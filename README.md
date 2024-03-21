@@ -1,4 +1,4 @@
 # cdapython
-A Python UI to mediate between users and the CDA REST API (see the `cda-service` repo).
+A Python UI to mediate between users and the [CDA REST API](https://github.com/CancerDataAggregator/cda-service).
 
 
