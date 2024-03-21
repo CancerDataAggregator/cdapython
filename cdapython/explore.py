@@ -942,7 +942,7 @@ def columns(
 def column_values(
     column = '',
     *,
-    return_data_as = 'dataframe',
+    return_data_as = '',
     output_file = '',
     sort_by = '',
     filters = '',
@@ -958,11 +958,11 @@ def column_values(
         column ( string; required ):
             The column to fetch values from.
 
-        return_data_as ( string; optional:
-                'dataframe' (default) or 'list' or 'tsv' ):
+        return_data_as ( string; optional: 'dataframe' or 'list' or 'tsv' ):
             Specify how column_values() should return results: as a pandas
             DataFrame, a Python list, or as output written to a TSV file named
-            by the user.
+            by the user.  If this argument is omitted, column_values() will default
+            to returning results as a DataFrame.
 
         output_file( string; optional ):
             If return_data_as='tsv' is specified, output_file should contain a
@@ -1129,6 +1129,7 @@ def column_values(
     # Process return-type directives.
 
     allowed_return_types = {
+        '',
         'dataframe',
         'tsv',
         'list'
@@ -1144,13 +1145,26 @@ def column_values(
 
     return_data_as = return_data_as.lower()
 
+    # We can't do much validation on filenames. If `output_file` isn't
+    # a locally writeable path, it'll fail when we try to open it for
+    # writing. Strip trailing whitespace from both ends and wrap the
+    # file-access operation (later, below) in a try{} block.
+
+    if not isinstance( output_file, str ):
+        
+        print( f"column_values(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path.", file=sys.stderr )
+
+        return
+
+    output_file = output_file.strip()
+
     if return_data_as not in allowed_return_types:
         
         print( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.", file=sys.stderr )
 
         return
 
-    elif return_data_as == 'tsv' and ( ( not isinstance( output_file, str ) ) or output_file == '' ):
+    elif return_data_as == 'tsv' and output_file == '':
         
         print( f"column_values(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'.", file=sys.stderr )
 
@@ -1158,6 +1172,11 @@ def column_values(
 
     elif return_data_as != 'tsv' and output_file != '':
         
+        # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
+        # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
+        # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
+        # so we complain and ask them to clarify.
+
         print( f"column_values(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.", file=sys.stderr )
         print( f"(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.).", file=sys.stderr )
 
