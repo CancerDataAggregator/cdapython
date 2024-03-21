@@ -966,7 +966,7 @@ def column_values(
 
         output_file( string; optional ):
             If return_data_as='tsv' is specified, output_file should contain a
-            resolvable path to a file into which column_values will write
+            resolvable path to a file into which column_values() will write
             tab-delimited results.
 
         sort_by( string; optional:
@@ -1837,6 +1837,8 @@ def column_values(
 def summary_counts(
     table = '',
     *,
+    return_data_as = '',
+    output_file = '',
     match_all = [],
     match_any = [],
     data_source = [],
@@ -1851,6 +1853,17 @@ def summary_counts(
         table ( string; required ):
             The table whose rows are to be filtered and counted. (Run the tables()
             function to get a list.)
+
+        return_data_as ( string; optional: 'dataframe_list' or 'tsv' ):
+            Specify how summary_counts() should return results: as a list of pandas
+            DataFrames, or as output written to a TSV file named by the user.  If
+            this argument is omitted, summary_counts() will defaultmto returning
+            results as a list of DataFrames.
+
+        output_file( string; optional ):
+            If return_data_as='tsv' is specified, output_file should contain a
+            resolvable path to a file into which summary_counts() will write
+            tab-delimited results.
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
