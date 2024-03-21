@@ -1,0 +1,24 @@
+# MacOS
+.DS_Store
+
+# Python
+**/*.pyc
+**/__pycache__
+build/
+dist/
+zz00_build
+zz01_install_somewhere
+
+# pip install -e generated
+*.egg-info/
+
+# Google credentials files
+**/GCS-service-account-key.*
+
+# Virtual environment files
+/venv*/
+
+# Data subdirs
+/extracted_data/
+/tests/output_data/*
+
