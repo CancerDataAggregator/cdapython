@@ -921,6 +921,8 @@ def columns(
             
             result_dataframe.to_csv( output_file, sep='\t', index=False )
 
+            return
+
         except Exception as error:
             
             print( f"columns(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
@@ -1818,7 +1820,17 @@ def column_values(
 
             print( '-' * 80, end='\n\n', file=sys.stderr )
 
-        result_dataframe.to_csv( output_file, sep='\t', index=False )
+        try:
+            
+            result_dataframe.to_csv( output_file, sep='\t', index=False )
+
+            return
+
+        except Exception as error:
+            
+            print( f"column_values(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
+
+            return
 
 #############################################################################################################################
 # 
@@ -1854,16 +1866,16 @@ def summary_counts(
             The table whose rows are to be filtered and counted. (Run the tables()
             function to get a list.)
 
-        return_data_as ( string; optional: 'dataframe_list' or 'tsv' ):
-            Specify how summary_counts() should return results: as a list of pandas
-            DataFrames, or as output written to a TSV file named by the user.  If
-            this argument is omitted, summary_counts() will defaultmto returning
-            results as a list of DataFrames.
+        return_data_as ( string; optional: 'dataframe_list' or 'dict' or 'json' ):
+            Specify how summary_counts() should return results: as a list
+            of pandas DataFrames, as a Python dictionary, or as output written to a
+            JSON file named by the user.  If this argument is omitted,
+            summary_counts() will default to returning results as a list of DataFrames.
 
         output_file( string; optional ):
-            If return_data_as='tsv' is specified, output_file should contain a
+            If return_data_as='json' is specified, output_file should contain a
             resolvable path to a file into which summary_counts() will write
-            tab-delimited results.
+            JSON-formatted results.
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -1919,7 +1931,19 @@ def summary_counts(
             summary_counts( table='subject', match_all=[ 'sex = NULL' ] )
 
     Returns:
-        Python dictionary enumerating counts of all data values (from a small set of pre-selected columns)
+        
+        list of pandas DataFrames, with one DataFrame for each of a small set of
+        pre-selected columns, enumerating counts of all of that column's data values
+        appearing in any of the rows of the user-specified `table` that match the
+        user-specified filter critera (the 'result rows'). One or two DataFrames
+        in this list -- titled 'total_`table`_matches' and sometimes also
+        'total_related_files', where appropriate -- will contain integers representing
+        the number of result rows and the number of files related to those rows,
+        respectively. All other DataFrames in the list will each be titled with
+        a CDA column name and contain counts for all observed values from that
+        column in the result row set.
+
+        OR Python dictionary enumerating counts of all data values (from a small set of pre-selected columns)
         appearing in any of the rows of the user-specified `table` that match the user-specified filter criteria
         (the 'result rows'). One or two summary keys in this dictionary -- 'total_`table`_matches', and
         sometimes 'total_related_files', where appropriate -- will point to integers representing
@@ -1929,7 +1953,10 @@ def summary_counts(
         named in the key. Each value in that (sub-)dictionary will represent the total number of times
         that its corresponding key appears in the result rows.
 
-        And yes, we know how that paragraph looks. We apologize to the entire English language.
+        OR JSON-formatted text representing the same structure as the `return_data_as='dict'`
+        option, written to `output_file`.
+
+        And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
     #############################################################################################################################
@@ -1955,6 +1982,67 @@ def summary_counts(
     if table not in valid_tables:
         
         print( f"summary_counts(): ERROR: parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not.", file=sys.stderr )
+
+        return
+
+    #############################################################################################################################
+    # Process return-type directives `return_data_as` and `output_file`.
+
+    allowed_return_types = {
+        '',
+        'dataframe_list',
+        'dict',
+        'json'
+    }
+
+    if not isinstance( return_data_as, str ):
+        
+        print( f"summary_counts(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json'.", file=sys.stderr )
+
+        return
+
+    # Let's not be picky if someone wants to give us return_data_as='DataFrame_LIsT' or return_data_as='JSON'
+
+    return_data_as = return_data_as.lower()
+
+    # We can't do much validation on filenames. If `output_file` isn't
+    # a locally writeable path, it'll fail when we try to open it for
+    # writing. Strip trailing whitespace from both ends and wrap the
+    # file-access operation (later, below) in a try{} block.
+
+    if not isinstance( output_file, str ):
+        
+        print( f"summary_counts(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path.", file=sys.stderr )
+
+        return
+
+    output_file = output_file.strip()
+
+    if return_data_as not in allowed_return_types:
+        
+        # Complain if we receive an unexpected `return_data_as` value.
+
+        print( f"summary_counts(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json'.", file=sys.stderr )
+
+        return
+
+    elif return_data_as == 'json' and output_file == '':
+        
+        # If the user asks for JSON, they also have to give us a path for the output file. If they didn't, complain.
+
+        print( f"summary_counts(): ERROR: return type 'json' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/json/to'.", file=sys.stderr )
+
+        return
+
+    elif return_data_as != 'json' and output_file != '':
+        
+        # If the user put something in the `output_file` parameter but didn't specify `result_data_as='json'`,
+        # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
+        # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
+        # so we complain and ask them to clarify.
+
+        print( f"summary_counts(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'json'. You requested return_data_as='{return_data_as}'.", file=sys.stderr )
+        print( f"(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe_list'.).", file=sys.stderr )
 
         return
 
@@ -2960,50 +3048,178 @@ def summary_counts(
 
             result_dataframe = result_dataframe.rename( columns={ result_column: toplevel_columns_to_fix[result_column] } )
 
-    # Build a Python dictionary to return to the user.
-
-    result_dict = dict()
-
-    for result_column in result_dataframe.columns:
+    if return_data_as == '' or return_data_as == 'dataframe_list':
         
-        if result_dataframe[result_column].dtype == 'int64':
-            
-            result_dict[result_column] = result_dataframe[result_column][0]
+        # Right now, the default is the same as if the user had
+        # specified return_data_as='dataframe_list'.
 
-        elif result_dataframe[result_column].dtype == 'object':
-            
-            result_dict[result_column] = None
+        result_list = list()
 
-            if result_dataframe[result_column][0] is not None:
+        for toplevel_column in [ f"total_{table}_matches", 'total_related_files' ]:
+            
+            if toplevel_column in result_dataframe:
                 
-                # These should be arrays of Python dicts, with each dict containing two entries:
-                # 
-                #    data column label and value:
-                #       keyword: `result_column`, except for when `result_column` == 'X_identifier_system', in which case it's just 'system'
-                #       value: one of { 'GDC', 'CDS', 'ICDC', ... }
-                #    observed count of the given value:
-                #       keyword: 'count'
-                #       value: (int) number of times the given data value (described in the previous dictionary entry) was observed in this set of result data
+                # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
 
-                result_dict[result_column] = dict()
+                result_list.append( result_dataframe[[toplevel_column]].copy() )
 
-                pair_keyword = result_column
-
-                if re.search( r'_identifier_system$', result_column ) is not None:
-                    
-                    pair_keyword = 'system'
-
-                for dict_pair in result_dataframe[result_column][0]:
-                    
-                    result_dict[result_column][dict_pair[pair_keyword]] = dict_pair['count']
-
-        else:
+        for result_column in result_dataframe.columns:
             
-            print( f"summary_counts(): ERROR: unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event.", file=sys.stderr )
+            if result_column not in [ f"total_{table}_matches", 'total_related_files' ]:
+                
+                # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
 
-            return
+                if result_dataframe[result_column].dtype == 'object':
+                    
+                    pair_keyword = result_column
 
-    return result_dict
+                    if re.search( r'_identifier_system$', result_column ) is not None:
+                        
+                        pair_keyword = 'system'
+
+                    result_column_dict = {
+                        
+                        pair_keyword: list(),
+                        'count': list()
+                    }
+
+                    if result_dataframe[result_column][0] is not None:
+                        
+                        # These should be arrays of Python dicts, with each dict containing two entries:
+                        # 
+                        #    data column label and value:
+                        #       keyword: `result_column`, except for when `result_column` == 'X_identifier_system', in which case it's just 'system'
+                        #       value: one of { 'GDC', 'CDS', 'ICDC', ... }
+                        #    observed count of the given value:
+                        #       keyword: 'count'
+                        #       value: (int) number of times the given data value (described in the previous dictionary entry) was observed in this set of result data
+
+                        for dict_pair in result_dataframe[result_column][0]:
+                            
+                            print_keyword = ''
+
+                            if dict_pair[pair_keyword] is not None:
+                                
+                                print_keyword = dict_pair[pair_keyword]
+
+                            result_column_dict[pair_keyword].append( print_keyword )
+
+                            result_column_dict['count'].append( dict_pair['count'] )
+
+                    result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ 'count' ], ascending=[ False ] ) )
+
+                else:
+                    
+                    print( f"summary_counts(): ERROR: unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event.", file=sys.stderr )
+
+                    return
+
+        if debug:
+            
+            if return_data_as == '':
+                
+                print( '-' * 80, file=sys.stderr )
+
+                print( '      DEBUG MESSAGE: summary_counts(): Returning results in default form (list of pandas.DataFrame objects)', file=sys.stderr )
+
+                print( '-' * 80, end='\n\n', file=sys.stderr )
+
+            elif return_data_as == 'dataframe_list':
+                
+                print( '-' * 80, file=sys.stderr )
+
+                print( '      DEBUG MESSAGE: summary_counts(): Returning results as a list of pandas.DataFrame objects', file=sys.stderr )
+
+                print( '-' * 80, end='\n\n', file=sys.stderr )
+
+        return result_list
+
+    elif return_data_as == 'dict' or return_data_as == 'json':
+
+        # Build a Python dictionary to shape returned results.
+
+        result_dict = dict()
+
+        for result_column in result_dataframe.columns:
+            
+            if result_dataframe[result_column].dtype == 'int64':
+                
+                result_dict[result_column] = int( result_dataframe[result_column][0] )
+
+            elif result_dataframe[result_column].dtype == 'object':
+                
+                result_dict[result_column] = None
+
+                if result_dataframe[result_column][0] is not None:
+                    
+                    # These should be arrays of Python dicts, with each dict containing two entries:
+                    # 
+                    #    data column label and value:
+                    #       keyword: `result_column`, except for when `result_column` == 'X_identifier_system', in which case it's just 'system'
+                    #       value: one of { 'GDC', 'CDS', 'ICDC', ... }
+                    #    observed count of the given value:
+                    #       keyword: 'count'
+                    #       value: (int) number of times the given data value (described in the previous dictionary entry) was observed in this set of result data
+
+                    result_dict[result_column] = dict()
+
+                    pair_keyword = result_column
+
+                    if re.search( r'_identifier_system$', result_column ) is not None:
+                        
+                        pair_keyword = 'system'
+
+                    for dict_pair in result_dataframe[result_column][0]:
+                        
+                        result_dict[result_column][dict_pair[pair_keyword]] = dict_pair['count']
+
+            else:
+                
+                print( f"summary_counts(): ERROR: unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event.", file=sys.stderr )
+
+                return
+
+        if return_data_as == 'dict':
+            
+            if debug:
+                
+                print( '-' * 80, file=sys.stderr )
+
+                print( f"      DEBUG MESSAGE: summary_counts(): Returning results as a Python dictionary", file=sys.stderr )
+
+                print( '-' * 80, end='\n\n', file=sys.stderr )
+
+            return result_dict
+
+        elif return_data_as == 'json':
+            
+            # Write the results to a user-specified JSON file.
+
+            if debug:
+                
+                print( '-' * 80, file=sys.stderr )
+
+                print( f"      DEBUG MESSAGE: summary_counts(): Printing results to JSON file '{output_file}'", file=sys.stderr )
+
+                print( '-' * 80, end='\n\n', file=sys.stderr )
+
+            try:
+                
+                with open( output_file, 'w' ) as OUT:
+                    
+                    json.dump( result_dict, OUT, indent=4, ensure_ascii=True )
+
+                return
+
+            except Exception as error:
+                
+                print( f"summary_counts(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
+
+                return
+
+    print( f"summary_counts(): ERROR: Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.", file=sys.stderr )
+
+    return
 
 #############################################################################################################################
 # 

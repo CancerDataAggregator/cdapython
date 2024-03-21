@@ -102,12 +102,12 @@ def fetch_rows(
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
             Specify how fetch_rows() should return results: as a pandas DataFrame,
-            a Python list, or as output written to a TSV file named by the user.
-            If this argument is omitted, fetch_rows() will default to returning
+            or as output written to a TSV file named by the user. If this
+            argument is omitted, fetch_rows() will default to returning
             results as a DataFrame.
 
         output_file( string; optional ):
-            If return_data_as='tsv' is specified, output_file should contain a
+            If return_data_as='tsv' is specified, `output_file` should contain a
             resolvable path to a file into which fetch_rows() will write
             tab-delimited results.
 
@@ -162,16 +162,20 @@ def fetch_rows(
             fetch_rows( table='researchsubject', match_all=[ 'primary_diagnosis_site = NULL' ] )
 
     Returns:
-        integer representing the total number of CDA `table` rows matching the given
-            filters (if count_only=True)
-
-        OR
-
-        pandas.DataFrame containing CDA `table` rows matching the user-specified
+        (Default) A pandas.DataFrame containing CDA `table` rows matching the user-specified
             filter criteria. The DataFrame's named columns will match columns in `table`,
             and each row in the DataFrame will contain one CDA `table` row (possibly
             with related data from a second table appended to it, according to user
             directives).
+
+        OR two integers representing the total number of CDA `table` rows matching the given
+            filters and the total number of result rows. These two counts will generally
+            differ if extra data from non-`table` sources is joined to result rows using
+            `link_to_table` or `add_columns`, because `table` rows will be repeated for any
+            one-to-many associations that are returned; otherwise they will be the same.
+
+        OR returns nothing, but writes results to a user-specified TSV file
+
     """
 
     #############################################################################################################################
@@ -235,6 +239,66 @@ def fetch_rows(
         if column_to_remove in source_table_columns_in_order:
             
             source_table_columns_in_order.remove( column_to_remove )
+
+    #############################################################################################################################
+    # Process return-type directives `return_data_as` and `output_file`.
+
+    allowed_return_types = {
+        '',
+        'dataframe',
+        'tsv'
+    }
+
+    if not isinstance( return_data_as, str ):
+        
+        print( f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'.", file=sys.stderr )
+
+        return
+
+    # Let's not be picky if someone wants to give us return_data_as='DataFrame' or return_data_as='TSV'
+
+    return_data_as = return_data_as.lower()
+
+    # We can't do much validation on filenames. If `output_file` isn't
+    # a locally writeable path, it'll fail when we try to open it for
+    # writing. Strip trailing whitespace from both ends and wrap the
+    # file-access operation (later, below) in a try{} block.
+
+    if not isinstance( output_file, str ):
+        
+        print( f"fetch_rows(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path.", file=sys.stderr )
+
+        return
+
+    output_file = output_file.strip()
+
+    if return_data_as not in allowed_return_types:
+        
+        # Complain if we receive an unexpected `return_data_as` value.
+
+        print( f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'.", file=sys.stderr )
+
+        return
+
+    elif return_data_as == 'tsv' and output_file == '':
+        
+        # If the user asks for TSV, they also have to give us a path for the output file. If they didn't, complain.
+
+        print( f"fetch_rows(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'.", file=sys.stderr )
+
+        return
+
+    elif return_data_as != 'tsv' and output_file != '':
+        
+        # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
+        # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
+        # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
+        # so we complain and ask them to clarify.
+
+        print( f"fetch_rows(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.", file=sys.stderr )
+        print( f"(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.).", file=sys.stderr )
+
+        return
 
     #############################################################################################################################
     # Define the list of supported filter-string operators.
@@ -1618,7 +1682,40 @@ def fetch_rows(
 
                 return
 
-    return result_dataframe
+    if return_data_as == '' or return_data_as == 'dataframe':
+        
+        # Right now, the default is the same as if the user had
+        # specified return_data_as='dataframe'.
+
+        return result_dataframe
+
+    elif return_data_as == 'tsv':
+        
+        # Write results to a user-specified TSV.
+
+        if debug:
+            
+            print( '-' * 80, file=sys.stderr )
+
+            print( f"      DEBUG MESSAGE: fetch_rows(): Printing results to TSV file '{output_file}'", file=sys.stderr )
+
+            print( '-' * 80, end='\n\n', file=sys.stderr )
+
+        try:
+            
+            result_dataframe.to_csv( output_file, sep='\t', index=False )
+
+            return
+
+        except Exception as error:
+            
+            print( f"fetch_rows(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
+
+            return
+
+    print( f"fetch_rows(): ERROR: Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.", file=sys.stderr )
+
+    return
 
 
 #############################################################################################################################
