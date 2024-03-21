@@ -1081,15 +1081,17 @@ def column_values(
         'ICDC'
     }
 
-    # Let us not care about case, and remove any whitespace before it can do any damage.
-
-    data_source = re.sub( r'\s+', r'', data_source ).upper()
-
-    if data_source not in allowed_data_source_values:
+    if data_source != '':
         
-        print( f"column_values(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{data_source}', which is not.", file=sys.stderr )
+        # Let us not care about case, and remove any whitespace before it can do any damage.
 
-        return
+        data_source = re.sub( r'\s+', r'', data_source ).upper()
+
+        if data_source not in allowed_data_source_values:
+            
+            print( f"column_values(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{data_source}', which is not.", file=sys.stderr )
+
+            return
 
     #############################################################################################################################
     # Check in advance for columns flagged as high-overhead.
@@ -2034,9 +2036,9 @@ def summary_counts(
 
         data_source = [ data_source ]
 
-    if not isinstance( data_source, list ) or len( data_source ) == 0:
+    elif not isinstance( data_source, list ):
         
-        print( f"summary_counts(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of nonempty strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither.", file=sys.stderr )
+        print( f"summary_counts(): ERROR: value assigned to the 'data_source' parameter must be a string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither.", file=sys.stderr )
 
         return
 
@@ -2044,7 +2046,7 @@ def summary_counts(
         
         if not isinstance( item, str ) or len( item ) == 0:
             
-            print( f"summary_counts(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of nonempty strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither.", file=sys.stderr )
+            print( f"summary_counts(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither.", file=sys.stderr )
 
             return
 

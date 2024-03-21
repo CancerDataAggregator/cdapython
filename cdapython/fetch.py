@@ -441,9 +441,9 @@ def fetch_rows(
 
         data_source = [ data_source ]
 
-    if not isinstance( data_source, list ) or len( data_source ) == 0:
+    elif not isinstance( data_source, list ):
         
-        print( f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of nonempty strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither.", file=sys.stderr )
+        print( f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither.", file=sys.stderr )
 
         return
 
@@ -451,7 +451,7 @@ def fetch_rows(
         
         if not isinstance( item, str ) or len( item ) == 0:
             
-            print( f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of nonempty strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither.", file=sys.stderr )
+            print( f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither.", file=sys.stderr )
 
             return
 
