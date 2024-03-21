@@ -67,7 +67,17 @@ def tables():
     # Call columns(), extract unique values from the `table` column of the
     # resulting DataFrame, and return those values to the user as a list.
 
-    return sorted( columns( return_data_as='dataframe' )['table'].unique() )
+    columns_result_df = columns( return_data_as='dataframe' )
+
+    if columns_result_df is None:
+        
+        print( f"tables(): ERROR: Something went fatally wrong with columns(); can't complete tables(), aborting.", file=sys.stderr )
+
+        return
+
+    else:
+        
+        return sorted( columns_result_df['table'].unique() )
 
 #############################################################################################################################
 # 
