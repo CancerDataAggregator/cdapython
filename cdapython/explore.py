@@ -580,7 +580,7 @@ def columns(
         
         while columns_response_data_object.ready() is False:
             
-            columns_response_data_object.wait( 10000 )
+            columns_response_data_object.wait( 5 )
 
         try:
 
@@ -1388,7 +1388,7 @@ def column_values(
         
         while paged_response_data_object.ready() is False:
             
-            paged_response_data_object.wait( 10000 )
+            paged_response_data_object.wait( 5 )
 
         try:
             
@@ -1484,7 +1484,7 @@ def column_values(
             
             while paged_response_data_object.ready() is False:
                 
-                paged_response_data_object.wait(10000)
+                paged_response_data_object.wait( 5 )
 
             try:
                 
@@ -2965,7 +2965,7 @@ def summary_counts(
         
         while paged_response_data_object.ready() is False:
             
-            paged_response_data_object.wait( 10000 )
+            paged_response_data_object.wait( 5 )
 
         try:
             
