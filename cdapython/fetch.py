@@ -1772,7 +1772,7 @@ def fetch_rows(
 
             elif result_column_data_types[column] == 'array_of_id_dictionaries':
                 
-                # All good here, these should't ever be null -- every `table` row has at least one entry in `table`_identifier.
+                # All good here, these shouldn't ever be null -- every `table` row has at least one entry in `table`_identifier.
 
                 pass
 
