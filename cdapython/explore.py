@@ -3116,7 +3116,7 @@ def summary_counts(
 
                             result_column_dict['count'].append( dict_pair['count'] )
 
-                    result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ 'count' ], ascending=[ False ] ) )
+                    result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ 'count' ], ascending=[ False ] ).reset_index( drop=True ) )
 
                 else:
                     
