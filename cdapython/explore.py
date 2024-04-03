@@ -1573,7 +1573,11 @@ def column_values(
 
                 return
 
-        result_dataframe = pd.concat( [ result_dataframe, pd.json_normalize( paged_response_data_object.result ) ] )
+        next_result_batch = pd.json_normalize( paged_response_data_object.result )
+
+        if not next_result_batch.empty:
+            
+            result_dataframe = pd.concat( [ result_dataframe, next_result_batch ] )
 
         incremented_offset = incremented_offset + records_per_page
 

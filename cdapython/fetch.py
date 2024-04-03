@@ -190,7 +190,15 @@ def fetch_rows(
     """
 
     #############################################################################################################################
-    # Top-level type checking (i.e. not examining list contents yet): ensure nothing untoward got passed into our parameters.
+    # Top-level type and sanity checking (i.e. not examining list contents yet): ensure nothing untoward got passed into our parameters.
+
+    # Make sure the requested table exists.
+
+    if table is None or not isinstance( table, str ) or table not in tables():
+        
+        print( f"fetch_rows(): ERROR: The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list.", file=sys.stderr )
+
+        return
 
     # `match_all`
 
@@ -262,6 +270,12 @@ def fetch_rows(
 
         return
 
+    elif link_to_table != '' and link_to_table == table:
+        
+        print( f"fetch_rows(): ERROR: parameter 'link_to_table' can't specify the same table as the 'table' parameter. Please try again.", file=sys.stderr )
+
+        return
+
     # `provenance`
 
     if provenance != True and provenance != False:
@@ -304,14 +318,6 @@ def fetch_rows(
 
     #############################################################################################################################
     # Preprocess table metadata, to enable consistent processing (and reporting) throughout.
-
-    # Make sure the requested table exists.
-
-    if table is None or not isinstance( table, str ) or table not in tables():
-        
-        print( f"fetch_rows(): ERROR: The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list.", file=sys.stderr )
-
-        return
 
     # Track the data type present in each `table` column, so we can
     # format results properly downstream.
@@ -1739,7 +1745,11 @@ def fetch_rows(
 
                 return
 
-        result_dataframe = pd.concat( [ result_dataframe, pd.json_normalize( paged_response_data_object.result ) ] )
+        next_result_batch = pd.json_normalize( paged_response_data_object.result )
+
+        if not next_result_batch.empty:
+            
+            result_dataframe = pd.concat( [ result_dataframe, next_result_batch ] )
 
         incremented_offset = incremented_offset + rows_per_page
 
