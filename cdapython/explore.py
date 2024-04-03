@@ -1575,8 +1575,12 @@ def column_values(
 
         next_result_batch = pd.json_normalize( paged_response_data_object.result )
 
-        if not next_result_batch.empty:
+        if not result_dataframe.empty and not next_result_batch.empty:
             
+            # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
+            
+            next_result_batch = next_result_batch.astype( result_dataframe.dtypes )
+
             result_dataframe = pd.concat( [ result_dataframe, next_result_batch ] )
 
         incremented_offset = incremented_offset + records_per_page
