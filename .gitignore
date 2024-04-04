@@ -21,4 +21,9 @@ zz01_install_somewhere
 # Data subdirs
 /extracted_data/
 /tests/output_data/*
+/merged_data/
+/transformed_data/
+/cda_tsvs/
+/SQL_data/
+
 

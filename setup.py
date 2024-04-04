@@ -18,7 +18,8 @@ setup_list = [
     'typing-extensions >= 4.4',
     'pandas >= 1.5.3',
     'wheel >= 0.42.0',
-    cda_openapi_python_sdk_setup_list_entry,
+    'cda-client >= 1.0.0',
+    #cda_openapi_python_sdk_setup_list_entry,
 ]
 
 # Load a long description of the cdapython package from the README
