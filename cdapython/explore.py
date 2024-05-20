@@ -4,6 +4,8 @@ import os
 import re
 import sys
 
+import tabulate
+
 from cda_client.api_client import ApiClient
 from cda_client.api.query_api import QueryApi
 
@@ -384,7 +386,7 @@ def columns(
 
             ascending_list.append( True )
 
-    if debug:
+    if debug == True:
         
         # Report details of the final parsed sort logic.
 
@@ -467,7 +469,7 @@ def columns(
         # Validate 
 
 
-    if debug:
+    if debug == True:
         
         # Report details of fully processed user directives prior to querying.
 
@@ -515,7 +517,7 @@ def columns(
 
         api_client_instance = ApiClient( configuration=api_configuration )
 
-        if debug:
+        if debug == True:
             
             # Report that we're pulling in a hostname from the CDA_API_URL environment variable.
 
@@ -539,7 +541,7 @@ def columns(
 
         api_client_instance = ApiClient( configuration=api_configuration )
 
-        if debug:
+        if debug == True:
             
             # Report the default location data for the CDA API, as loaded from the CdaConfiguration class.
 
@@ -557,7 +559,7 @@ def columns(
 
             print( '-' * 80, end='\n\n', file=sys.stderr )
 
-    if debug:
+    if debug == True:
         
         print( '-' * 80, file=sys.stderr )
 
@@ -627,7 +629,7 @@ def columns(
 
             return
 
-    if debug:
+    if debug == True:
         
         print( f"Query complete: initial (unfiltered) result set contains records describing { len( columns_response_data_object['result'] ) } columns.", end='\n\n', file=sys.stderr )
 
@@ -685,7 +687,7 @@ def columns(
         
         result_dataframe = result_dataframe.loc[ result_dataframe['column'] != banned_column ]
 
-    if debug:
+    if debug == True:
         
         print( '-' * 80, file=sys.stderr )
 
@@ -723,7 +725,7 @@ def columns(
 
         result_dataframe = result_dataframe.sort_values( by=by_list, ascending=ascending_list )
 
-    if debug:
+    if debug == True:
         
         print( '-' * 80, file=sys.stderr )
 
@@ -874,7 +876,7 @@ def columns(
 
                 result_dataframe = result_dataframe.loc[ result_dataframe[target_field].str.contains( match_pattern_string, case=False ) ]
 
-    if debug:
+    if debug == True:
         
         print( '-' * 80, file=sys.stderr )
 
@@ -898,7 +900,7 @@ def columns(
         # 
         # print( result_dataframe.to_string( index=False, justify='right', max_rows=25, max_colwidth=50 ), file=sys.stdout )
 
-        if debug:
+        if debug == True:
             
             print( '-' * 80, file=sys.stderr )
 
@@ -912,7 +914,7 @@ def columns(
         
         # Give the user back the results DataFrame.
 
-        if debug:
+        if debug == True:
             
             print( '-' * 80, file=sys.stderr )
 
@@ -926,7 +928,7 @@ def columns(
         
         # Give the user back a list of column names.
 
-        if debug:
+        if debug == True:
             
             print( '-' * 80, file=sys.stderr )
 
@@ -940,7 +942,7 @@ def columns(
         
         # Write the results DataFrame to a user-specified TSV file.
 
-        if debug:
+        if debug == True:
             
             print( '-' * 80, file=sys.stderr )
 
@@ -1280,7 +1282,7 @@ def column_values(
 
             return
 
-    if debug:
+    if debug == True:
         
         # Report details of the final parsed sort logic.
 
@@ -1326,7 +1328,7 @@ def column_values(
 
         api_client_instance = ApiClient( configuration=api_configuration )
 
-        if debug:
+        if debug == True:
             
             # Report that we're pulling in a hostname from the CDA_API_URL environment variable.
 
@@ -1350,7 +1352,7 @@ def column_values(
 
         api_client_instance = ApiClient( configuration=api_configuration )
 
-        if debug:
+        if debug == True:
             
             # Report the default location data for the CDA API, as loaded from the CdaConfiguration class.
 
@@ -1368,7 +1370,7 @@ def column_values(
 
             print( '-' * 80, end='\n\n', file=sys.stderr )
 
-    if debug:
+    if debug == True:
         
         print( '-' * 80, file=sys.stderr )
 
@@ -1456,7 +1458,7 @@ def column_values(
 
             return
 
-    if debug:
+    if debug == True:
         
         # Report some metadata about the results we got back.
     
@@ -1481,7 +1483,7 @@ def column_values(
 
     more_than_one_result_page = False
 
-    if debug and paged_response_data_object['next_url'] is not None:
+    if debug == True and paged_response_data_object['next_url'] is not None:
         
         print( f"Fetching remaining results in pages...", file=sys.stderr )
 
@@ -1489,7 +1491,7 @@ def column_values(
 
     while paged_response_data_object['next_url'] is not None:
         
-        if debug:
+        if debug == True:
             
             # Show the `next_url` address returned to us by the API.
 
@@ -1585,7 +1587,7 @@ def column_values(
 
         incremented_offset = incremented_offset + records_per_page
 
-    if debug:
+    if debug == True:
         
         if more_than_one_result_page:
             
@@ -1604,7 +1606,7 @@ def column_values(
         
         return result_dataframe
 
-    if debug:
+    if debug == True:
         
         print( '-' * 80, file=sys.stderr )
 
@@ -1646,7 +1648,7 @@ def column_values(
 
         result_dataframe = result_dataframe.rename( columns = { suffix: column } )
 
-    if debug:
+    if debug == True:
         
         print( 'Handling missing values...', file=sys.stderr )
 
@@ -1750,7 +1752,7 @@ def column_values(
 
     match_pattern_string = re.sub( r'\|$', r'', match_pattern_string )
 
-    if debug:
+    if debug == True:
         
         print_regex = match_pattern_string
 
@@ -1793,7 +1795,7 @@ def column_values(
 
     # Sort results. Default (note that the final value of `sort_by` is determined earlier in this function) is to sort by term count, descending.
 
-    if debug:
+    if debug == True:
         
         print( f"Applying sort directive '{sort_by}'...", end='\n\n', file=sys.stderr )
 
@@ -1827,7 +1829,7 @@ def column_values(
 
         return
 
-    if debug:
+    if debug == True:
 
         print( '-' * 80, file=sys.stderr )
 
@@ -1851,7 +1853,7 @@ def column_values(
         # 
         # print( result_dataframe.to_string( index=False, justify='right', max_rows=25, max_colwidth=50 ), file=sys.stdout )
 
-        if debug:
+        if debug == True:
             
             print( '-' * 80, file=sys.stderr )
 
@@ -1865,7 +1867,7 @@ def column_values(
         
         # Give the user back the results DataFrame.
 
-        if debug:
+        if debug == True:
             
             print( '-' * 80, file=sys.stderr )
 
@@ -1879,7 +1881,7 @@ def column_values(
         
         # Strip the term-values column out of the results DataFrame and give them to the user as a Python list.
 
-        if debug:
+        if debug == True:
             
             print( '-' * 80, file=sys.stderr )
 
@@ -1893,7 +1895,7 @@ def column_values(
         
         # Write the results DataFrame to a user-specified TSV file.
 
-        if debug:
+        if debug == True:
             
             print( '-' * 80, file=sys.stderr )
 
@@ -1951,7 +1953,9 @@ def summary_counts(
             Specify how summary_counts() should return results: as a list
             of pandas DataFrames, as a Python dictionary, or as output written to a
             JSON file named by the user.  If this argument is omitted,
-            summary_counts() will default to returning results as a list of DataFrames.
+            summary_counts() will, for each DataFrame that would have been returned
+            by the 'dataframe_list' option, print a table to the standard output
+            stream (and nothing will be returned).
 
         output_file( string; optional ):
             If return_data_as='json' is specified, output_file should contain a
@@ -2037,6 +2041,9 @@ def summary_counts(
         OR JSON-formatted text representing the same structure as the `return_data_as='dict'`
         option, written to `output_file`.
 
+        OR returns nothing, but displays a series of tables to standard output
+        describing the same data returned by the other `return_data_as` options.
+
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
@@ -2078,7 +2085,7 @@ def summary_counts(
 
     if not isinstance( return_data_as, str ):
         
-        print( f"summary_counts(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json'.", file=sys.stderr )
+        print( f"summary_counts(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json' (or omit the 'return_data_as' parameter altogether).", file=sys.stderr )
 
         return
 
@@ -2103,7 +2110,7 @@ def summary_counts(
         
         # Complain if we receive an unexpected `return_data_as` value.
 
-        print( f"summary_counts(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json'.", file=sys.stderr )
+        print( f"summary_counts(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json' (or omit the 'return_data_as' parameter altogether).", file=sys.stderr )
 
         return
 
@@ -2123,7 +2130,7 @@ def summary_counts(
         # so we complain and ask them to clarify.
 
         print( f"summary_counts(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'json'. You requested return_data_as='{return_data_as}'.", file=sys.stderr )
-        print( f"(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe_list'.).", file=sys.stderr )
+        print( f"(Note that if you don't specify any value for 'return_data_as', it defaults to printing tables to the standard output stream and not to an output file.).", file=sys.stderr )
 
         return
 
@@ -2924,7 +2931,7 @@ def summary_counts(
 
             final_query = actually_final_query
 
-    if debug:
+    if debug == True:
         
         # Dump JSON describing the full combined query structure.
 
@@ -2946,7 +2953,7 @@ def summary_counts(
 
         api_client_instance = ApiClient( configuration=api_configuration )
 
-        if debug:
+        if debug == True:
             
             # Report that we're pulling in a hostname from the CDA_API_URL environment variable.
 
@@ -2970,7 +2977,7 @@ def summary_counts(
 
         api_client_instance = ApiClient( configuration=api_configuration )
 
-        if debug:
+        if debug == True:
             
             # Report the default location data for the CDA API, as loaded from the CdaConfiguration class.
 
@@ -2988,7 +2995,7 @@ def summary_counts(
 
             print( '-' * 80, end='\n\n', file=sys.stderr )
 
-    if debug:
+    if debug == True:
         
         print( '-' * 80, file=sys.stderr )
 
@@ -3092,7 +3099,7 @@ def summary_counts(
     """
     # This is immensely verbose, sometimes.
 
-    if debug:
+    if debug == True:
         
         print( '-' * 80, file=sys.stderr )
 
@@ -3120,7 +3127,7 @@ def summary_counts(
     #############################################################################################################################
     # Postprocess API result data.
 
-    if debug:
+    if debug == True:
         
         print( 'Organizing result data...', file=sys.stderr )
 
@@ -3152,8 +3159,9 @@ def summary_counts(
 
     if return_data_as == '' or return_data_as == 'dataframe_list':
         
-        # Right now, the default is the same as if the user had
-        # specified return_data_as='dataframe_list'.
+        # Right now, the default is to print one table to standard output
+        # for each DataFrame that would be returned had they requested
+        # `return_data_as='dataframe_list'`.
 
         result_list = list()
 
@@ -3173,15 +3181,17 @@ def summary_counts(
 
                 if result_dataframe[result_column].dtype == 'object':
                     
-                    pair_keyword = result_column
+                    source_pair_keyword = result_column
+                    dest_pair_keyword = result_column
 
                     if re.search( r'_identifier_system$', result_column ) is not None:
                         
-                        pair_keyword = 'system'
+                        source_pair_keyword = 'system'
+                        dest_pair_keyword = f"{table}_data_source"
 
                     result_column_dict = {
                         
-                        pair_keyword: list(),
+                        dest_pair_keyword: list(),
                         'count': list()
                     }
 
@@ -3198,13 +3208,13 @@ def summary_counts(
 
                         for dict_pair in result_dataframe[result_column][0]:
                             
-                            print_keyword = ''
+                            print_value = '<NA>'
 
-                            if dict_pair[pair_keyword] is not None:
+                            if dict_pair[source_pair_keyword] is not None and dict_pair[source_pair_keyword] != '':
                                 
-                                print_keyword = dict_pair[pair_keyword]
+                                print_value = dict_pair[source_pair_keyword]
 
-                            result_column_dict[pair_keyword].append( print_keyword )
+                            result_column_dict[dest_pair_keyword].append( print_value )
 
                             result_column_dict['count'].append( dict_pair['count'] )
 
@@ -3216,17 +3226,53 @@ def summary_counts(
 
                     return
 
-        if debug:
+        if return_data_as == '':
             
-            if return_data_as == '':
+            if debug == True:
                 
                 print( '-' * 80, file=sys.stderr )
 
-                print( '      DEBUG MESSAGE: summary_counts(): Returning results in default form (list of pandas.DataFrame objects)', file=sys.stderr )
+                print( '      DEBUG MESSAGE: summary_counts(): Returning results in default form (printing list of tables to standard output)', file=sys.stderr )
 
                 print( '-' * 80, end='\n\n', file=sys.stderr )
 
-            elif return_data_as == 'dataframe_list':
+            with pd.option_context( 'display.max_rows', None, 'display.max_columns', None, 'display.max_colwidth', 65 ):
+                
+                for dataframe in result_list:
+                    
+                    # Put the count values first in the display.
+
+                    max_col_width = 80
+
+                    maxcolwidths_list = [ None, max_col_width ]
+
+                    colalign_list = [ 'right', 'left' ]
+
+                    if len( dataframe.columns ) == 1:
+                        
+                        maxcolwidths_list = [ None ]
+
+                        colalign_list = [ 'left' ]
+
+                    else:
+                        
+                        # Truncate displayed values manually. The `tabulate` library can't handle this on its own (as Pandas does).
+                        
+                        dataframe[dataframe.columns[0]] = dataframe[dataframe.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r'\1...', x ) if ( x is not None and len( x ) > max_col_width ) else x )
+
+                    new_column_ordering = list( reversed( dataframe.columns.tolist() ) )
+
+                    dataframe = dataframe[new_column_ordering]
+
+                    # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
+
+                    print( tabulate.tabulate( dataframe, showindex=False, headers=dataframe.columns, tablefmt="double_outline", colalign=colalign_list, maxcolwidths=maxcolwidths_list ) )
+
+            return
+
+        elif return_data_as == 'dataframe_list':
+            
+            if debug == True:
                 
                 print( '-' * 80, file=sys.stderr )
 
@@ -3234,7 +3280,7 @@ def summary_counts(
 
                 print( '-' * 80, end='\n\n', file=sys.stderr )
 
-        return result_list
+            return result_list
 
     elif return_data_as == 'dict' or return_data_as == 'json':
 
@@ -3283,7 +3329,7 @@ def summary_counts(
 
         if return_data_as == 'dict':
             
-            if debug:
+            if debug == True:
                 
                 print( '-' * 80, file=sys.stderr )
 
@@ -3297,7 +3343,7 @@ def summary_counts(
             
             # Write the results to a user-specified JSON file.
 
-            if debug:
+            if debug == True:
                 
                 print( '-' * 80, file=sys.stderr )
 
