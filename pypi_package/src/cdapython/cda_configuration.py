@@ -1,6 +1,5 @@
 from os import path
 from ssl import get_default_verify_paths
-from typing import Any, Dict, Optional, Tuple
 
 from cda_client.configuration import Configuration
 
@@ -8,7 +7,7 @@ class CdaConfiguration(Configuration):
     
     def __init__(
         self,
-        host: Optional[str] = None,
+        host = None,
         api_key=None,
         api_key_prefix=None,
         access_token=None,
@@ -21,12 +20,12 @@ class CdaConfiguration(Configuration):
         server_operation_index=None,
         server_operation_variables=None,
         ssl_ca_cert=None,
-        verify: Optional[bool] = None,
-        verbose: Optional[bool] = None,
+        verify = None,
+        verbose = None,
     ):
         if host is None:
             
-            host = 'http://localhost:8080/'
+            host = 'https://cancerdata.dsde-prod.broadinstitute.org/'
 
         self._host = host.strip("/")
 
