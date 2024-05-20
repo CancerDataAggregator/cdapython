@@ -980,7 +980,7 @@ def column_values(
     return_data_as = '',
     output_file = '',
     sort_by = '',
-    filters = '',
+    filters = None,
     data_source = '',
     force = False,
     debug = False
@@ -1028,7 +1028,7 @@ def column_values(
         filters ( string or list of strings; optional ):
             Restrict returned values to those matching any of the given strings.
             A wildcard (asterisk) at either end (or both ends) of each string
-            will allow partial matches. Case will be ignored. Use an empty
+            will allow partial matches. Case will be ignored. Specify an empty
             filter string '' to match and count missing (null) values.
 
         data_source ( string; optional ):
@@ -1150,15 +1150,13 @@ def column_values(
     #############################################################################################################################
     # Listify `filters`, if it's a string, so we can process it in a uniform way later on.
 
-    if isinstance( filters, str ):
+    if filters is None:
         
-        if filters == '':
-            
-            filters = list()
+        filters = list()
 
-        else:
-            
-            filters = [ filters ]
+    elif isinstance( filters, str ):
+        
+        filters = [ filters ]
 
     #############################################################################################################################
     # Process return-type directives.
@@ -1843,6 +1841,23 @@ def column_values(
     # Reindex DataFrame rows to match their final sort order.
 
     result_dataframe = result_dataframe.reset_index( drop=True )
+
+    # Pretty-print missing values.
+
+    if result_dataframe[column].dtype == 'object':
+        
+        # String data comes through as a column with dtype 'object', based on something involving
+        # the variability inherent in string lengths.
+        # 
+        # See https://stackoverflow.com/questions/33957720/how-to-convert-column-with-dtype-as-object-to-string-in-pandas-dataframe
+
+        # Replace term values that are None (== null) with empty strings.
+
+        result_dataframe = result_dataframe.replace( r'^$', r'<NA>', regex=True )
+
+    elif result_dataframe[column].dtype == 'bool':
+        
+        result_dataframe = result_dataframe.replace( r'^$', r'<NA>', regex=True )
 
     if return_data_as == '':
         

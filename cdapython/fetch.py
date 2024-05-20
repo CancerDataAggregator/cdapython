@@ -1867,7 +1867,7 @@ def fetch_rows(
                 # Replace values that are None (== null) with empty strings. (This has been tested and works
                 # for both strings and booleans.)
 
-                result_dataframe[column] = result_dataframe[column].fillna( '' )
+                result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
 
             elif result_column_data_types[column] == 'array_of_id_dictionaries':
                 
