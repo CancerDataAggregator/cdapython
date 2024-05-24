@@ -3111,7 +3111,6 @@ def summary_counts(
     # 
     # print( f"Query SQL: {paged_response_data_object.query_sql}", file=sys.stderr )
 
-    """
     # This is immensely verbose, sometimes.
 
     if debug == True:
@@ -3129,8 +3128,6 @@ def summary_counts(
         print( f"END DEBUG MESSAGE: summary_counts(): First page of '{table}/counts' endpoint response", file=sys.stderr )
 
         print( '-' * 80, end='\n\n', file=sys.stderr )
-
-    """
 
     # Make a Pandas DataFrame out of the first batch of results.
     # 
@@ -3186,7 +3183,7 @@ def summary_counts(
                 
                 # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
 
-                result_list.append( result_dataframe[[toplevel_column]].copy() )
+                result_list.append( pd.DataFrame( result_dataframe[toplevel_column], columns=[toplevel_column] ) )
 
         for result_column in result_dataframe.columns:
             
@@ -3271,7 +3268,7 @@ def summary_counts(
 
                     else:
                         
-                        # Truncate displayed values manually. The `tabulate` library can't handle this on its own (as Pandas does).
+                        # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
                         
                         dataframe[dataframe.columns[0]] = dataframe[dataframe.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r'\1...', x ) if ( x is not None and len( x ) > max_col_width ) else x )
 
@@ -3281,7 +3278,7 @@ def summary_counts(
 
                     # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
 
-                    print( tabulate.tabulate( dataframe, showindex=False, headers=dataframe.columns, tablefmt="double_outline", colalign=colalign_list, maxcolwidths=maxcolwidths_list ) )
+                    print( tabulate.tabulate( dataframe, showindex=False, headers=dataframe.columns, tablefmt="double_outline", colalign=colalign_list, maxcolwidths=maxcolwidths_list, disable_numparse=True ) )
 
             return
 
