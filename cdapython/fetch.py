@@ -55,6 +55,7 @@ def fetch_rows(
     *,
     match_all = [],
     match_any = [],
+    match_from_file = [],
     data_source = [],
     add_columns = [],
     link_to_table = '',
@@ -68,7 +69,7 @@ def fetch_rows(
     Get CDA data records ('result rows') from `table` that match user-specified criteria.
 
     Arguments:
-        table( string; required ):
+        table ( string; required ):
             The table whose rows are to be filtered and retrieved. (Run the tables()
             function to get a list.)
 
@@ -79,6 +80,15 @@ def fetch_rows(
         match_any ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
             AT LEAST ONE of which must be met by all result rows.
+
+        match_from_file ( list of strings; optional ):
+            A list containing 3 elements:
+                1. The name of a CDA column
+                2. The name of a (local) TSV file (with column names in its first row)
+                3. The name of a column in that TSV
+            Restrict results to those where the value of the given CDA
+            column matches at least one value from the given column
+            in the given TSV file.
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
@@ -116,7 +126,7 @@ def fetch_rows(
             argument is omitted, fetch_rows() will default to returning
             results as a DataFrame.
 
-        output_file( string; optional ):
+        output_file ( string; optional ):
             If return_data_as='tsv' is specified, `output_file` should contain a
             resolvable path to a file into which fetch_rows() will write
             tab-delimited results.
@@ -225,6 +235,14 @@ def fetch_rows(
     if not isinstance( match_any, list ):
         
         print( f"fetch_rows(): ERROR: value assigned to 'match_any' parameter must be a filter string or a list of filter strings; you specified '{match_any}', which is neither.", file=sys.stderr )
+
+        return
+
+    # `match_from_file`
+
+    if not isinstance( match_from_file, list ):
+        
+        print( f"fetch_rows(): ERROR: value assigned to 'match_from_file' parameter must be a list of strings; you specified '{match_from_file}', which is not.", file=sys.stderr )
 
         return
 
@@ -480,6 +498,95 @@ def fetch_rows(
         if re.search( r'^\S+\s+\S+\s+\S.*$', item ) is None:
             
             print( f"fetch_rows(): ERROR: match_any: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format.", file=sys.stderr )
+
+            return
+
+    #############################################################################################################################
+    # Manage basic validation for the `match_from_file` parameter, which refers to a target CDA column and a list of allowed
+    # values, and restricts all returned rows only to those that contain an allowed value in the target column. Also load data
+    # here, so we can fail early if something goes wrong loading data from the specified column in the specified TSV file.
+
+    # Cache metadata about this parameter, if it's used.
+
+    match_from_file_target_column = ''
+
+    match_from_file_input_file = ''
+
+    match_from_file_source_column_name = ''
+
+    match_from_file_target_values = set()
+
+    # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
+    # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
+    # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
+    # anger and confusion.
+
+    match_from_file_nulls_allowed = False
+
+    if len( match_from_file ) > 0 and len( match_from_file ) != 3:
+        
+        print( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a list containing three strings: a target CDA column, a local TSV file, and the name of a column in that file. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+
+        return
+
+    elif len( match_from_file ) == 3:
+        
+        match_from_file_target_column = match_from_file[0]
+
+        # See if columns() agrees that the requested column exists.
+
+        if len( columns( column=match_from_file_target_column, return_data_as='list' ) ) == 0:
+            
+            print( f"fetch_rows(): ERROR: CDA column '{match_from_file_target_column}' (specified in your 'match_from_file' parameter) does not exist. Please see the output of columns() for a list of those that do.", file=sys.stderr )
+
+            return
+
+        match_from_file_input_file = match_from_file[1]
+
+        match_from_file_source_column_name = match_from_file[2]
+
+        if match_from_file_input_file == output_file:
+            
+            print( f"fetch_rows(): ERROR: You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different.", file=sys.stderr )
+
+            return
+
+        try:
+            
+            with open( match_from_file_input_file ) as IN:
+                
+                column_names = next( IN ).rstrip( '\n' ).split( '\t' )
+
+                if match_from_file_source_column_name not in column_names:
+                    
+                    print( f"fetch_rows(): ERROR: TSV column '{match_from_file_source_column_name}' (specified in your 'match_from_file' parameter) does not exist. Columns in your specified input file ('{match_from_file_input_file}') are:\n\n    {column_names}\n", file=sys.stderr )
+
+                    return
+
+                else:
+                    
+                    for line in [ next_line.rstrip( '\n' ) for next_line in IN ]:
+                        
+                        record = dict( zip( column_names, line.split( '\t' ) ) )
+
+                        target_value = record[match_from_file_source_column_name]
+
+                        if target_value is None or target_value == '' or target_value == '<NA>':
+                            
+                            # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
+                            # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
+                            # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
+                            # anger and confusion.
+
+                            match_from_file_nulls_allowed = True
+
+                        else:
+                            
+                            match_from_file_target_values.add( target_value )
+
+        except Exception as error:
+            
+            print( f"fetch_rows(): ERROR: Couldn't load requested column '{match_from_file_source_column_name}' from requested TSV file '{match_from_file_input_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
 
             return
 
@@ -983,6 +1090,187 @@ def fetch_rows(
         queries_for_match_any.append( filter_query )
 
     #############################################################################################################################
+    # Parse `match_from_file` filter values: complain if
+    # 
+    #     * filter values don't match the data types of the columns they're paired with
+    #     * wildcards appear anywhere
+    # 
+    # ...and save parse results as a combined filter expression in a Query object (to be combined with others later).
+
+    # Identify the data type of the target column.
+
+    target_data_type = columns( column=match_from_file_target_column )['data_type'][0]
+
+    processed_target_values = set()
+
+    for target_value in match_from_file_target_values:
+        
+        # Validate value types and test for wildcards.
+
+        if target_data_type != 'text':
+            
+            # Ignore leading and trailing whitespace unless we're dealing with strings.
+
+            target_value = re.sub( r'^\s+', r'', target_value )
+            target_value = re.sub( r'\s+$', r'', target_value )
+
+        if target_data_type == 'boolean':
+            
+            # If we're supposed to be in a boolean column, make sure we've got a true/false value.
+
+            target_value = target_value.lower()
+
+            if target_value not in boolean_alias:
+                
+                print( f"fetch_rows(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither.", file=sys.stderr )
+
+                return
+
+            else:
+                
+                target_value = boolean_alias[target_value]
+
+        elif target_data_type in [ 'bigint', 'integer', 'numeric' ]:
+            
+            # If we're supposed to be in a numeric column, make sure we've got a number.
+
+            if re.search( r'^[-+]?\d+(\.\d+)?$', target_value ) is None:
+                
+                print( f"fetch_rows(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not.", file=sys.stderr )
+
+                return
+
+        elif target_data_type == 'text':
+            
+            # Check for wildcards: if found, vomit.
+
+            if re.search( r'\*', target_value ) is not None:
+                
+                print( f"fetch_rows(): ERROR: match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this function); string '{target_value}' is noncompliant. Please fix.", file=sys.stderr )
+
+                return
+
+        else:
+            
+            # Just to be safe. Types change.
+
+            print( f"fetch_rows(): ERROR: match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers.", file=sys.stderr )
+
+            return
+
+        processed_target_values.add( target_value )
+
+    # Build a Query object for the column data loaded according to `match_from_file`.
+
+    query_for_match_from_file = None
+
+    if match_from_file_nulls_allowed == True:
+        
+        query_for_match_from_file = Query()
+
+        query_for_match_from_file.node_type = 'OR'
+
+        match_from_file_null_match_subquery = Query()
+
+        match_from_file_null_match_subquery.node_type = 'IS'
+
+        match_from_file_null_match_subquery.l = Query()
+
+        match_from_file_null_match_subquery.l.node_type = 'column'
+
+        match_from_file_null_match_subquery.l.value = match_from_file_target_column
+
+        match_from_file_null_match_subquery.r = Query()
+
+        match_from_file_null_match_subquery.r.node_type = 'unquoted'
+
+        match_from_file_null_match_subquery.r.value = 'NULL'
+
+        query_for_match_from_file.l = match_from_file_null_match_subquery
+
+        match_from_file_allowed_values_subquery = Query()
+
+        match_from_file_allowed_values_subquery.node_type = 'IN'
+
+        match_from_file_allowed_values_subquery.l = Query()
+
+        match_from_file_allowed_values_subquery.l.node_type = 'column'
+
+        match_from_file_allowed_values_subquery.l.value = match_from_file_target_column
+
+        match_from_file_allowed_values_subquery.r = Query()
+
+        match_from_file_allowed_values_subquery.r.node_type = 'unquoted'
+
+        if target_data_type == 'text':
+            
+            match_from_file_allowed_values_subquery.r.value = r'("' + r'","'.join( sorted( processed_target_values ) ) + r'")'
+
+        else:
+            
+            match_from_file_allowed_values_subquery.r.value = r'(' + r','.join( sorted( processed_target_values ) ) + r')'
+
+        query_for_match_from_file.r = match_from_file_allowed_values_subquery
+
+    elif len( processed_target_values ) > 0:
+        
+        query_for_match_from_file = Query()
+
+        query_for_match_from_file.node_type = 'IN'
+
+        query_for_match_from_file.l = Query()
+
+        query_for_match_from_file.l.node_type = 'column'
+
+        query_for_match_from_file.l.value = match_from_file_target_column
+
+        query_for_match_from_file.r = Query()
+
+        query_for_match_from_file.r.node_type = 'unquoted'
+
+        if target_data_type == 'text':
+            
+            query_for_match_from_file.r.value = r'("' + r'","'.join( sorted( processed_target_values ) ) + r'")'
+
+        else:
+            
+            query_for_match_from_file.r.value = r'(' + r','.join( sorted( processed_target_values ) ) + r')'
+
+    #############################################################################################################################
+    # Parse `data_source` filter expressions: complain if any are nonconformant, and (for now) save parse results for each
+    # filter expression as a separate Query object.
+
+    queries_for_data_source = []
+
+    for item in data_source:
+        
+        # Build a Query object for this data source and add it to the data_source list.
+
+        data_source_query = Query()
+
+        data_source_query.node_type = '='
+
+        data_source_query.l = Query()
+
+        data_source_query.l.node_type = 'column'
+
+        if table == 'somatic_mutation':
+            
+            data_source_query.l.value = f"subject_from_{item}"
+
+        else:
+            
+            data_source_query.l.value = f"{table}_from_{item}"
+
+        data_source_query.r = Query()
+
+        data_source_query.r.node_type = 'unquoted'
+
+        data_source_query.r.value = 'true'
+
+        queries_for_data_source.append( data_source_query )
+
+    #############################################################################################################################
     # Parse `add_columns` list: use the API's SELECT and SELECTVALUES operators
     # to build a Query object encoding the given column selections.
 
@@ -1073,40 +1361,6 @@ def fetch_rows(
         query_for_extra_columns.l.node_type = 'SELECTVALUES'
 
         query_for_extra_columns.l.value = ', '.join( columns_to_fetch )
-
-    #############################################################################################################################
-    # Parse `data_source` filter expressions: complain if any are nonconformant, and (for now) save parse results for each
-    # filter expression as a separate Query object.
-
-    queries_for_data_source = []
-
-    for item in data_source:
-        
-        # Build a Query object for this data source and add it to the data_source list.
-
-        data_source_query = Query()
-
-        data_source_query.node_type = '='
-
-        data_source_query.l = Query()
-
-        data_source_query.l.node_type = 'column'
-
-        if table == 'somatic_mutation':
-            
-            data_source_query.l.value = f"subject_from_{item}"
-
-        else:
-            
-            data_source_query.l.value = f"{table}_from_{item}"
-
-        data_source_query.r = Query()
-
-        data_source_query.r.node_type = 'unquoted'
-
-        data_source_query.r.value = 'true'
-
-        queries_for_data_source.append( data_source_query )
 
     #############################################################################################################################
     # Combine all match_all filter queries into one big AND-linked query.
@@ -1242,7 +1496,7 @@ def fetch_rows(
 
     final_query = Query()
 
-    if combined_match_all_query is None and combined_match_any_query is None and combined_data_source_query is None:
+    if combined_match_all_query is None and combined_match_any_query is None and combined_data_source_query is None and query_for_match_from_file is None:
         
         # We got no filters. Retrieve everything: make the query we pass to the API
         # equivalent to 'id IS NOT NULL', which should match everything.
@@ -1291,69 +1545,171 @@ def fetch_rows(
 
     elif combined_data_source_query is None:
         
-        if combined_match_all_query is not None and combined_match_any_query is None:
+        if query_for_match_from_file is None:
             
-            final_query = combined_match_all_query
+            if combined_match_all_query is not None and combined_match_any_query is None:
+                
+                final_query = combined_match_all_query
 
-        elif combined_match_all_query is None and combined_match_any_query is not None:
-            
-            final_query = combined_match_any_query
+            elif combined_match_all_query is None and combined_match_any_query is not None:
+                
+                final_query = combined_match_any_query
+
+            else:
+                
+                # Join both non-null filter groups with an `AND`.
+
+                final_query.node_type = 'AND'
+
+                final_query.l = combined_match_all_query
+
+                final_query.r = combined_match_any_query
 
         else:
             
-            # Join both non-null filter groups with an `AND`.
+            if combined_match_all_query is None and combined_match_any_query is None:
+                
+                final_query = query_for_match_from_file
 
-            final_query.node_type = 'AND'
+            elif combined_match_all_query is not None and combined_match_any_query is None:
+                
+                final_query.node_type = 'AND'
 
-            final_query.l = combined_match_all_query
+                final_query.l = combined_match_all_query
 
-            final_query.r = combined_match_any_query
+                final_query.r = query_for_match_from_file
+
+            elif combined_match_all_query is None and combined_match_any_query is not None:
+                
+                final_query.node_type = 'AND'
+
+                final_query.l = combined_match_any_query
+
+                final_query.r = query_for_match_from_file
+
+            else:
+                
+                final_query.node_type = 'AND'
+
+                final_query.l = Query()
+
+                final_query.l.node_type = 'AND'
+
+                final_query.l.l = combined_match_all_query
+
+                final_query.l.r = combined_match_any_query
+
+                final_query.r = query_for_match_from_file
 
     else:
         
-        if combined_match_all_query is None and combined_match_any_query is None:
+        if query_for_match_from_file is None:
             
-            final_query = combined_data_source_query
+            if combined_match_all_query is None and combined_match_any_query is None:
+                
+                final_query = combined_data_source_query
 
-        elif combined_match_all_query is not None and combined_match_any_query is None:
-            
-            # Join both non-null filter groups with an `AND`.
+            elif combined_match_all_query is not None and combined_match_any_query is None:
+                
+                # Join both non-null filter groups with an `AND`.
 
-            final_query.node_type = 'AND'
+                final_query.node_type = 'AND'
 
-            final_query.l = combined_data_source_query
+                final_query.l = combined_data_source_query
 
-            final_query.r = combined_match_all_query
+                final_query.r = combined_match_all_query
 
-        elif combined_match_all_query is None and combined_match_any_query is not None:
-            
-            # Join both non-null filter groups with an `AND`.
+            elif combined_match_all_query is None and combined_match_any_query is not None:
+                
+                # Join both non-null filter groups with an `AND`.
 
-            final_query.node_type = 'AND'
+                final_query.node_type = 'AND'
 
-            final_query.l = combined_data_source_query
+                final_query.l = combined_data_source_query
 
-            final_query.r = combined_match_any_query
+                final_query.r = combined_match_any_query
+
+            else:
+                
+                # Join all three filter groups via 'AND'.
+
+                final_query.node_type = 'AND'
+
+                final_query.l = combined_match_all_query
+
+                final_query.r = combined_match_any_query
+
+                actually_final_query = Query()
+
+                actually_final_query.node_type = 'AND'
+
+                actually_final_query.l = final_query
+
+                actually_final_query.r = combined_data_source_query
+
+                final_query = actually_final_query
 
         else:
             
-            # Join all three filter groups via 'AND'.
+            if combined_match_all_query is None and combined_match_any_query is None:
+                
+                final_query.node_type = 'AND'
 
-            final_query.node_type = 'AND'
+                final_query.l = combined_data_source_query
 
-            final_query.l = combined_match_all_query
+                final_query.r = query_for_match_from_file
 
-            final_query.r = combined_match_any_query
+            elif combined_match_all_query is not None and combined_match_any_query is None:
+                
+                final_query.node_type = 'AND'
 
-            actually_final_query = Query()
+                final_query.l = Query()
 
-            actually_final_query.node_type = 'AND'
+                final_query.l.node_type = 'AND'
 
-            actually_final_query.l = final_query
+                final_query.l.l = combined_data_source_query
 
-            actually_final_query.r = combined_data_source_query
+                final_query.l.r = combined_match_all_query
 
-            final_query = actually_final_query
+                final_query.r = query_for_match_from_file
+
+            elif combined_match_all_query is None and combined_match_any_query is not None:
+                
+                final_query.node_type = 'AND'
+
+                final_query.l = Query()
+
+                final_query.l.node_type = 'AND'
+
+                final_query.l.l = combined_data_source_query
+
+                final_query.l.r = combined_match_any_query
+
+                final_query.r = query_for_match_from_file
+
+            else:
+                
+                final_query.node_type = 'AND'
+
+                final_query.l = combined_match_all_query
+
+                final_query.r = combined_match_any_query
+
+                actually_final_query = Query()
+
+                actually_final_query.node_type = 'AND'
+
+                actually_final_query.l = final_query
+
+                actually_final_query.r = Query()
+
+                actually_final_query.r.node_type = 'AND'
+
+                actually_final_query.r.l = combined_data_source_query
+
+                actually_final_query.r.r = query_for_match_from_file
+
+                final_query = actually_final_query
 
     # If the user requested extra row data via `add_columns`,
     # `link_to_table` or `provenance`, set that up.
