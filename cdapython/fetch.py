@@ -519,12 +519,13 @@ def fetch_rows(
     # here, so we can fail early if something goes wrong loading data from the specified column in the specified TSV file.
 
     # Cache metadata about this parameter, if it's used.
+    # ( We already checked above that `match_from_file` is a dictionary with exactly three keys possessing the expected names.)
 
-    match_from_file_target_column = ''
+    match_from_file_target_column = match_from_file['cda_column_to_match']
 
-    match_from_file_input_file = ''
+    match_from_file_input_file = match_from_file['input_file']
 
-    match_from_file_source_column_name = ''
+    match_from_file_source_column_name = match_from_file['input_column']
 
     match_from_file_target_values = set()
 
@@ -535,98 +536,86 @@ def fetch_rows(
 
     match_from_file_nulls_allowed = False
 
-    if len( match_from_file ) != 3:
-        
-        print( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+    # Make sure the dictionary values are either all null or all not null.
 
-        return
+    if match_from_file_target_column == '':
+        
+        if match_from_file['input_file'] != '' or match_from_file['input_column'] != '':
+            
+            print( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+
+            return
+
+    elif match_from_file['input_file'] == '':
+        
+        if match_from_file_target_column != '' or match_from_file['input_column'] != '':
+            
+            print( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+
+            return
+
+    elif match_from_file['input_column'] == '':
+        
+        if match_from_file_target_column != '' or match_from_file['input_file'] != '':
+            
+            print( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+
+            return
 
     else:
         
-        match_from_file_target_column = match_from_file['cda_column_to_match']
+        # See if columns() agrees that the requested column exists.
 
-        if match_from_file_target_column == '':
+        if len( columns( column=match_from_file_target_column, return_data_as='list' ) ) == 0:
             
-            if match_from_file['input_file'] != '' or match_from_file['input_column'] != '':
-                
-                print( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+            print( f"fetch_rows(): ERROR: CDA column '{match_from_file_target_column}' (specified in your 'match_from_file' parameter) does not exist. Please see the output of columns() for a list of those that do.", file=sys.stderr )
 
-                return
+            return
 
-        elif match_from_file['input_file'] == '':
+        if match_from_file_input_file == output_file:
             
-            if match_from_file_target_column != '' or match_from_file['input_column'] != '':
-                
-                print( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+            print( f"fetch_rows(): ERROR: You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different.", file=sys.stderr )
 
-                return
+            return
 
-        elif match_from_file['input_column'] == '':
+        try:
             
-            if match_from_file_target_column != '' or match_from_file['input_file'] != '':
+            with open( match_from_file_input_file ) as IN:
                 
-                print( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+                column_names = next( IN ).rstrip( '\n' ).split( '\t' )
 
-                return
-
-        else:
-            
-            # See if columns() agrees that the requested column exists.
-
-            if len( columns( column=match_from_file_target_column, return_data_as='list' ) ) == 0:
-                
-                print( f"fetch_rows(): ERROR: CDA column '{match_from_file_target_column}' (specified in your 'match_from_file' parameter) does not exist. Please see the output of columns() for a list of those that do.", file=sys.stderr )
-
-                return
-
-            match_from_file_input_file = match_from_file['input_file']
-
-            match_from_file_source_column_name = match_from_file['input_column']
-
-            if match_from_file_input_file == output_file:
-                
-                print( f"fetch_rows(): ERROR: You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different.", file=sys.stderr )
-
-                return
-
-            try:
-                
-                with open( match_from_file_input_file ) as IN:
+                if match_from_file_source_column_name not in column_names:
                     
-                    column_names = next( IN ).rstrip( '\n' ).split( '\t' )
+                    print( f"fetch_rows(): ERROR: TSV column '{match_from_file_source_column_name}' (specified in your 'match_from_file' parameter) does not exist. Columns in your specified input file ('{match_from_file_input_file}') are:\n\n    {column_names}\n", file=sys.stderr )
 
-                    if match_from_file_source_column_name not in column_names:
+                    return
+
+                else:
+                    
+                    for line in [ next_line.rstrip( '\n' ) for next_line in IN ]:
                         
-                        print( f"fetch_rows(): ERROR: TSV column '{match_from_file_source_column_name}' (specified in your 'match_from_file' parameter) does not exist. Columns in your specified input file ('{match_from_file_input_file}') are:\n\n    {column_names}\n", file=sys.stderr )
+                        record = dict( zip( column_names, line.split( '\t' ) ) )
 
-                        return
+                        target_value = record[match_from_file_source_column_name]
 
-                    else:
-                        
-                        for line in [ next_line.rstrip( '\n' ) for next_line in IN ]:
+                        if target_value is None or target_value == '' or target_value == '<NA>':
                             
-                            record = dict( zip( column_names, line.split( '\t' ) ) )
+                            # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
+                            # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
+                            # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
+                            # anger and confusion.
 
-                            target_value = record[match_from_file_source_column_name]
+                            match_from_file_nulls_allowed = True
 
-                            if target_value is None or target_value == '' or target_value == '<NA>':
-                                
-                                # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
-                                # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
-                                # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
-                                # anger and confusion.
+                        else:
+                            
+                            match_from_file_target_values.add( target_value )
 
-                                match_from_file_nulls_allowed = True
+        except Exception as error:
+            
+            print( f"fetch_rows(): ERROR: Couldn't load requested column '{match_from_file_source_column_name}' from requested TSV file '{match_from_file_input_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
 
-                            else:
-                                
-                                match_from_file_target_values.add( target_value )
-
-            except Exception as error:
-                
-                print( f"fetch_rows(): ERROR: Couldn't load requested column '{match_from_file_source_column_name}' from requested TSV file '{match_from_file_input_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
-
-                return
+            return
 
     #############################################################################################################################
     # Manage basic validation for the `data_source` parameter, which enumerates user-specified filters on upstream data
