@@ -515,8 +515,8 @@ def fetch_rows(
 
     #############################################################################################################################
     # Manage basic validation for the `match_from_file` parameter, which refers to a target CDA column and a list of allowed
-    # values, and restricts all returned rows only to those that contain an allowed value in the target column. Also load data
-    # here, so we can fail early if something goes wrong loading data from the specified column in the specified TSV file.
+    # values, and restricts all returned rows only to those that contain an allowed value in the target CDA column. Also
+    # load column data here from the given TSV, so we can fail early if something goes wrong with the I/O.
 
     # Cache metadata about this parameter, if it's used.
     # ( We already checked above that `match_from_file` is a dictionary with exactly three keys possessing the expected names.)
@@ -1173,7 +1173,7 @@ def fetch_rows(
 
             if re.search( r'\*', target_value ) is not None:
                 
-                print( f"fetch_rows(): ERROR: match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this function); string '{target_value}' is noncompliant. Please fix.", file=sys.stderr )
+                print( f"fetch_rows(): ERROR: match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); string '{target_value}' is noncompliant. Please fix.", file=sys.stderr )
 
                 return
 

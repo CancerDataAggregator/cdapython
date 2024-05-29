@@ -1951,13 +1951,14 @@ def summary_counts(
     output_file = '',
     match_all = [],
     match_any = [],
+    match_from_file = { 'input_file': '', 'input_column': '', 'cda_column_to_match': '' },
     data_source = [],
     debug = False
 ):
     """
-    For a set of rows in a user-specified table that all match a user-specified set of filters, get
-    a report showing counts of values present in that set of rows, profiled across a small set of
-    pre-selected columns.
+    For a set of rows in a user-specified table that all match a user-specified set of
+    filters -- "result rows" -- get a report showing counts of values present in that
+    set of rows, profiled across a small set of pre-selected columns.
 
     Arguments:
         table ( string; required ):
@@ -1984,6 +1985,15 @@ def summary_counts(
         match_any ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
             AT LEAST ONE of which must be met by all result rows.
+
+        match_from_file ( 3-element dictionary of strings; optional ):
+            A dictionary containing 3 named elements:
+                1. 'input_file': The name of a (local) TSV file (with column names in its first row)
+                2. 'input_column': The name of a column in that TSV
+                3. 'cda_column_to_match': The name of a CDA column
+            Restrict result rows to those where the value of the given CDA
+            column matches at least one value from the given column
+            in the given TSV file.
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
@@ -2246,6 +2256,131 @@ def summary_counts(
         if re.search( r'^\S+\s+\S+\s+\S.*$', item ) is None:
             
             print( f"summary_counts(): ERROR: match_any: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format.", file=sys.stderr )
+
+            return
+
+    #############################################################################################################################
+    # Manage basic validation for the `match_from_file` parameter, which refers to a target CDA column and a list of allowed
+    # values, and constrains summary_counts() to describe only data from rows that contain an allowed value in the target
+    # CDA column. Also load column data here from the given TSV, so we can fail early if something goes wrong with the I/O.
+
+    # Top-level type and sanity checking (i.e. not examining dictionary values yet): ensure nothing untoward got passed into `match_from_file`.
+
+    if not isinstance( match_from_file, dict ):
+        
+        print( f"summary_counts(): ERROR: value assigned to 'match_from_file' parameter must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not.", file=sys.stderr )
+
+        return
+
+    else:
+        
+        received_keys = set( match_from_file.keys() )
+
+        expected_keys = { 'input_file', 'input_column', 'cda_column_to_match' }
+
+        if received_keys != expected_keys:
+            
+            print( f"summary_counts(): ERROR: value assigned to 'match_from_file' parameter must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not.", file=sys.stderr )
+
+            return
+
+    # Cache metadata about this parameter, if it's been used (i.e. if values aren't blank).
+
+    match_from_file_target_column = match_from_file['cda_column_to_match']
+
+    match_from_file_input_file = match_from_file['input_file']
+
+    match_from_file_source_column_name = match_from_file['input_column']
+
+    match_from_file_target_values = set()
+
+    # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
+    # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
+    # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
+    # anger and confusion when results don't match the input set along the given column.
+
+    match_from_file_nulls_allowed = False
+
+    # Make sure the dictionary values are either all zero-length strings or all nonzero-length strings.
+
+    # I know the following isn't efficiently written -- sorry. Was in an unusually urgent hurry and the logic reflects first-round thoughts only.
+
+    if match_from_file_target_column == '':
+        
+        if match_from_file['input_file'] != '' or match_from_file['input_column'] != '':
+            
+            print( f"summary_counts(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+
+            return
+
+    elif match_from_file['input_file'] == '':
+        
+        if match_from_file_target_column != '' or match_from_file['input_column'] != '':
+            
+            print( f"summary_counts(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+
+            return
+
+    elif match_from_file['input_column'] == '':
+        
+        if match_from_file_target_column != '' or match_from_file['input_file'] != '':
+            
+            print( f"summary_counts(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that.", file=sys.stderr )
+
+            return
+
+    else:
+        
+        # See if columns() agrees that the requested column exists.
+
+        if len( columns( column=match_from_file_target_column, return_data_as='list' ) ) == 0:
+            
+            print( f"summary_counts(): ERROR: CDA column '{match_from_file_target_column}' (specified in your 'match_from_file' parameter) does not exist. Please see the output of columns() for a list of those that do.", file=sys.stderr )
+
+            return
+
+        if match_from_file_input_file == output_file:
+            
+            print( f"summary_counts(): ERROR: You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different.", file=sys.stderr )
+
+            return
+
+        try:
+            
+            with open( match_from_file_input_file ) as IN:
+                
+                column_names = next( IN ).rstrip( '\n' ).split( '\t' )
+
+                if match_from_file_source_column_name not in column_names:
+                    
+                    print( f"summary_counts(): ERROR: TSV column '{match_from_file_source_column_name}' (specified in your 'match_from_file' parameter) does not exist. Columns in your specified input file ('{match_from_file_input_file}') are:\n\n    {column_names}\n", file=sys.stderr )
+
+                    return
+
+                else:
+                    
+                    for line in [ next_line.rstrip( '\n' ) for next_line in IN ]:
+                        
+                        record = dict( zip( column_names, line.split( '\t' ) ) )
+
+                        target_value = record[match_from_file_source_column_name]
+
+                        if target_value is None or target_value == '' or target_value == '<NA>':
+                            
+                            # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
+                            # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
+                            # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
+                            # anger and confusion.
+
+                            match_from_file_nulls_allowed = True
+
+                        else:
+                            
+                            match_from_file_target_values.add( target_value )
+
+        except Exception as error:
+            
+            print( f"summary_counts(): ERROR: Couldn't load requested column '{match_from_file_source_column_name}' from requested TSV file '{match_from_file_input_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
 
             return
 
@@ -2672,6 +2807,153 @@ def summary_counts(
         queries_for_match_any.append( filter_query )
 
     #############################################################################################################################
+    # Parse `match_from_file` filter values: complain if
+    # 
+    #     * filter values don't match the data types of the columns they're paired with
+    #     * wildcards appear anywhere
+    # 
+    # ...and save parse results as a combined filter expression in a Query object (to be combined with others later).
+
+    # Identify the data type of the target column.
+
+    target_data_type = columns( column=match_from_file_target_column )['data_type'][0]
+
+    processed_target_values = set()
+
+    for target_value in match_from_file_target_values:
+        
+        # Validate value types and test for wildcards.
+
+        if target_data_type != 'text':
+            
+            # Ignore leading and trailing whitespace unless we're dealing with strings.
+
+            target_value = re.sub( r'^\s+', r'', target_value )
+            target_value = re.sub( r'\s+$', r'', target_value )
+
+        if target_data_type == 'boolean':
+            
+            # If we're supposed to be in a boolean column, make sure we've got a true/false value.
+
+            target_value = target_value.lower()
+
+            if target_value not in boolean_alias:
+                
+                print( f"summary_counts(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither.", file=sys.stderr )
+
+                return
+
+            else:
+                
+                target_value = boolean_alias[target_value]
+
+        elif target_data_type in [ 'bigint', 'integer', 'numeric' ]:
+            
+            # If we're supposed to be in a numeric column, make sure we've got a number.
+
+            if re.search( r'^[-+]?\d+(\.\d+)?$', target_value ) is None:
+                
+                print( f"summary_counts(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not.", file=sys.stderr )
+
+                return
+
+        elif target_data_type == 'text':
+            
+            # Check for wildcards: if found, vomit.
+
+            if re.search( r'\*', target_value ) is not None:
+                
+                print( f"summary_counts(): ERROR: match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); string '{target_value}' is noncompliant. Please fix.", file=sys.stderr )
+
+                return
+
+        else:
+            
+            # Just to be safe. Types change.
+
+            print( f"summary_counts(): ERROR: match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers.", file=sys.stderr )
+
+            return
+
+        processed_target_values.add( target_value )
+
+    # Build a Query object for the column data loaded according to `match_from_file`.
+
+    query_for_match_from_file = None
+
+    if match_from_file_nulls_allowed == True:
+        
+        query_for_match_from_file = Query()
+
+        query_for_match_from_file.node_type = 'OR'
+
+        match_from_file_null_match_subquery = Query()
+
+        match_from_file_null_match_subquery.node_type = 'IS'
+
+        match_from_file_null_match_subquery.l = Query()
+
+        match_from_file_null_match_subquery.l.node_type = 'column'
+
+        match_from_file_null_match_subquery.l.value = match_from_file_target_column
+
+        match_from_file_null_match_subquery.r = Query()
+
+        match_from_file_null_match_subquery.r.node_type = 'unquoted'
+
+        match_from_file_null_match_subquery.r.value = 'NULL'
+
+        query_for_match_from_file.l = match_from_file_null_match_subquery
+
+        match_from_file_allowed_values_subquery = Query()
+
+        match_from_file_allowed_values_subquery.node_type = 'IN'
+
+        match_from_file_allowed_values_subquery.l = Query()
+
+        match_from_file_allowed_values_subquery.l.node_type = 'column'
+
+        match_from_file_allowed_values_subquery.l.value = match_from_file_target_column
+
+        match_from_file_allowed_values_subquery.r = Query()
+
+        match_from_file_allowed_values_subquery.r.node_type = 'unquoted'
+
+        if target_data_type == 'text':
+            
+            match_from_file_allowed_values_subquery.r.value = r'("' + r'","'.join( sorted( processed_target_values ) ) + r'")'
+
+        else:
+            
+            match_from_file_allowed_values_subquery.r.value = r'(' + r','.join( sorted( processed_target_values ) ) + r')'
+
+        query_for_match_from_file.r = match_from_file_allowed_values_subquery
+
+    elif len( processed_target_values ) > 0:
+        
+        query_for_match_from_file = Query()
+
+        query_for_match_from_file.node_type = 'IN'
+
+        query_for_match_from_file.l = Query()
+
+        query_for_match_from_file.l.node_type = 'column'
+
+        query_for_match_from_file.l.value = match_from_file_target_column
+
+        query_for_match_from_file.r = Query()
+
+        query_for_match_from_file.r.node_type = 'unquoted'
+
+        if target_data_type == 'text':
+            
+            query_for_match_from_file.r.value = r'("' + r'","'.join( sorted( processed_target_values ) ) + r'")'
+
+        else:
+            
+            query_for_match_from_file.r.value = r'(' + r','.join( sorted( processed_target_values ) ) + r')'
+
+    #############################################################################################################################
     # Parse `data_source` filter expressions: complain if any are nonconformant, and (for now) save parse results for each
     # filter expression as a separate Query object.
 
@@ -2833,7 +3115,7 @@ def summary_counts(
 
     final_query = Query()
 
-    if combined_match_all_query is None and combined_match_any_query is None and combined_data_source_query is None:
+    if combined_match_all_query is None and combined_match_any_query is None and combined_data_source_query is None and query_for_match_from_file is None:
         
         # We got no filters. Retrieve everything: make the query we pass to the API
         # equivalent to 'id IS NOT NULL', which should match everything.
@@ -2882,69 +3164,171 @@ def summary_counts(
 
     elif combined_data_source_query is None:
         
-        if combined_match_all_query is not None and combined_match_any_query is None:
+        if query_for_match_from_file is None:
             
-            final_query = combined_match_all_query
+            if combined_match_all_query is not None and combined_match_any_query is None:
+                
+                final_query = combined_match_all_query
 
-        elif combined_match_all_query is None and combined_match_any_query is not None:
-            
-            final_query = combined_match_any_query
+            elif combined_match_all_query is None and combined_match_any_query is not None:
+                
+                final_query = combined_match_any_query
+
+            else:
+                
+                # Join both non-null filter groups with an `AND`.
+
+                final_query.node_type = 'AND'
+
+                final_query.l = combined_match_all_query
+
+                final_query.r = combined_match_any_query
 
         else:
             
-            # Join both non-null filter groups with an `AND`.
+            if combined_match_all_query is None and combined_match_any_query is None:
+                
+                final_query = query_for_match_from_file
 
-            final_query.node_type = 'AND'
+            elif combined_match_all_query is not None and combined_match_any_query is None:
+                
+                final_query.node_type = 'AND'
 
-            final_query.l = combined_match_all_query
+                final_query.l = combined_match_all_query
 
-            final_query.r = combined_match_any_query
+                final_query.r = query_for_match_from_file
+
+            elif combined_match_all_query is None and combined_match_any_query is not None:
+                
+                final_query.node_type = 'AND'
+
+                final_query.l = combined_match_any_query
+
+                final_query.r = query_for_match_from_file
+
+            else:
+                
+                final_query.node_type = 'AND'
+
+                final_query.l = Query()
+
+                final_query.l.node_type = 'AND'
+
+                final_query.l.l = combined_match_all_query
+
+                final_query.l.r = combined_match_any_query
+
+                final_query.r = query_for_match_from_file
 
     else:
         
-        if combined_match_all_query is None and combined_match_any_query is None:
+        if query_for_match_from_file is None:
             
-            final_query = combined_data_source_query
+            if combined_match_all_query is None and combined_match_any_query is None:
+                
+                final_query = combined_data_source_query
 
-        elif combined_match_all_query is not None and combined_match_any_query is None:
-            
-            # Join both non-null filter groups with an `AND`.
+            elif combined_match_all_query is not None and combined_match_any_query is None:
+                
+                # Join both non-null filter groups with an `AND`.
 
-            final_query.node_type = 'AND'
+                final_query.node_type = 'AND'
 
-            final_query.l = combined_data_source_query
+                final_query.l = combined_data_source_query
 
-            final_query.r = combined_match_all_query
+                final_query.r = combined_match_all_query
 
-        elif combined_match_all_query is None and combined_match_any_query is not None:
-            
-            # Join both non-null filter groups with an `AND`.
+            elif combined_match_all_query is None and combined_match_any_query is not None:
+                
+                # Join both non-null filter groups with an `AND`.
 
-            final_query.node_type = 'AND'
+                final_query.node_type = 'AND'
 
-            final_query.l = combined_data_source_query
+                final_query.l = combined_data_source_query
 
-            final_query.r = combined_match_any_query
+                final_query.r = combined_match_any_query
+
+            else:
+                
+                # Join all three filter groups via 'AND'.
+
+                final_query.node_type = 'AND'
+
+                final_query.l = combined_match_all_query
+
+                final_query.r = combined_match_any_query
+
+                actually_final_query = Query()
+
+                actually_final_query.node_type = 'AND'
+
+                actually_final_query.l = final_query
+
+                actually_final_query.r = combined_data_source_query
+
+                final_query = actually_final_query
 
         else:
             
-            # Join all three filter groups via 'AND'.
+            if combined_match_all_query is None and combined_match_any_query is None:
+                
+                final_query.node_type = 'AND'
 
-            final_query.node_type = 'AND'
+                final_query.l = combined_data_source_query
 
-            final_query.l = combined_match_all_query
+                final_query.r = query_for_match_from_file
 
-            final_query.r = combined_match_any_query
+            elif combined_match_all_query is not None and combined_match_any_query is None:
+                
+                final_query.node_type = 'AND'
 
-            actually_final_query = Query()
+                final_query.l = Query()
 
-            actually_final_query.node_type = 'AND'
+                final_query.l.node_type = 'AND'
 
-            actually_final_query.l = final_query
+                final_query.l.l = combined_data_source_query
 
-            actually_final_query.r = combined_data_source_query
+                final_query.l.r = combined_match_all_query
 
-            final_query = actually_final_query
+                final_query.r = query_for_match_from_file
+
+            elif combined_match_all_query is None and combined_match_any_query is not None:
+                
+                final_query.node_type = 'AND'
+
+                final_query.l = Query()
+
+                final_query.l.node_type = 'AND'
+
+                final_query.l.l = combined_data_source_query
+
+                final_query.l.r = combined_match_any_query
+
+                final_query.r = query_for_match_from_file
+
+            else:
+                
+                final_query.node_type = 'AND'
+
+                final_query.l = combined_match_all_query
+
+                final_query.r = combined_match_any_query
+
+                actually_final_query = Query()
+
+                actually_final_query.node_type = 'AND'
+
+                actually_final_query.l = final_query
+
+                actually_final_query.r = Query()
+
+                actually_final_query.r.node_type = 'AND'
+
+                actually_final_query.r.l = combined_data_source_query
+
+                actually_final_query.r.r = query_for_match_from_file
+
+                final_query = actually_final_query
 
     if debug == True:
         
