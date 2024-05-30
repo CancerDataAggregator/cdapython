@@ -34,7 +34,7 @@ setup(
     # Name and version of the base package.
 
     name = 'cdapython',
-    version = '2024.0.0',
+    version = '2024.0.1',
 
     # Tell setup.py where the packages it's managing can be located.
     # Keep an __init__.py file in each package subdirectory (including
