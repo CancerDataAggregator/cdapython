@@ -1901,7 +1901,7 @@ def fetch_rows(
 
                 except ApiException as e:
                     
-                    if e.body is not None:
+                    try:
                         
                         # Ordinarily, this exception represents a structured complaint
                         # from the API service that something went wrong. In this case,
@@ -1911,7 +1911,7 @@ def fetch_rows(
 
                         error_message = json.loads( e.body )['message']
 
-                    else:
+                    except:
                         
                         # Unfortunately, if something goes wrong at the level of the
                         # HTTP service on which the API relies -- that is, when we
@@ -1968,7 +1968,7 @@ def fetch_rows(
 
         except ApiException as e:
             
-            if e.body is not None:
+            try:
                 
                 # Ordinarily, this exception represents a structured complaint
                 # from the API service that something went wrong. In this case,
@@ -1978,7 +1978,7 @@ def fetch_rows(
 
                 error_message = json.loads( e.body )['message']
 
-            else:
+            except:
                 
                 # Unfortunately, if something goes wrong at the level of the
                 # HTTP service on which the API relies -- that is, when we
@@ -2089,7 +2089,7 @@ def fetch_rows(
 
             except ApiException as e:
                 
-                if e.body is not None:
+                try:
                     
                     # Ordinarily, this exception represents a structured complaint
                     # from the API service that something went wrong. In this case,
@@ -2099,7 +2099,7 @@ def fetch_rows(
 
                     error_message = json.loads( e.body )['message']
 
-                else:
+                except:
                     
                     # Unfortunately, if something goes wrong at the level of the
                     # HTTP service on which the API relies -- that is, when we

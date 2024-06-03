@@ -590,7 +590,7 @@ def columns(
 
         except ApiException as e:
             
-            if e.body is not None:
+            try:
                 
                 # Ordinarily, this exception represents a structured complaint
                 # from the API service that something went wrong. In this case,
@@ -600,7 +600,7 @@ def columns(
 
                 error_message = json.loads( e.body )['message']
 
-            else:
+            except:
                 
                 # Unfortunately, if something goes wrong at the level of the
                 # HTTP service on which the API relies -- that is, when we
@@ -1417,7 +1417,7 @@ def column_values(
 
         except ApiException as e:
             
-            if e.body is not None:
+            try:
                 
                 # Ordinarily, this exception represents a structured complaint
                 # from the API service that something went wrong. In this case,
@@ -1427,7 +1427,7 @@ def column_values(
 
                 error_message = json.loads( e.body )['message']
 
-            else:
+            except:
                 
                 # Unfortunately, if something goes wrong at the level of the
                 # HTTP service on which the API relies -- that is, when we
@@ -1534,7 +1534,7 @@ def column_values(
 
             except ApiException as e:
                 
-                if e.body is not None:
+                try:
                     
                     # Ordinarily, this exception represents a structured complaint
                     # from the API service that something went wrong. In this case,
@@ -1544,7 +1544,7 @@ def column_values(
 
                     error_message = json.loads( e.body )['message']
 
-                else:
+                except:
                     
                     # Unfortunately, if something goes wrong at the level of the
                     # HTTP service on which the API relies -- that is, when we
@@ -3450,7 +3450,7 @@ def summary_counts(
 
         except ApiException as e:
             
-            if e.body is not None:
+            try:
                 
                 # Ordinarily, this exception represents a structured complaint
                 # from the API service that something went wrong. In this case,
@@ -3460,7 +3460,7 @@ def summary_counts(
 
                 error_message = json.loads( e.body )['message']
 
-            else:
+            except:
                 
                 # Unfortunately, if something goes wrong at the level of the
                 # HTTP service on which the API relies -- that is, when we
