@@ -203,7 +203,6 @@ def fetch_rows(
     # Top-level type and sanity checking (i.e. not examining list contents yet): ensure nothing untoward got passed into our parameters.
 
     # Make sure the requested table exists.
-
     if table is None or not isinstance( table, str ) or table not in tables():
         
         print( f"fetch_rows(): ERROR: The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list.", file=sys.stderr )
@@ -383,7 +382,7 @@ def fetch_rows(
     # so they never make it into `source_table_columns_in_order`.
     # If we want one, we need to add it back.
 
-    if provenance == True and table != 'somatic_mutation':
+    if provenance == True:
         
         source_table_columns_in_order.append( f"{table}_identifier" )
 
@@ -738,13 +737,9 @@ def fetch_rows(
             
             join_table_name = sorted( join_tables )[0]
 
-            # `somatic_mutation` has no row IDs of its own: it is one-to-many subject-to-individual_mutation_observation data (like subject_associated_project), so has no PK and one foreign key into subject.
+            join_table_id_field = f"{join_table_name}_id"
 
-            if join_table_name != 'somatic_mutation':
-                
-                join_table_id_field = f"{join_table_name}_id"
-
-                result_column_data_types[join_table_id_field] = columns( column=join_table_id_field )['data_type'][0]
+            result_column_data_types[join_table_id_field] = columns( column=join_table_id_field )['data_type'][0]
 
     #############################################################################################################################
     # Parse `match_all` filter expressions: complain if
@@ -1281,13 +1276,7 @@ def fetch_rows(
 
         data_source_query.l.node_type = 'column'
 
-        if table == 'somatic_mutation':
-            
-            data_source_query.l.value = f"subject_from_{item}"
-
-        else:
-            
-            data_source_query.l.value = f"{table}_from_{item}"
+        data_source_query.l.value = f"{table}_from_{item}"
 
         data_source_query.r = Query()
 
@@ -1319,7 +1308,7 @@ def fetch_rows(
     # If we're adding extra columns from some non-`table` table*, always
     # include that table's ID field, whether or not it was requested.
     # 
-    # *...unless it's `somatic_mutation`, from which we can add extra columns
+    # *...unless it's `mutation`, from which we can add extra columns
     # but which doesn't have its own ID field.
 
     if join_table_id_field is not None:
@@ -1352,13 +1341,13 @@ def fetch_rows(
 
         query_for_extra_columns.l.value = ', '.join( columns_to_fetch )
 
-    elif table == 'somatic_mutation' and provenance == True:
+    elif table == 'mutation' and provenance == True:
         
         # We've been asked to provide provenance information for 
-        # `somatic_mutation` rows, and "we got them all from ISB-CGC
+        # `mutation` rows, and "we got them all from ISB-CGC
         # by way of GDC" is likely less helpful than fetching the
         # provenance information for the CDA `subject` rows
-        # associated with the `somatic_mutation` rows and attaching
+        # associated with the `mutation` rows and attaching
         # that instead. Also, move column `cda_subject_id` to the
         # end of each row so it's next to its own data_source & ID
         # information.
@@ -1541,34 +1530,6 @@ def fetch_rows(
         final_query.r.node_type = 'unquoted'
 
         final_query.r.value = 'NULL'
-
-        # `somatic_mutation` has no ID field (and the API blocks us from specifying, say, "subject_alias IS NULL").
-
-        if table == 'somatic_mutation':
-            
-            final_query.node_type = 'OR'
-
-            final_query.l = Query()
-            final_query.l.node_type = 'IS'
-
-            final_query.l.l = Query()
-            final_query.l.l.node_type = 'column'
-            final_query.l.l.value = 'hotspot'
-
-            final_query.l.r = Query()
-            final_query.l.r.node_type = 'unquoted'
-            final_query.l.r.value = 'NULL'
-
-            final_query.r = Query()
-            final_query.r.node_type = 'IS NOT'
-
-            final_query.r.l = Query()
-            final_query.r.l.node_type = 'column'
-            final_query.r.l.value = 'hotspot'
-
-            final_query.r.r = Query()
-            final_query.r.r.node_type = 'unquoted'
-            final_query.r.r.value = 'NULL'
 
     elif combined_data_source_query is None:
         
@@ -1845,9 +1806,8 @@ def fetch_rows(
         'specimen': query_api_instance.specimen_query,
         'treatment': query_api_instance.treatments_query,
         'file': query_api_instance.files,
-        'somatic_mutation': query_api_instance.mutation_query
+        'mutation': query_api_instance.mutation_query
     }
-
     # Unless we've been asked just to count the anticipated result set, we return all results
     # to users at once. Paging occurs internally, but is made transparent to the user.
     # By default (unless overridden by a `count_only` directive from the user), the
@@ -1890,11 +1850,11 @@ def fetch_rows(
             # Gracefully fetch asynchronously-generated results once they're ready.
 
             if isinstance( paged_response_data_object, ApplyResult ):
-                
+
                 while paged_response_data_object.ready() is False:
                     
                     paged_response_data_object.wait( 5 )
-
+                    
                 try:
                     
                     paged_response_data_object = paged_response_data_object.get()
@@ -1955,7 +1915,6 @@ def fetch_rows(
     )
 
     # Gracefully fetch asynchronously-generated results once they're ready.
-
     if isinstance( paged_response_data_object, ApplyResult ):
         
         while paged_response_data_object.ready() is False:
@@ -2269,61 +2228,43 @@ def fetch_rows(
         # Consolidate provenance information if present.
 
         if provenance == True:
-            
-            if table == 'somatic_mutation':
                 
-                rename_columns = {
-                    
-                    'subject_identifier_system' : 'subject_data_source',
-                    'subject_identifier_field_name': 'subject_data_source_id'
-                }
+            # We'll need to build a new result matrix, including one copy of
+            # each row for each identifier present. Iteratively build a list of
+            # tuples (rows) and convert the list to a new DataFrame when complete.
 
-                result_dataframe = result_dataframe.rename( columns=rename_columns )
+            new_result_matrix = list()
 
-                result_dataframe['subject_data_source_id'] = result_dataframe['subject_data_source_id'] + ':' + result_dataframe['subject_identifier_value']
+            new_result_column_names = result_dataframe.columns.tolist()
 
-                # axis=0: rows; axis=1: columns.
+            new_result_column_names.remove( f"{table}_identifier" )
 
-                result_dataframe = result_dataframe.drop( 'subject_identifier_value', axis=1 )
+            # There are likely more efficient ways to do this; target this block
+            # for optimization if it ever becomes a bottleneck.
 
-            else:
+            for result_row_index, result_row in result_dataframe.iterrows():
                 
-                # We'll need to build a new result matrix, including one copy of
-                # each row for each identifier present. Iteratively build a list of
-                # tuples (rows) and convert the list to a new DataFrame when complete.
+                identifier_array = result_row[f"{table}_identifier"]
 
-                new_result_matrix = list()
-
-                new_result_column_names = result_dataframe.columns.tolist()
-
-                new_result_column_names.remove( f"{table}_identifier" )
-
-                # There are likely more efficient ways to do this; target this block
-                # for optimization if it ever becomes a bottleneck.
-
-                for result_row_index, result_row in result_dataframe.iterrows():
+                for identifier_record in identifier_array:
                     
-                    identifier_array = result_row[f"{table}_identifier"]
+                    data_source = identifier_record['system']
 
-                    for identifier_record in identifier_array:
+                    data_source_id = identifier_record['field_name'] + ':' + identifier_record['value']
+
+                    new_row = list()
+
+                    for column_name in new_result_column_names:
                         
-                        data_source = identifier_record['system']
+                        new_row.append( result_row[column_name] )
 
-                        data_source_id = identifier_record['field_name'] + ':' + identifier_record['value']
+                    new_row = new_row + [ data_source, data_source_id ]
 
-                        new_row = list()
+                    new_result_matrix.append( tuple( new_row ) )
 
-                        for column_name in new_result_column_names:
-                            
-                            new_row.append( result_row[column_name] )
-
-                        new_row = new_row + [ data_source, data_source_id ]
-
-                        new_result_matrix.append( tuple( new_row ) )
-
-                new_result_column_names = new_result_column_names + [ f"{table}_data_source", f"{table}_data_source_id" ]
-                
-                result_dataframe = pd.DataFrame( new_result_matrix, columns=new_result_column_names )
+            new_result_column_names = new_result_column_names + [ f"{table}_data_source", f"{table}_data_source_id" ]
+            
+            result_dataframe = pd.DataFrame( new_result_matrix, columns=new_result_column_names )
 
     if return_data_as == '' or return_data_as == 'dataframe':
         
