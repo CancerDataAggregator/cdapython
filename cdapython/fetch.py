@@ -381,8 +381,7 @@ def fetch_rows(
     # These two columns don't appear in columns() output right now,
     # so they never make it into `source_table_columns_in_order`.
     # If we want one, we need to add it back.
-
-    if provenance == True:
+    if provenance == True and table != 'mutation':
         
         source_table_columns_in_order.append( f"{table}_identifier" )
 
