@@ -1275,7 +1275,13 @@ def fetch_rows(
 
         data_source_query.l.node_type = 'column'
 
-        data_source_query.l.value = f"{table}_from_{item}"
+        if table == 'mutation':
+            
+            data_source_query.l.value = f"subject_from_{item}"
+
+        else:
+            
+            data_source_query.l.value = f"{table}_from_{item}"
 
         data_source_query.r = Query()
 
@@ -1306,15 +1312,10 @@ def fetch_rows(
 
     # If we're adding extra columns from some non-`table` table*, always
     # include that table's ID field, whether or not it was requested.
-    # 
-    # *...unless it's `mutation`, from which we can add extra columns
-    # but which doesn't have its own ID field.
 
-    if join_table_id_field is not None:
-        
-        columns_to_fetch.append( join_table_id_field )
+    columns_to_fetch.append( join_table_id_field )
 
-        use_only_default_columns = False
+    use_only_default_columns = False
 
     for column_to_add in add_columns:
         
@@ -1853,7 +1854,7 @@ def fetch_rows(
                 while paged_response_data_object.ready() is False:
                     
                     paged_response_data_object.wait( 5 )
-                    
+
                 try:
                     
                     paged_response_data_object = paged_response_data_object.get()
@@ -2227,43 +2228,61 @@ def fetch_rows(
         # Consolidate provenance information if present.
 
         if provenance == True:
-                
-            # We'll need to build a new result matrix, including one copy of
-            # each row for each identifier present. Iteratively build a list of
-            # tuples (rows) and convert the list to a new DataFrame when complete.
-
-            new_result_matrix = list()
-
-            new_result_column_names = result_dataframe.columns.tolist()
-
-            new_result_column_names.remove( f"{table}_identifier" )
-
-            # There are likely more efficient ways to do this; target this block
-            # for optimization if it ever becomes a bottleneck.
-
-            for result_row_index, result_row in result_dataframe.iterrows():
-                
-                identifier_array = result_row[f"{table}_identifier"]
-
-                for identifier_record in identifier_array:
-                    
-                    data_source = identifier_record['system']
-
-                    data_source_id = identifier_record['field_name'] + ':' + identifier_record['value']
-
-                    new_row = list()
-
-                    for column_name in new_result_column_names:
-                        
-                        new_row.append( result_row[column_name] )
-
-                    new_row = new_row + [ data_source, data_source_id ]
-
-                    new_result_matrix.append( tuple( new_row ) )
-
-            new_result_column_names = new_result_column_names + [ f"{table}_data_source", f"{table}_data_source_id" ]
             
-            result_dataframe = pd.DataFrame( new_result_matrix, columns=new_result_column_names )
+            if table == 'mutation':
+                
+                rename_columns = {
+                    
+                    'subject_identifier_system' : 'subject_data_source',
+                    'subject_identifier_field_name': 'subject_data_source_id'
+                }
+
+                result_dataframe = result_dataframe.rename( columns=rename_columns )
+
+                result_dataframe['subject_data_source_id'] = result_dataframe['subject_data_source_id'] + ':' + result_dataframe['subject_identifier_value']
+
+                # axis=0: rows; axis=1: columns.
+
+                result_dataframe = result_dataframe.drop( 'subject_identifier_value', axis=1 )
+
+            else:
+                
+                # We'll need to build a new result matrix, including one copy of
+                # each row for each identifier present. Iteratively build a list of
+                # tuples (rows) and convert the list to a new DataFrame when complete.
+
+                new_result_matrix = list()
+
+                new_result_column_names = result_dataframe.columns.tolist()
+
+                new_result_column_names.remove( f"{table}_identifier" )
+
+                # There are likely more efficient ways to do this; target this block
+                # for optimization if it ever becomes a bottleneck.
+
+                for result_row_index, result_row in result_dataframe.iterrows():
+                    
+                    identifier_array = result_row[f"{table}_identifier"]
+
+                    for identifier_record in identifier_array:
+                        
+                        data_source = identifier_record['system']
+
+                        data_source_id = identifier_record['field_name'] + ':' + identifier_record['value']
+
+                        new_row = list()
+
+                        for column_name in new_result_column_names:
+                            
+                            new_row.append( result_row[column_name] )
+
+                        new_row = new_row + [ data_source, data_source_id ]
+
+                        new_result_matrix.append( tuple( new_row ) )
+
+                new_result_column_names = new_result_column_names + [ f"{table}_data_source", f"{table}_data_source_id" ]
+                
+                result_dataframe = pd.DataFrame( new_result_matrix, columns=new_result_column_names )
 
     if return_data_as == '' or return_data_as == 'dataframe':
         
