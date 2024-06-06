@@ -1312,10 +1312,11 @@ def fetch_rows(
 
     # If we're adding extra columns from some non-`table` table*, always
     # include that table's ID field, whether or not it was requested.
+    if join_table_id_field is not None:
 
-    columns_to_fetch.append( join_table_id_field )
-
-    use_only_default_columns = False
+        columns_to_fetch.append( join_table_id_field )
+        
+        use_only_default_columns = False
 
     for column_to_add in add_columns:
         
