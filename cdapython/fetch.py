@@ -1349,13 +1349,10 @@ def fetch_rows(
         # by way of GDC" is likely less helpful than fetching the
         # provenance information for the CDA `subject` rows
         # associated with the `mutation` rows and attaching
-        # that instead. Also, move column `cda_subject_id` to the
-        # end of each row so it's next to its own data_source & ID
-        # information.
+        # that instead. 
 
         associated_subject_provenance_columns = [
-            
-            'cda_subject_id',
+            'subject_id',
             'subject_identifier_system',
             'subject_identifier_field_name',
             'subject_identifier_value'
@@ -1364,8 +1361,6 @@ def fetch_rows(
         for column in associated_subject_provenance_columns:
             
             result_column_data_types[column] = 'text'
-
-        columns_to_fetch.remove( 'cda_subject_id' )
 
         columns_to_fetch = columns_to_fetch + associated_subject_provenance_columns
 
