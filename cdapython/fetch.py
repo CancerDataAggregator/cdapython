@@ -203,7 +203,6 @@ def fetch_rows(
     # Top-level type and sanity checking (i.e. not examining list contents yet): ensure nothing untoward got passed into our parameters.
 
     # Make sure the requested table exists.
-
     if table is None or not isinstance( table, str ) or table not in tables():
         
         print( f"fetch_rows(): ERROR: The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list.", file=sys.stderr )
@@ -382,8 +381,7 @@ def fetch_rows(
     # These two columns don't appear in columns() output right now,
     # so they never make it into `source_table_columns_in_order`.
     # If we want one, we need to add it back.
-
-    if provenance == True and table != 'somatic_mutation':
+    if provenance == True and table != 'mutation':
         
         source_table_columns_in_order.append( f"{table}_identifier" )
 
@@ -738,13 +736,9 @@ def fetch_rows(
             
             join_table_name = sorted( join_tables )[0]
 
-            # `somatic_mutation` has no row IDs of its own: it is one-to-many subject-to-individual_mutation_observation data (like subject_associated_project), so has no PK and one foreign key into subject.
+            join_table_id_field = f"{join_table_name}_id"
 
-            if join_table_name != 'somatic_mutation':
-                
-                join_table_id_field = f"{join_table_name}_id"
-
-                result_column_data_types[join_table_id_field] = columns( column=join_table_id_field )['data_type'][0]
+            result_column_data_types[join_table_id_field] = columns( column=join_table_id_field )['data_type'][0]
 
     #############################################################################################################################
     # Parse `match_all` filter expressions: complain if
@@ -1281,7 +1275,7 @@ def fetch_rows(
 
         data_source_query.l.node_type = 'column'
 
-        if table == 'somatic_mutation':
+        if table == 'mutation':
             
             data_source_query.l.value = f"subject_from_{item}"
 
@@ -1318,14 +1312,10 @@ def fetch_rows(
 
     # If we're adding extra columns from some non-`table` table*, always
     # include that table's ID field, whether or not it was requested.
-    # 
-    # *...unless it's `somatic_mutation`, from which we can add extra columns
-    # but which doesn't have its own ID field.
-
     if join_table_id_field is not None:
-        
-        columns_to_fetch.append( join_table_id_field )
 
+        columns_to_fetch.append( join_table_id_field )
+        
         use_only_default_columns = False
 
     for column_to_add in add_columns:
@@ -1352,20 +1342,17 @@ def fetch_rows(
 
         query_for_extra_columns.l.value = ', '.join( columns_to_fetch )
 
-    elif table == 'somatic_mutation' and provenance == True:
+    elif table == 'mutation' and provenance == True:
         
         # We've been asked to provide provenance information for 
-        # `somatic_mutation` rows, and "we got them all from ISB-CGC
+        # `mutation` rows, and "we got them all from ISB-CGC
         # by way of GDC" is likely less helpful than fetching the
         # provenance information for the CDA `subject` rows
-        # associated with the `somatic_mutation` rows and attaching
-        # that instead. Also, move column `cda_subject_id` to the
-        # end of each row so it's next to its own data_source & ID
-        # information.
+        # associated with the `mutation` rows and attaching
+        # that instead. 
 
         associated_subject_provenance_columns = [
-            
-            'cda_subject_id',
+            'subject_id',
             'subject_identifier_system',
             'subject_identifier_field_name',
             'subject_identifier_value'
@@ -1374,8 +1361,6 @@ def fetch_rows(
         for column in associated_subject_provenance_columns:
             
             result_column_data_types[column] = 'text'
-
-        columns_to_fetch.remove( 'cda_subject_id' )
 
         columns_to_fetch = columns_to_fetch + associated_subject_provenance_columns
 
@@ -1541,34 +1526,6 @@ def fetch_rows(
         final_query.r.node_type = 'unquoted'
 
         final_query.r.value = 'NULL'
-
-        # `somatic_mutation` has no ID field (and the API blocks us from specifying, say, "subject_alias IS NULL").
-
-        if table == 'somatic_mutation':
-            
-            final_query.node_type = 'OR'
-
-            final_query.l = Query()
-            final_query.l.node_type = 'IS'
-
-            final_query.l.l = Query()
-            final_query.l.l.node_type = 'column'
-            final_query.l.l.value = 'hotspot'
-
-            final_query.l.r = Query()
-            final_query.l.r.node_type = 'unquoted'
-            final_query.l.r.value = 'NULL'
-
-            final_query.r = Query()
-            final_query.r.node_type = 'IS NOT'
-
-            final_query.r.l = Query()
-            final_query.r.l.node_type = 'column'
-            final_query.r.l.value = 'hotspot'
-
-            final_query.r.r = Query()
-            final_query.r.r.node_type = 'unquoted'
-            final_query.r.r.value = 'NULL'
 
     elif combined_data_source_query is None:
         
@@ -1845,9 +1802,8 @@ def fetch_rows(
         'specimen': query_api_instance.specimen_query,
         'treatment': query_api_instance.treatments_query,
         'file': query_api_instance.files,
-        'somatic_mutation': query_api_instance.mutation_query
+        'mutation': query_api_instance.mutation_query
     }
-
     # Unless we've been asked just to count the anticipated result set, we return all results
     # to users at once. Paging occurs internally, but is made transparent to the user.
     # By default (unless overridden by a `count_only` directive from the user), the
@@ -1890,7 +1846,7 @@ def fetch_rows(
             # Gracefully fetch asynchronously-generated results once they're ready.
 
             if isinstance( paged_response_data_object, ApplyResult ):
-                
+
                 while paged_response_data_object.ready() is False:
                     
                     paged_response_data_object.wait( 5 )
@@ -1955,7 +1911,6 @@ def fetch_rows(
     )
 
     # Gracefully fetch asynchronously-generated results once they're ready.
-
     if isinstance( paged_response_data_object, ApplyResult ):
         
         while paged_response_data_object.ready() is False:
@@ -2270,7 +2225,7 @@ def fetch_rows(
 
         if provenance == True:
             
-            if table == 'somatic_mutation':
+            if table == 'mutation':
                 
                 rename_columns = {
                     
