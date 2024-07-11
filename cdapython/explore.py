@@ -3136,31 +3136,31 @@ def summary_counts(
 
         # `somatic_mutation` has no ID field.
 
-        if table == 'somatic_mutation':
+        # if table == 'somatic_mutation':
             
-            final_query.node_type = 'OR'
+        #     final_query.node_type = 'OR'
 
-            final_query.l = Query()
-            final_query.l.node_type = 'IS'
+        #     final_query.l = Query()
+        #     final_query.l.node_type = 'IS'
 
-            final_query.l.l = Query()
-            final_query.l.l.node_type = 'column'
-            final_query.l.l.value = 'hotspot'
+        #     final_query.l.l = Query()
+        #     final_query.l.l.node_type = 'column'
+        #     final_query.l.l.value = 'hotspot'
 
-            final_query.l.r = Query()
-            final_query.l.r.node_type = 'unquoted'
-            final_query.l.r.value = 'NULL'
+        #     final_query.l.r = Query()
+        #     final_query.l.r.node_type = 'unquoted'
+        #     final_query.l.r.value = 'NULL'
 
-            final_query.r = Query()
-            final_query.r.node_type = 'IS NOT'
+        #     final_query.r = Query()
+        #     final_query.r.node_type = 'IS NOT'
 
-            final_query.r.l = Query()
-            final_query.r.l.node_type = 'column'
-            final_query.r.l.value = 'hotspot'
+        #     final_query.r.l = Query()
+        #     final_query.r.l.node_type = 'column'
+        #     final_query.r.l.value = 'hotspot'
 
-            final_query.r.r = Query()
-            final_query.r.r.node_type = 'unquoted'
-            final_query.r.r.value = 'NULL'
+        #     final_query.r.r = Query()
+        #     final_query.r.r.node_type = 'unquoted'
+        #     final_query.r.r.value = 'NULL'
 
     elif combined_data_source_query is None:
         
@@ -3417,7 +3417,7 @@ def summary_counts(
         'specimen': query_api_instance.specimen_counts_query,
         'treatment': query_api_instance.treatment_counts_query,
         'file': query_api_instance.file_counts_query,
-        'somatic_mutation': query_api_instance.mutation_counts_query
+        'mutation': query_api_instance.mutation_counts_query
     }
 
     paged_response_data_object = query_selector[table](
@@ -3425,16 +3425,6 @@ def summary_counts(
         dry_run=False,
         async_req=True
     )
-
-    ### TEMPORARY TRAP: Remove this when mutations/counts/ is fixed
-    ###                 and everything should just work; all the
-    ###                 downstream processing is already in place.
-
-    if table == 'somatic_mutation':
-        
-        print( f"summary_counts(): ERROR_WITH_APOLOGIES: summary counts for somatic_mutation are not available at present. Please select any of our other fine tables.", file=sys.stderr )
-
-        return
 
     # Gracefully fetch asynchronously-generated results once they're ready.
 
@@ -3532,9 +3522,9 @@ def summary_counts(
 
     # This column duplicates `total_count` when querying somatic_mutation. Remove it.
 
-    if 'somatic_mutation_id' in result_dataframe:
+    if 'mutation_id' in result_dataframe:
         
-        result_dataframe = result_dataframe.drop( columns=[ 'somatic_mutation_id' ] )
+        result_dataframe = result_dataframe.drop( columns=[ 'mutation_id' ] )
 
     # For some reason, the highest-level summary counts come through as floats. Fix that
     # (and rename them while we're at it).
