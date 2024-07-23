@@ -5,9 +5,9 @@ import re
 import sys
 
 import tabulate
-from cda_client_new import openapi_client
-from cda_client_new.openapi_client.models import ColumnResponseObj
-from cda_client_new.openapi_client import ApiException
+from cda_client import openapi_client
+from cda_client.openapi_client.models import ColumnResponseObj
+from cda_client.openapi_client import ApiException
 
 # Nomenclature notes:
 # 
@@ -848,5 +848,767 @@ def columns(
 #############################################################################################################################
 # 
 # END columns() 
+# 
+#############################################################################################################################
+
+
+#############################################################################################################################
+# 
+# column_values( column=`column` ): Show all distinct values present in `column`, along with a count of occurrences for each value.
+# 
+#############################################################################################################################
+
+def column_values(
+    column = '',
+    *,
+    return_data_as = '',
+    output_file = '',
+    sort_by = '',
+    filters = None,
+    data_source = '',
+    force = False,
+    debug = False
+):
+    """
+    Show all distinct values present in `column`, along with a count
+    of occurrences for each value.
+
+    Arguments:
+        column ( string; required ):
+            The column to fetch values from.
+
+        return_data_as ( string; optional: 'dataframe' or 'list' or 'tsv' ):
+            Specify how column_values() should return results: as a pandas
+            DataFrame, a Python list, or as output written to a TSV file named
+            by the user.  If this argument is omitted, column_values() will default
+            to returning results as a DataFrame.
+
+        output_file( string; optional ):
+            If return_data_as='tsv' is specified, output_file should contain a
+            resolvable path to a file into which column_values() will write
+            tab-delimited results.
+
+        sort_by( string; optional:
+                'count' ( default for return_data_as='dataframe' and
+                return_data_as='tsv' ) or 'value' ( default for
+                return_data_as='list' ) or 'count:desc' or 'value:desc'
+                or 'count:asc' or 'value:asc' ):
+            Specify the primary column to sort when preparing result data: on
+            values, or on counts of values.
+
+            A column name with a suffix of ':desc' appended to it will be
+            sorted in reverse order; adding ':asc' will ensure ascending sort
+            order. Example: sort_by='value:desc'
+
+            Secondary sort order is automatic: if the results are to be
+            primarily sorted by count, then the automatic behavior will be to
+            also (alphabetically) sort by value within each group of values
+            that all share the same count. If results are primarily sorted by
+            value, then there is no secondary sort -- each value is unique by
+            design, so results don't contain groups with the same value but
+            different counts, so there's nothing to arrange once the primary
+            sort has been applied.
+
+        filters ( string or list of strings; optional ):
+            Restrict returned values to those matching any of the given strings.
+            A wildcard (asterisk) at either end (or both ends) of each string
+            will allow partial matches. Case will be ignored. Specify an empty
+            filter string '' to match and count missing (null) values.
+
+        data_source ( string; optional ):
+            Restrict returned values to the given upstream data source. Current
+            valid values are 'GDC', 'IDC', 'PDC', 'CDS' and 'ICDC'.
+            Defaults to '' (no filter).
+
+        force( boolean; optional ):
+            Force execution of high-overhead queries on columns (like IDs)
+            flagged as having large numbers of values. Defaults to False,
+            in which case attempts to retrieve values for flagged columns
+            will result in a warning.
+
+        debug( boolean; optional ): If set to True, print internal process
+        details to the standard error stream.
+
+    Returns:
+        pandas.DataFrame OR list OR returns nothing, but writes retrieved
+        data to a user-specified TSV file
+    """
+
+    #############################################################################################################################
+    # Ensure nothing untoward got passed into the `debug` or `force` parameters.
+
+    if debug != True and debug != False:
+        
+        print( f"column_values(): ERROR: The `debug` parameter must be set to True or False; you specified '{debug}', which is neither.", file=sys.stderr )
+
+        return
+
+    if force != True and force != False:
+        
+        print( f"column_values(): ERROR: The `force` parameter must be set to True or False; you specified '{force}', which is neither.", file=sys.stderr )
+
+        return
+
+    #############################################################################################################################
+    # Check for our one required parameter.
+
+    if ( not isinstance( column, str ) ) or column == '':
+        
+        print( f"column_values(): ERROR: parameter 'column' cannot be omitted. Please specify a column from which to fetch a list of distinct values.", file=sys.stderr )
+
+        return
+
+    # If there's whitespace in our column name, remove it before it does any damage.
+
+    column = re.sub( r'\s+', r'', column )
+
+    # Let's not care about case.
+
+    column = column.lower()
+
+    # See if columns() agrees that the requested column exists.
+
+    if len( columns( column=column, return_data_as='list' ) ) == 0:
+        
+        print( f"column_values(): ERROR: parameter 'column' must be a searchable CDA column name. You supplied '{column}', which is not.", file=sys.stderr )
+
+        return
+
+    #############################################################################################################################
+    # Manage basic validation for the `data_source` parameter, which describes user-specified filtration on upstream data
+    # sources.
+
+    if not isinstance( data_source, str ):
+        
+        print( f"column_values(): ERROR: value assigned to 'data_source' parameter must be a string (e.g. 'GDC'); you specified '{data_source}', which is not.", file=sys.stderr )
+
+        return
+
+    # TEMPORARY: enumerate valid `data_source` values and warn the user if they supplied something else.
+    # At time of writing this is too expensive to retrieve dynamically from the API,
+    # so the valid value list is hard-coded here and in the docstring for this function.
+    # 
+    # This should be replaced ASAP with a fetch from a 'release metadata' table or something
+    # similar.
+
+    allowed_data_source_values = {
+        
+        'GDC',
+        'PDC',
+        'IDC',
+        'CDS',
+        'ICDC'
+    }
+
+    if data_source != '':
+        
+        # Let us not care about case, and remove any whitespace before it can do any damage.
+
+        data_source = re.sub( r'\s+', r'', data_source ).upper()
+
+        if data_source not in allowed_data_source_values:
+            
+            print( f"column_values(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{data_source}', which is not.", file=sys.stderr )
+
+            return
+
+    #############################################################################################################################
+    # Check in advance for columns flagged as high-overhead.
+
+    expensive_columns = {
+        
+        'file_id',
+        'byte_size',
+        'checksum',
+        'drs_uri',
+        'file_integer_id_alias',
+        'label'
+    }
+
+    if not force and column in expensive_columns:
+        
+        print( f"column_values(): WARNING: '{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' ).", file=sys.stderr )
+
+        return
+
+    #############################################################################################################################
+    # Listify `filters`, if it's a string, so we can process it in a uniform way later on.
+
+    if filters is None:
+        
+        filters = list()
+
+    elif isinstance( filters, str ):
+        
+        filters = [ filters ]
+
+    #############################################################################################################################
+    # Process return-type directives.
+
+    allowed_return_types = {
+        '',
+        'dataframe',
+        'tsv',
+        'list'
+    }
+
+    if not isinstance( return_data_as, str ):
+        
+        print( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.", file=sys.stderr )
+
+        return
+
+    # Let's not be picky if someone wants to give us return_data_as='DataFrame' or return_data_as='TSV'
+
+    return_data_as = return_data_as.lower()
+
+    # We can't do much validation on filenames. If `output_file` isn't
+    # a locally writeable path, it'll fail when we try to open it for
+    # writing. Strip trailing whitespace from both ends and wrap the
+    # file-access operation (later, below) in a try{} block.
+
+    if not isinstance( output_file, str ):
+        
+        print( f"column_values(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path.", file=sys.stderr )
+
+        return
+
+    output_file = output_file.strip()
+
+    if return_data_as not in allowed_return_types:
+        
+        print( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.", file=sys.stderr )
+
+        return
+
+    elif return_data_as == 'tsv' and output_file == '':
+        
+        print( f"column_values(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'.", file=sys.stderr )
+
+        return
+
+    elif return_data_as != 'tsv' and output_file != '':
+        
+        # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
+        # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
+        # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
+        # so we complain and ask them to clarify.
+
+        print( f"column_values(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.", file=sys.stderr )
+        print( f"(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.).", file=sys.stderr )
+
+        return
+
+    #############################################################################################################################
+    # Process sorting directives.
+
+    # Enumerate all allowed values that a user can specify using the `sort_by` parameter. ( 'X:asc' will be aliased immediately to just 'X'. )
+
+    allowed_sort_by_options = {
+        
+        'list' : {
+            '',
+            'value',
+            'value:desc'
+        },
+        'dataframe_or_tsv' : {
+            '',
+            'count',
+            'count:desc',
+            'value',
+            'value:desc'
+        }
+    }
+
+    if not isinstance( sort_by, str ):
+        
+        # Complain if we receive any unexpected data types instead of string directives.
+
+        print( f"column_values(): ERROR: 'sort_by' must be a string; you used '{sort_by}', which is not.", file=sys.stderr )
+
+        return
+
+    # Let's not care about case.
+
+    sort_by = sort_by.lower()
+
+    # ':asc' is redundant. Remove it (politely).
+
+    sort_by = re.sub( r':asc$', r'', sort_by )
+
+    if return_data_as == 'list':
+        
+        # Restrict sorting options for lists.
+
+        if sort_by == '':
+            
+            sort_by = 'value'
+
+        elif sort_by not in allowed_sort_by_options['list']:
+            
+            print( f"column_values(): ERROR: return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again.", file=sys.stderr )
+
+            return
+
+    else:
+        
+        # For TSV output files and DataFrames, we support more user-configurable options (defaulting to sort_by='count:desc'):
+
+        if sort_by == '':
+            
+            sort_by = 'count:desc'
+
+        elif sort_by not in allowed_sort_by_options['dataframe_or_tsv']:
+            
+            print( f"column_values(): ERROR: unrecognized sort_by '{sort_by}'. Please use one of 'count', 'value', 'count:desc', 'value:desc', 'count:asc' or 'value:asc' (or omit the sort_by parameter altogether).", file=sys.stderr )
+
+            return
+
+    if debug == True:
+        
+        # Report details of the final parsed sort logic.
+
+        print( '-' * 80, file=sys.stderr )
+
+        print( f"BEGIN DEBUG MESSAGE: column_values(): Processed all parameter directives. Calling API to fetch data for:", file=sys.stderr )
+
+        print( '-' * 80, end='\n\n', file=sys.stderr )
+
+        parameter_dict = {
+            
+            'column': column,
+            'return_data_as': return_data_as,
+            'output_file': output_file,
+            'sort_by': sort_by,
+            'filters': filters,
+            'data_source': data_source,
+            'force': force,
+            'debug': debug
+        }
+
+        print( parameter_dict, end='\n\n', file=sys.stderr )
+
+        print( '-' * 80, file=sys.stderr )
+
+        print( f"END   DEBUG MESSAGE: column_values(): Processed sort directives", file=sys.stderr )
+
+        print( '-' * 80, end='\n\n', file=sys.stderr )
+
+    #############################################################################################################################
+    # Fetch data from the API.
+
+    # Make an ApiClient object containing the information necessary to connect to the CDA database.
+    # 
+    # Allow users to override the system-default URL for the CDA API by setting their CDA_API_URL
+    # environment variable.
+
+    url = "http://localhost:8000"
+    url_override = os.environ.get( 'CDA_API_URL' )
+    if url_override is not None and len( url_override ) > 0:
+        url = url_override
+    configuration = openapi_client.Configuration(host = url)
+
+
+    api_client = openapi_client.ApiClient(configuration)
+    # Create an instance of the API class
+    query_api_instance = openapi_client.UniqueValuesApi(api_client)
+    columnname = column # str | 
+    system = data_source # str |  (optional) (default to '')
+    count = False # bool |  (optional) (default to False)
+    total_count = False # bool |  (optional) (default to False)
+    records_per_page = 56 # int |  (optional)
+    starting_offset = 56 # int |  (optional)
+
+    #try:
+        # Unique Values Endpoint
+    paged_response_data_object = query_api_instance.unique_values_endpoint_unique_values_columnname_post(columnname, system=system, count=count, total_count=total_count, limit=records_per_page, offset=starting_offset)
+    print("The response of UniqueValuesApi->unique_values_endpoint_unique_values_columnname_post:\n")
+    print(str(paged_response_data_object))
+    #except Exception as e:
+    #    print("Exception when calling UniqueValuesApi->unique_values_endpoint_unique_values_columnname_post: %s\n" % e)
+
+    if debug == True:
+        
+        print( '-' * 80, file=sys.stderr )
+
+        print( f"BEGIN DEBUG MESSAGE: column_values(): Querying CDA API 'unique_values' endpoint", file=sys.stderr )
+
+        print( '-' * 80, end='\n\n', file=sys.stderr )
+
+   
+    if debug == True:
+        
+        # Report some metadata about the results we got back.
+    
+        print( f"Number of result rows: {paged_response_data_object.total_row_count}", file=sys.stderr )
+
+        print( f"Query SQL: '{paged_response_data_object.query_sql}'", end='\n\n', file=sys.stderr )
+
+    # Make a Pandas DataFrame out of the first batch of results.
+    # 
+    # The API returns responses in JSON format: convert that JSON into a DataFrame
+    # using pandas' json_normalize() function.
+
+    result_dataframe = pd.json_normalize( paged_response_data_object.result )
+
+    # The data we've fetched so far might be just the first page (if the total number
+    # of results is greater than `records_per_page`).
+    # 
+    # Get the rest of the result pages, if there are any, and add each page's data
+    # onto the end of our results DataFrame.
+
+    incremented_offset = starting_offset + records_per_page
+
+    more_than_one_result_page = False
+
+    
+    if debug == True:
+        
+        if more_than_one_result_page:
+            
+            print( '...done.', end='\n\n', file=sys.stderr )
+
+        print( '-' * 80, file=sys.stderr )
+
+        print( f"END   DEBUG MESSAGE: column_values(): Queried CDA API 'unique_values' endpoint and created result DataFrame", file=sys.stderr )
+
+        print( '-' * 80, end='\n\n', file=sys.stderr )
+
+    #############################################################################################################################
+    # Postprocess API result data, if there is any.
+
+    if len( result_dataframe ) == 0:
+        
+        return result_dataframe
+
+    if debug == True:
+        
+        print( '-' * 80, file=sys.stderr )
+
+        print( 'BEGIN DEBUG MESSAGE: column_values(): Postprocessing results', file=sys.stderr )
+
+        print( '-' * 80, end='\n\n', file=sys.stderr )
+
+        print( 'Casting counts to integers and fixing symmetry for returned column labels...', file=sys.stderr )
+
+    # Term-count values come in as floats. Make them not that.
+
+    result_dataframe['count'] = result_dataframe['count'].astype( int )
+
+    # `X_id` columns come back labeled just as `id`. Fix.
+
+    if re.search( r'_id$', column ) is not None:
+        
+        result_dataframe = result_dataframe.rename( columns = { 'id': column } )
+
+    # `X_integer_id_alias` columns come back labeled just as `integer_id_alias`. Fix.
+
+    elif re.search( r'_integer_id_alias$', column ) is not None:
+        
+        result_dataframe = result_dataframe.rename( columns = { 'integer_id_alias': column } )
+
+    # `X_associated_project` columns come back labeled just as `associated_project`. Fix.
+
+    elif re.search( r'_associated_project$', column ) is not None:
+        
+        result_dataframe = result_dataframe.rename( columns = { 'associated_project': column } )
+
+    # `X_identifier_Y` columns come back labeled just as `Y`. Fix.
+
+    elif re.search( r'^(.*_identifier_)(.+)$', column ) is not None:
+        
+        suffix = re.sub( r'^.*_identifier_(.+)$', r'\1', column )
+
+        # Adjust the header the API sent us for the values column.
+
+        result_dataframe = result_dataframe.rename( columns = { suffix: column } )
+
+    if debug == True:
+        
+        print( 'Handling missing values...', file=sys.stderr )
+
+    # CDA has no float values. If the API gives us some, cast them to integers.
+
+    if result_dataframe[column].dtype == 'float64':
+        
+        # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
+        # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
+        # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
+        # storage of missing values. These will print as '<NA>'.
+
+        result_dataframe[column] = result_dataframe[column].round().astype( 'Int64' )
+
+    elif result_dataframe[column].dtype == 'object':
+        
+        # String data comes through as a column with dtype 'object', based on something involving
+        # the variability inherent in string lengths.
+        # 
+        # See https://stackoverflow.com/questions/33957720/how-to-convert-column-with-dtype-as-object-to-string-in-pandas-dataframe
+
+        # Replace term values that are None (== null) with empty strings.
+
+        result_dataframe = result_dataframe.fillna( '' )
+
+    elif result_dataframe[column].dtype == 'bool':
+        
+        result_dataframe = result_dataframe.fillna( '' )
+
+    else:
+        
+        # This isn't anticipated. Yell if we get something unexpected.
+
+        print( f"column_values(): ERROR: Unexpected data type `{result_dataframe[column].dtype}` received; aborting. Please report this event to the CDA development team.", file=sys.stderr )
+
+        return
+
+    #############################################################################################################################
+    # Filter returned values according to user specifications.
+
+    # Default behavior: all result values must be exact matches to at least one
+    # filter (ignoring case). To match end-to-end, we use a ^ to represent
+    # the beginning of each value and a $ to indicate the end. If the user
+    # specifies wildcards on one or both ends of a filter, we'll remove one or both
+    # restrictions as instructed for that filter.
+
+    match_pattern_string = ''
+
+    # If the user includes an empty string in the filters list, make sure we return
+    # a count for empty (null) values in addition to any values matching other filters.
+
+    include_null_count = False
+
+    for filter_pattern in filters:
+        
+        if filter_pattern == '':
+            
+            include_null_count = True
+
+        else:
+            
+            # Process wildcard characters.
+
+            if re.search( r'^\*', filter_pattern ) is not None:
+                
+                # Any prefix will do, now.
+                # 
+                # Strip leading '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
+
+                filter_pattern = re.sub( r'^\*+', r'', filter_pattern )
+
+            else:
+                
+                # No wildcard at the beginning of `filter_pattern` --> require all successful matches to _begin_ with `filter_pattern` by prepending a ^ character to `filter_pattern`:
+                # 
+                # ...I know this looks weird, but it's just tacking a '^' character onto the beginning of `filter_pattern`.
+
+                filter_pattern = re.sub( r'^', r'^', filter_pattern )
+
+            if re.search( r'\*$', filter_pattern ) is not None:
+                
+                # Any suffix will do, now.
+                # 
+                # Strip trailing '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
+
+                filter_pattern = re.sub( r'\*+$', r'', filter_pattern )
+
+            else:
+                
+                # No wildcard at the end of `filter_pattern` --> require all successful matches to _end_ with `filter_pattern` by appending a '$' character to `filter_pattern`:
+                # 
+                # ...I know this looks weird, but it's just tacking a '$' character onto the end of `filter_pattern`.
+
+                filter_pattern = re.sub( r'$', r'$', filter_pattern )
+
+            # Build the overall match pattern as we go, one (processed) `filter_pattern` at a time.
+
+            match_pattern_string = match_pattern_string + filter_pattern + '|'
+
+    # Strip the trailing '|' character from the end of the last `filter_pattern`.
+
+    match_pattern_string = re.sub( r'\|$', r'', match_pattern_string )
+
+    if debug == True:
+        
+        print_regex = match_pattern_string
+
+        if include_null_count:
+            
+            if print_regex == '':
+                
+                print_regex = '(missing values)'
+
+            else:
+                
+                print_regex = print_regex + '|(missing values)'
+
+        if print_regex == '':
+            
+            print_regex = '(none)'
+
+        else:
+            
+            print_regex = f"/{print_regex}/"
+
+        print( f"Applying pattern filters: {print_regex}", file=sys.stderr )
+
+    # Filter results to match the full aggregated regular expression in `match_pattern_string`.
+
+    if include_null_count and match_pattern_string != '':
+        
+        result_dataframe = result_dataframe.loc[ result_dataframe[column].astype(str).str.contains( match_pattern_string, case=False ) | result_dataframe[column].astype(str).str.contains( r'^$' ) | result_dataframe[column].isna() ]
+
+    elif include_null_count:
+        
+        result_dataframe = result_dataframe.loc[ result_dataframe[column].astype(str).str.contains( r'^$' ) | result_dataframe[column].isna() ]
+
+    else:
+        
+        # This will return unfiltered results if `match_pattern_string` is empty (i.e. if the user asked for no filters to be applied),
+        # and will filter results according to `match_pattern_string` if not.
+
+        result_dataframe = result_dataframe.loc[ result_dataframe[column].astype(str).str.contains( match_pattern_string, case=False ) ]
+
+    # Sort results. Default (note that the final value of `sort_by` is determined earlier in this function) is to sort by term count, descending.
+
+    if debug == True:
+        
+        print( f"Applying sort directive '{sort_by}'...", end='\n\n', file=sys.stderr )
+
+    if sort_by == 'count':
+        
+        # Sort by count; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
+
+        result_dataframe = result_dataframe.sort_values( by=[ 'count', column ], ascending=[ True, True ] )
+
+    elif sort_by == 'count:desc':
+        
+        # Sort by count, descending; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
+
+        result_dataframe = result_dataframe.sort_values( by=[ 'count', column ], ascending=[ False, True ] )
+
+    elif sort_by == 'value':
+        
+        # No need for a sub-sort, here, since values aren't repeated.
+
+        result_dataframe = result_dataframe.sort_values( by=column, ascending=True )
+
+    elif sort_by == 'value:desc':
+        
+        # No need for a sub-sort, here, since values aren't repeated.
+
+        result_dataframe = result_dataframe.sort_values( by=column, ascending=False )
+
+    else:
+        
+        print( f"column_values(): ERROR: something has gone horribly wrong; we should never get here.", file=sys.stderr )
+
+        return
+
+    if debug == True:
+
+        print( '-' * 80, file=sys.stderr )
+
+        print( 'END   DEBUG MESSAGE: column_values(): Postprocessed results', file=sys.stderr )
+
+        print( '-' * 80, end='\n\n', file=sys.stderr )
+
+    #############################################################################################################################
+    # Send the results back to the user.
+
+    # Reindex DataFrame rows to match their final sort order.
+
+    result_dataframe = result_dataframe.reset_index( drop=True )
+
+    # Pretty-print missing values.
+
+    if result_dataframe[column].dtype == 'object':
+        
+        # String data comes through as a column with dtype 'object', based on something involving
+        # the variability inherent in string lengths.
+        # 
+        # See https://stackoverflow.com/questions/33957720/how-to-convert-column-with-dtype-as-object-to-string-in-pandas-dataframe
+
+        # Replace term values that are None (== null) with empty strings.
+
+        result_dataframe = result_dataframe.replace( r'^$', r'<NA>', regex=True )
+
+    elif result_dataframe[column].dtype == 'bool':
+        
+        result_dataframe = result_dataframe.replace( r'^$', r'<NA>', regex=True )
+
+    if return_data_as == '':
+        
+        # Right now, the default is the same as if the user had
+        # specified return_data_as='dataframe'.
+
+        # The following, for the dubiously useful record, is a somewhat worse alternative default thing to do.
+        # 
+        # print( result_dataframe.to_string( index=False, justify='right', max_rows=25, max_colwidth=50 ), file=sys.stdout )
+
+        if debug == True:
+            
+            print( '-' * 80, file=sys.stderr )
+
+            print( '      DEBUG MESSAGE: column_values(): Returning results in default form (pandas.DataFrame)', file=sys.stderr )
+
+            print( '-' * 80, end='\n\n', file=sys.stderr )
+
+        return result_dataframe
+
+    elif return_data_as == 'dataframe':
+        
+        # Give the user back the results DataFrame.
+
+        if debug == True:
+            
+            print( '-' * 80, file=sys.stderr )
+
+            print( '      DEBUG MESSAGE: column_values(): Returning results as pandas.DataFrame', file=sys.stderr )
+
+            print( '-' * 80, end='\n\n', file=sys.stderr )
+
+        return result_dataframe
+
+    elif return_data_as == 'list':
+        
+        # Strip the term-values column out of the results DataFrame and give them to the user as a Python list.
+
+        if debug == True:
+            
+            print( '-' * 80, file=sys.stderr )
+
+            print( '      DEBUG MESSAGE: column_values(): Returning results as list of column values', file=sys.stderr )
+
+            print( '-' * 80, end='\n\n', file=sys.stderr )
+
+        return result_dataframe[column].to_list()
+
+    else:
+        
+        # Write the results DataFrame to a user-specified TSV file.
+
+        if debug == True:
+            
+            print( '-' * 80, file=sys.stderr )
+
+            print( f"      DEBUG MESSAGE: column_values(): Printing results to TSV file '{output_file}'", file=sys.stderr )
+
+            print( '-' * 80, end='\n\n', file=sys.stderr )
+
+        try:
+            
+            result_dataframe.to_csv( output_file, sep='\t', index=False )
+
+            return
+
+        except Exception as error:
+            
+            print( f"column_values(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
+
+            return
+
+#############################################################################################################################
+# 
+# END column_values() 
 # 
 #############################################################################################################################
