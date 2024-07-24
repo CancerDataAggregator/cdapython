@@ -3,12 +3,14 @@ import pandas as pd
 import os
 import re
 import sys
+import logging
 
 import tabulate
 from cda_client import openapi_client
 from cda_client.openapi_client.models import ColumnResponseObj
 from cda_client.openapi_client import ApiException
 from cdapython.application_utilities import get_logger
+
 
 log = get_logger()
 
@@ -98,6 +100,7 @@ def columns(
     output_file = '',
     sort_by = '',
     debug = False,
+    loglevel = 'WARNING',
     **filter_arguments
 ):
     """
@@ -129,7 +132,11 @@ def columns(
 
         debug( boolean; optional ):
             If set to True, print internal process details to the standard
-            error stream.
+            error stream. Deprecated in favor of loglevel but will still work
+            if set. 
+
+        loglevel ( str; 'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ):
+            If debug is false, and one of these values is set, set the loglevel to it.
 
     Filter arguments:
         table ( string or list of strings; optional ):
@@ -204,10 +211,24 @@ def columns(
     # 
     # Fun exercise for reader: compare results if `isinstance( debug, bool )` is used.
 
+    loglevel = loglevel.upper()
     if debug != True and debug != False:
         
         log.error( f"columns(): ERROR: The `debug` parameter must be set to True or False; you specified '{debug}', which is neither.")
         return
+    
+    elif debug == True:
+
+        log.setLevel('DEBUG')
+
+    elif debug == False and loglevel in {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}:
+
+        log.setLevel(loglevel)
+
+    else:
+
+        log.warning( f"columns(): loglevel set to '{loglevel}'. Should be one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. Setting to 'WARNING'." )
+        log.setLevel( 'WARNING' )
 
     #############################################################################################################################
     # Process return-type directives `return_data_as` and `output_file`.
@@ -221,7 +242,7 @@ def columns(
 
     if not isinstance( return_data_as, str ):
         
-        log.error( f"columns(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.")
+        log.critical( f"columns(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.")
 
         return
 
@@ -236,7 +257,7 @@ def columns(
 
     if not isinstance( output_file, str ):
         
-        log.error( f"columns(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path.")
+        log.critical( f"columns(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path.")
 
         return
 
@@ -246,7 +267,7 @@ def columns(
         
         # Complain if we receive an unexpected `return_data_as` value.
 
-        log.error( f"columns(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.")
+        log.critical( f"columns(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.")
 
         return
 
@@ -254,7 +275,7 @@ def columns(
         
         # If the user asks for a TSV, they also have to give us a path for that TSV. If they didn't, complain.
 
-        log.error( f"columns(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'.")
+        log.critical( f"columns(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'.")
 
         return
 
@@ -267,7 +288,7 @@ def columns(
 
         msg  = f"columns(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n"
         msg += f"(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)."
-        log.error(msg)
+        log.critical(msg)
 
         return
 
@@ -329,7 +350,7 @@ def columns(
             
             # Complain if we receive any unexpected data types instead of string directives.
 
-            log.error(f"columns(): ERROR: 'sort_by' must be a string or a list of strings; you used '{sort_by}', which is neither.")
+            log.critical(f"columns(): ERROR: 'sort_by' must be a string or a list of strings; you used '{sort_by}', which is neither.")
             return
 
         # Let's not care about case.
@@ -344,7 +365,7 @@ def columns(
             
             # Complain if we receive any unexpected sort_by directives.
 
-            log.error( f"columns(): ERROR: '{field_code}' is not a valid directive for the 'sort_by' parameter. Please use one of [ '" + "', '".join( allowed_sort_by_arguments ) + "' ] instead.")
+            log.critical( f"columns(): ERROR: '{field_code}' is not a valid directive for the 'sort_by' parameter. Please use one of [ '" + "', '".join( allowed_sort_by_arguments ) + "' ] instead.")
 
             return
 
@@ -362,7 +383,7 @@ def columns(
             
             # Complain if we receive multiple sort_by directives for the same output column.
 
-            log.error( f"columns(): ERROR: Multiple sort_by directives received for the same output column, including '{seen_so_far[code_basename]}' and '{field_code}': please specify only one directive per output column.")
+            log.critical( f"columns(): ERROR: Multiple sort_by directives received for the same output column, including '{seen_so_far[code_basename]}' and '{field_code}': please specify only one directive per output column.")
 
             return
 
@@ -377,33 +398,30 @@ def columns(
             by_list.append( field_code )
 
             ascending_list.append( True )
-
-    if debug == True:
         
-        # Report details of the final parsed sort logic.
+    # Report details of the final parsed sort logic.
 
-        log.debug( '-' * 80 )
+    log.debug( '-' * 80 )
 
-        log.debug( f"BEGIN DEBUG MESSAGE: columns(): Processed sort directives" )
-        log.debug( f"BEGIN DEBUG MESSAGE: columns(): Processed sort directives")
+    log.debug( f"BEGIN DEBUG MESSAGE: columns(): Processed sort directives" )
 
-        log.debug( '-' * 80, end='\n\n' )
+    log.debug( '-' * 80)
 
-        sort_dataframe = pd.DataFrame(
-            
-            {
-                'sort_by': by_list,
-                'ascending?': ascending_list
-            }
-        )
+    sort_dataframe = pd.DataFrame(
+        
+        {
+            'sort_by': by_list,
+            'ascending?': ascending_list
+        }
+    )
 
-        log.debug( sort_dataframe, end='\n\n' )
+    log.debug( sort_dataframe )
 
-        log.debug( '-' * 80 )
+    log.debug( '-' * 80 )
 
-        log.debug( f"END   DEBUG MESSAGE: columns(): Processed sort directives" )
+    log.debug( f"END   DEBUG MESSAGE: columns(): Processed sort directives" )
 
-        log.debug( '-' * 80, end='\n\n' )
+    log.debug( '-' * 80 )
 
     #############################################################################################################################
     # Process user-supplied filter directives.
@@ -425,7 +443,7 @@ def columns(
             
             # Complain if we receive any unexpected filter arguments.
 
-            log.error( f"columns(): ERROR: Received unexpected argument {filter_argument_name}; aborting." )
+            log.critical( f"columns(): ERROR: Received unexpected argument {filter_argument_name}; aborting." )
 
             return
 
@@ -435,7 +453,7 @@ def columns(
                 
                 # Complain if we got a parameter value of the wrong data type.
 
-                log.error( f"columns(): ERROR: 'nullable' must be a Boolean value (True or False); you used '{filter_arguments[filter_argument_name]}', which is not." )
+                log.critical( f"columns(): ERROR: 'nullable' must be a Boolean value (True or False); you used '{filter_arguments[filter_argument_name]}', which is not." )
 
                 return
 
@@ -443,7 +461,7 @@ def columns(
             
             # Complain if we got a parameter value of the wrong data type.
 
-            log.error( f"columns(): ERROR: '{filter_argument_name}' must be a string or a list of strings; you used '{filter_arguments[filter_argument_name]}', which is neither." )
+            log.critical( f"columns(): ERROR: '{filter_argument_name}' must be a string or a list of strings; you used '{filter_arguments[filter_argument_name]}', which is neither." )
 
             return
 
@@ -455,44 +473,43 @@ def columns(
                     
                     # Complain if we receive any unexpected data types inside a filter list (i.e. anything but strings).
 
-                    log.error( f"columns(): ERROR: '{filter_argument_name}' must be a string or a list of strings; you used '{filter_arguments[filter_argument_name]}', which is neither." )
+                    log.critical( f"columns(): ERROR: '{filter_argument_name}' must be a string or a list of strings; you used '{filter_arguments[filter_argument_name]}', which is neither." )
 
                     return
 
         # Validate 
 
 
-    if debug == True:
         
-        # Report details of fully processed user directives prior to querying.
+    # Report details of fully processed user directives prior to querying.
 
-        status_report = f"return_data_as='{return_data_as}', output_file='{output_file}'"
+    status_report = f"return_data_as='{return_data_as}', output_file='{output_file}'"
 
-        status_report = status_report + f", sort_by={sort_by}"
+    status_report = status_report + f", sort_by={sort_by}"
 
-        for filter_argument_name in filter_arguments:
+    for filter_argument_name in filter_arguments:
+        
+        if isinstance( filter_arguments[filter_argument_name], str ):
             
-            if isinstance( filter_arguments[filter_argument_name], str ):
-                
-                status_report = status_report + f", {filter_argument_name}='{filter_arguments[filter_argument_name]}'"
+            status_report = status_report + f", {filter_argument_name}='{filter_arguments[filter_argument_name]}'"
 
-            else:
-                
-                status_report = status_report + f", {filter_argument_name}={filter_arguments[filter_argument_name]}"
+        else:
+            
+            status_report = status_report + f", {filter_argument_name}={filter_arguments[filter_argument_name]}"
 
-        log.debug( '-' * 80 )
+    log.debug( '-' * 80 )
 
-        log.debug( f"BEGIN DEBUG MESSAGE: columns(): Processed filter directives; summary" )
+    log.debug( f"BEGIN DEBUG MESSAGE: columns(): Processed filter directives; summary" )
 
-        log.debug( '-' * 80, end='\n\n' )
+    log.debug( '-' * 80 )
 
-        log.debug( 'running explore.py columns( ' + status_report + ' )', end='\n\n' )
+    log.debug( 'running explore.py columns( ' + status_report + ' )' )
 
-        log.debug( '-' * 80 )
+    log.debug( '-' * 80 )
 
-        log.debug( f"END   DEBUG MESSAGE: columns(): Processed filter directives; summary" )
+    log.debug( f"END   DEBUG MESSAGE: columns(): Processed filter directives; summary" )
 
-        log.debug( '-' * 80, end='\n\n' )
+    log.debug( '-' * 80 )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -572,14 +589,12 @@ def columns(
     for banned_column in banned_columns:
         
         result_dataframe = result_dataframe.loc[ result_dataframe['column'] != banned_column ]
-
-    if debug == True:
         
-        log.debug( '-' * 80 )
+    log.debug( '-' * 80 )
 
-        log.debug( '      DEBUG MESSAGE: columns(): Created result DataFrame' )
+    log.debug( '      DEBUG MESSAGE: columns(): Created result DataFrame' )
 
-        log.debug( '-' * 80, end='\n\n' )
+    log.debug( '-' * 80 )
 
     #############################################################################################################################
     # Execute sorting directives, if we got any; otherwise perform the default sort on the result DataFrame.
@@ -611,13 +626,12 @@ def columns(
 
         result_dataframe = result_dataframe.sort_values( by=by_list, ascending=ascending_list )
 
-    if debug == True:
         
-        log.debug( '-' * 80 )
+    log.debug( '-' * 80 )
 
-        log.debug( '      DEBUG MESSAGE: columns(): Applied sort_by directives' )
+    log.debug( '      DEBUG MESSAGE: columns(): Applied sort_by directives' )
 
-        log.debug( '-' * 80, end='\n\n' )
+    log.debug( '-' * 80 )
 
     #############################################################################################################################
     # Iterate through whatever filters the user passed us and
@@ -656,7 +670,7 @@ def columns(
 
             if not isinstance( return_if_nullable, bool ):
                 
-                log.error( f"columns(): ERROR: Please specify either nullable=True or nullable=False, not (what you sent) nullable='{return_if_nullable}'." )
+                log.critical( f"columns(): ERROR: Please specify either nullable=True or nullable=False, not (what you sent) nullable='{return_if_nullable}'." )
 
                 return
 
@@ -761,14 +775,12 @@ def columns(
                 # Retain all rows where the value of `target_field` matches any of the given filter patterns.
 
                 result_dataframe = result_dataframe.loc[ result_dataframe[target_field].str.contains( match_pattern_string, case=False ) ]
-
-    if debug == True:
         
-        log.debug( '-' * 80 )
+    log.debug( '-' * 80 )
 
-        log.debug( '      DEBUG MESSAGE: columns(): Applied value-filtration directives' )
+    log.debug( '      DEBUG MESSAGE: columns(): Applied value-filtration directives' )
 
-        log.debug( '-' * 80, end='\n\n' )
+    log.debug( '-' * 80 )
 
     #############################################################################################################################
     # Send the results back to the user.
@@ -785,28 +797,24 @@ def columns(
         # The following, for the dubiously useful record, is a somewhat worse alternative default thing to do.
         # 
         # print( result_dataframe.to_string( index=False, justify='right', max_rows=25, max_colwidth=50 ), file=sys.stdout )
-
-        if debug == True:
             
-            log.debug( '-' * 80 )
+        log.debug( '-' * 80 )
 
-            log.debug( '      DEBUG MESSAGE: columns(): Returning results in default form (pandas.DataFrame)' )
+        log.debug( '      DEBUG MESSAGE: columns(): Returning results in default form (pandas.DataFrame)' )
 
-            log.debug( '-' * 80, end='\n\n' )
+        log.debug( '-' * 80 )
 
         return result_dataframe
 
     elif return_data_as == 'dataframe':
         
         # Give the user back the results DataFrame.
-
-        if debug == True:
             
-            log.debug( '-' * 80 )
+        log.debug( '-' * 80 )
 
-            log.debug( '      DEBUG MESSAGE: columns(): Returning results as pandas.DataFrame' )
+        log.debug( '      DEBUG MESSAGE: columns(): Returning results as pandas.DataFrame' )
 
-            log.debug( '-' * 80, end='\n\n' )
+        log.debug( '-' * 80 )
 
         return result_dataframe
 
@@ -814,27 +822,23 @@ def columns(
         
         # Give the user back a list of column names.
 
-        if debug == True:
-            
-            log.debug( '-' * 80 )
+        log.debug( '-' * 80 )
 
-            log.debug( '      DEBUG MESSAGE: columns(): Returning results as list of column names' )
+        log.debug( '      DEBUG MESSAGE: columns(): Returning results as list of column names' )
 
-            log.debug( '-' * 80, end='\n\n' )
+        log.debug( '-' * 80 )
 
         return result_dataframe['column'].to_list()
 
     else:
         
         # Write the results DataFrame to a user-specified TSV file.
-
-        if debug == True:
             
-            log.debug( '-' * 80 )
+        log.debug( '-' * 80 )
 
-            log.debug( f"      DEBUG MESSAGE: columns(): Printing results to TSV file '{output_file}'" )
+        log.debug( f"      DEBUG MESSAGE: columns(): Printing results to TSV file '{output_file}'" )
 
-            log.debug( '-' * 80, end='\n\n' )
+        log.debug( '-' * 80 )
 
         try:
             
@@ -844,7 +848,7 @@ def columns(
 
         except Exception as error:
             
-            log.error( f"columns(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
+            log.critical( f"columns(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
 
             return
 
@@ -870,7 +874,8 @@ def column_values(
     filters = None,
     data_source = '',
     force = False,
-    debug = False
+    debug = False,
+    loglevel = 'WARNING'
 ):
     """
     Show all distinct values present in `column`, along with a count
@@ -929,8 +934,14 @@ def column_values(
             in which case attempts to retrieve values for flagged columns
             will result in a warning.
 
-        debug( boolean; optional ): If set to True, print internal process
-        details to the standard error stream.
+        debug( boolean; optional ):
+            If set to True, print internal process details to the standard
+            error stream. Deprecated in favor of loglevel but will still work
+            if set. 
+
+        loglevel ( str; 'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ):
+            If debug is false, and one of these values is set, set the loglevel to it.
+
 
     Returns:
         pandas.DataFrame OR list OR returns nothing, but writes retrieved
@@ -940,15 +951,28 @@ def column_values(
     #############################################################################################################################
     # Ensure nothing untoward got passed into the `debug` or `force` parameters.
 
+    loglevel = loglevel.upper()
     if debug != True and debug != False:
         
-        print( f"column_values(): ERROR: The `debug` parameter must be set to True or False; you specified '{debug}', which is neither.", file=sys.stderr )
-
+        log.error( f"column_values(): ERROR: The `debug` parameter must be set to True or False; you specified '{debug}', which is neither.")
         return
+    
+    elif debug == True:
+
+        log.setLevel('DEBUG')
+
+    elif debug == False and loglevel in {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}:
+
+        log.setLevel(loglevel)
+
+    else:
+
+        log.warning( f"column_values(): loglevel set to '{loglevel}'. Should be one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. Setting to 'WARNING'." )
+        log.setLevel( 'WARNING' )
 
     if force != True and force != False:
         
-        print( f"column_values(): ERROR: The `force` parameter must be set to True or False; you specified '{force}', which is neither.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: The `force` parameter must be set to True or False; you specified '{force}', which is neither." )
 
         return
 
@@ -957,7 +981,7 @@ def column_values(
 
     if ( not isinstance( column, str ) ) or column == '':
         
-        print( f"column_values(): ERROR: parameter 'column' cannot be omitted. Please specify a column from which to fetch a list of distinct values.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: parameter 'column' cannot be omitted. Please specify a column from which to fetch a list of distinct values." )
 
         return
 
@@ -973,7 +997,7 @@ def column_values(
 
     if len( columns( column=column, return_data_as='list' ) ) == 0:
         
-        print( f"column_values(): ERROR: parameter 'column' must be a searchable CDA column name. You supplied '{column}', which is not.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: parameter 'column' must be a searchable CDA column name. You supplied '{column}', which is not." )
 
         return
 
@@ -983,7 +1007,7 @@ def column_values(
 
     if not isinstance( data_source, str ):
         
-        print( f"column_values(): ERROR: value assigned to 'data_source' parameter must be a string (e.g. 'GDC'); you specified '{data_source}', which is not.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: value assigned to 'data_source' parameter must be a string (e.g. 'GDC'); you specified '{data_source}', which is not." )
 
         return
 
@@ -1011,7 +1035,7 @@ def column_values(
 
         if data_source not in allowed_data_source_values:
             
-            print( f"column_values(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{data_source}', which is not.", file=sys.stderr )
+            log.critical( f"column_values(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{data_source}', which is not." )
 
             return
 
@@ -1030,7 +1054,7 @@ def column_values(
 
     if not force and column in expensive_columns:
         
-        print( f"column_values(): WARNING: '{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' ).", file=sys.stderr )
+        log.critical( f"column_values(): WARNING: '{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' )." )
 
         return
 
@@ -1057,7 +1081,7 @@ def column_values(
 
     if not isinstance( return_data_as, str ):
         
-        print( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
 
         return
 
@@ -1072,7 +1096,7 @@ def column_values(
 
     if not isinstance( output_file, str ):
         
-        print( f"column_values(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path." )
 
         return
 
@@ -1080,13 +1104,13 @@ def column_values(
 
     if return_data_as not in allowed_return_types:
         
-        print( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
 
         return
 
     elif return_data_as == 'tsv' and output_file == '':
         
-        print( f"column_values(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'." )
 
         return
 
@@ -1097,8 +1121,8 @@ def column_values(
         # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
         # so we complain and ask them to clarify.
 
-        print( f"column_values(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.", file=sys.stderr )
-        print( f"(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.).", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'." )
+        log.critical( f"(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
 
         return
 
@@ -1127,7 +1151,7 @@ def column_values(
         
         # Complain if we receive any unexpected data types instead of string directives.
 
-        print( f"column_values(): ERROR: 'sort_by' must be a string; you used '{sort_by}', which is not.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: 'sort_by' must be a string; you used '{sort_by}', which is not." )
 
         return
 
@@ -1149,7 +1173,7 @@ def column_values(
 
         elif sort_by not in allowed_sort_by_options['list']:
             
-            print( f"column_values(): ERROR: return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again.", file=sys.stderr )
+            log.critical( f"column_values(): ERROR: return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again." )
 
             return
 
@@ -1163,39 +1187,37 @@ def column_values(
 
         elif sort_by not in allowed_sort_by_options['dataframe_or_tsv']:
             
-            print( f"column_values(): ERROR: unrecognized sort_by '{sort_by}'. Please use one of 'count', 'value', 'count:desc', 'value:desc', 'count:asc' or 'value:asc' (or omit the sort_by parameter altogether).", file=sys.stderr )
+            log.critical( f"column_values(): ERROR: unrecognized sort_by '{sort_by}'. Please use one of 'count', 'value', 'count:desc', 'value:desc', 'count:asc' or 'value:asc' (or omit the sort_by parameter altogether)." )
 
             return
-
-    if debug == True:
         
-        # Report details of the final parsed sort logic.
+    # Report details of the final parsed sort logic.
 
-        print( '-' * 80, file=sys.stderr )
+    log.debug( '-' * 80 )
 
-        print( f"BEGIN DEBUG MESSAGE: column_values(): Processed all parameter directives. Calling API to fetch data for:", file=sys.stderr )
+    log.debug( f"BEGIN DEBUG MESSAGE: column_values(): Processed all parameter directives. Calling API to fetch data for:" )
 
-        print( '-' * 80, end='\n\n', file=sys.stderr )
+    log.debug( '-' * 80 )
 
-        parameter_dict = {
-            
-            'column': column,
-            'return_data_as': return_data_as,
-            'output_file': output_file,
-            'sort_by': sort_by,
-            'filters': filters,
-            'data_source': data_source,
-            'force': force,
-            'debug': debug
-        }
+    parameter_dict = {
+        
+        'column': column,
+        'return_data_as': return_data_as,
+        'output_file': output_file,
+        'sort_by': sort_by,
+        'filters': filters,
+        'data_source': data_source,
+        'force': force,
+        'debug': debug
+    }
 
-        print( parameter_dict, end='\n\n', file=sys.stderr )
+    log.debug( parameter_dict )
 
-        print( '-' * 80, file=sys.stderr )
+    log.debug( '-' * 80 )
 
-        print( f"END   DEBUG MESSAGE: column_values(): Processed sort directives", file=sys.stderr )
+    log.debug( f"END   DEBUG MESSAGE: column_values(): Processed sort directives" )
 
-        print( '-' * 80, end='\n\n', file=sys.stderr )
+    log.debug( '-' * 80 )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -1225,27 +1247,22 @@ def column_values(
     #try:
         # Unique Values Endpoint
     paged_response_data_object = query_api_instance.unique_values_endpoint_unique_values_columnname_post(columnname, system=system, count=count, total_count=total_count, limit=records_per_page, offset=starting_offset)
-    print("The response of UniqueValuesApi->unique_values_endpoint_unique_values_columnname_post:\n")
-    print(str(paged_response_data_object))
+
+
     #except Exception as e:
     #    print("Exception when calling UniqueValuesApi->unique_values_endpoint_unique_values_columnname_post: %s\n" % e)
-
-    if debug == True:
         
-        print( '-' * 80, file=sys.stderr )
+    log.debug( '-' * 80 )
 
-        print( f"BEGIN DEBUG MESSAGE: column_values(): Querying CDA API 'unique_values' endpoint", file=sys.stderr )
+    log.debug( f"BEGIN DEBUG MESSAGE: column_values(): Querying CDA API 'unique_values' endpoint" )
 
-        print( '-' * 80, end='\n\n', file=sys.stderr )
-
-   
-    if debug == True:
+    log.debug( '-' * 80 )
         
-        # Report some metadata about the results we got back.
-    
-        print( f"Number of result rows: {paged_response_data_object.total_row_count}", file=sys.stderr )
+    # Report some metadata about the results we got back.
 
-        print( f"Query SQL: '{paged_response_data_object.query_sql}'", end='\n\n', file=sys.stderr )
+    log.debug( f"Number of result rows: {paged_response_data_object.total_row_count}" )
+
+    log.debug( f"Query SQL: '{paged_response_data_object.query_sql}'" )
 
     # Make a Pandas DataFrame out of the first batch of results.
     # 
@@ -1264,18 +1281,16 @@ def column_values(
 
     more_than_one_result_page = False
 
-    
-    if debug == True:
         
-        if more_than_one_result_page:
-            
-            print( '...done.', end='\n\n', file=sys.stderr )
+    if more_than_one_result_page:
+        
+        log.debug( '...done.' )
 
-        print( '-' * 80, file=sys.stderr )
+    log.debug( '-' * 80 )
 
-        print( f"END   DEBUG MESSAGE: column_values(): Queried CDA API 'unique_values' endpoint and created result DataFrame", file=sys.stderr )
+    log.debug( f"END   DEBUG MESSAGE: column_values(): Queried CDA API 'unique_values' endpoint and created result DataFrame" )
 
-        print( '-' * 80, end='\n\n', file=sys.stderr )
+    log.debug( '-' * 80 )
 
     #############################################################################################################################
     # Postprocess API result data, if there is any.
@@ -1284,15 +1299,14 @@ def column_values(
         
         return result_dataframe
 
-    if debug == True:
         
-        print( '-' * 80, file=sys.stderr )
+    log.debug( '-' * 80 )
 
-        print( 'BEGIN DEBUG MESSAGE: column_values(): Postprocessing results', file=sys.stderr )
+    log.debug( 'BEGIN DEBUG MESSAGE: column_values(): Postprocessing results' )
 
-        print( '-' * 80, end='\n\n', file=sys.stderr )
+    log.debug( '-' * 80 )
 
-        print( 'Casting counts to integers and fixing symmetry for returned column labels...', file=sys.stderr )
+    log.debug( 'Casting counts to integers and fixing symmetry for returned column labels...' )
 
     # Term-count values come in as floats. Make them not that.
 
@@ -1325,10 +1339,8 @@ def column_values(
         # Adjust the header the API sent us for the values column.
 
         result_dataframe = result_dataframe.rename( columns = { suffix: column } )
-
-    if debug == True:
         
-        print( 'Handling missing values...', file=sys.stderr )
+    log.debug( 'Handling missing values...' )
 
     # CDA has no float values. If the API gives us some, cast them to integers.
 
@@ -1360,7 +1372,7 @@ def column_values(
         
         # This isn't anticipated. Yell if we get something unexpected.
 
-        print( f"column_values(): ERROR: Unexpected data type `{result_dataframe[column].dtype}` received; aborting. Please report this event to the CDA development team.", file=sys.stderr )
+        log.critical( f"column_values(): ERROR: Unexpected data type `{result_dataframe[column].dtype}` received; aborting. Please report this event to the CDA development team." )
 
         return
 
@@ -1429,30 +1441,28 @@ def column_values(
     # Strip the trailing '|' character from the end of the last `filter_pattern`.
 
     match_pattern_string = re.sub( r'\|$', r'', match_pattern_string )
-
-    if debug == True:
         
-        print_regex = match_pattern_string
+    print_regex = match_pattern_string
 
-        if include_null_count:
-            
-            if print_regex == '':
-                
-                print_regex = '(missing values)'
-
-            else:
-                
-                print_regex = print_regex + '|(missing values)'
-
+    if include_null_count:
+        
         if print_regex == '':
             
-            print_regex = '(none)'
+            print_regex = '(missing values)'
 
         else:
             
-            print_regex = f"/{print_regex}/"
+            print_regex = print_regex + '|(missing values)'
 
-        print( f"Applying pattern filters: {print_regex}", file=sys.stderr )
+    if print_regex == '':
+        
+        print_regex = '(none)'
+
+    else:
+        
+        print_regex = f"/{print_regex}/"
+
+    print( f"Applying pattern filters: {print_regex}" )
 
     # Filter results to match the full aggregated regular expression in `match_pattern_string`.
 
@@ -1472,10 +1482,8 @@ def column_values(
         result_dataframe = result_dataframe.loc[ result_dataframe[column].astype(str).str.contains( match_pattern_string, case=False ) ]
 
     # Sort results. Default (note that the final value of `sort_by` is determined earlier in this function) is to sort by term count, descending.
-
-    if debug == True:
         
-        print( f"Applying sort directive '{sort_by}'...", end='\n\n', file=sys.stderr )
+    log.debug( f"Applying sort directive '{sort_by}'..." )
 
     if sort_by == 'count':
         
@@ -1503,17 +1511,15 @@ def column_values(
 
     else:
         
-        print( f"column_values(): ERROR: something has gone horribly wrong; we should never get here.", file=sys.stderr )
+        log.error( f"column_values(): ERROR: something has gone horribly wrong; we should never get here." )
 
         return
 
-    if debug == True:
+    log.debug( '-' * 80 )
 
-        print( '-' * 80, file=sys.stderr )
+    log.debug( 'END   DEBUG MESSAGE: column_values(): Postprocessed results' )
 
-        print( 'END   DEBUG MESSAGE: column_values(): Postprocessed results', file=sys.stderr )
-
-        print( '-' * 80, end='\n\n', file=sys.stderr )
+    log.debug( '-' * 80 )
 
     #############################################################################################################################
     # Send the results back to the user.
@@ -1547,28 +1553,24 @@ def column_values(
         # The following, for the dubiously useful record, is a somewhat worse alternative default thing to do.
         # 
         # print( result_dataframe.to_string( index=False, justify='right', max_rows=25, max_colwidth=50 ), file=sys.stdout )
-
-        if debug == True:
             
-            print( '-' * 80, file=sys.stderr )
+        log.debug( '-' * 80 )
 
-            print( '      DEBUG MESSAGE: column_values(): Returning results in default form (pandas.DataFrame)', file=sys.stderr )
+        log.debug( '      DEBUG MESSAGE: column_values(): Returning results in default form (pandas.DataFrame)' )
 
-            print( '-' * 80, end='\n\n', file=sys.stderr )
+        log.debug( '-' * 80 )
 
         return result_dataframe
 
     elif return_data_as == 'dataframe':
         
         # Give the user back the results DataFrame.
-
-        if debug == True:
             
-            print( '-' * 80, file=sys.stderr )
+        log.debug( '-' * 80 )
 
-            print( '      DEBUG MESSAGE: column_values(): Returning results as pandas.DataFrame', file=sys.stderr )
+        log.debug( '      DEBUG MESSAGE: column_values(): Returning results as pandas.DataFrame' )
 
-            print( '-' * 80, end='\n\n', file=sys.stderr )
+        log.debug( '-' * 80 )
 
         return result_dataframe
 
@@ -1576,27 +1578,23 @@ def column_values(
         
         # Strip the term-values column out of the results DataFrame and give them to the user as a Python list.
 
-        if debug == True:
-            
-            print( '-' * 80, file=sys.stderr )
+        log.debug( '-' * 80 )
 
-            print( '      DEBUG MESSAGE: column_values(): Returning results as list of column values', file=sys.stderr )
+        log.debug( '      DEBUG MESSAGE: column_values(): Returning results as list of column values' )
 
-            print( '-' * 80, end='\n\n', file=sys.stderr )
+        log.debug( '-' * 80 )
 
         return result_dataframe[column].to_list()
 
     else:
         
         # Write the results DataFrame to a user-specified TSV file.
-
-        if debug == True:
             
-            print( '-' * 80, file=sys.stderr )
+        log.debug( '-' * 80 )
 
-            print( f"      DEBUG MESSAGE: column_values(): Printing results to TSV file '{output_file}'", file=sys.stderr )
+        log.debug( f"      DEBUG MESSAGE: column_values(): Printing results to TSV file '{output_file}'" )
 
-            print( '-' * 80, end='\n\n', file=sys.stderr )
+        log.debug( '-' * 80 )
 
         try:
             
@@ -1606,7 +1604,7 @@ def column_values(
 
         except Exception as error:
             
-            print( f"column_values(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'.", file=sys.stderr )
+            log.critical( f"column_values(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
 
             return
 
