@@ -27,3 +27,7 @@ zz01_install_somewhere
 /SQL_data/
 
 
+*.ipynb
+/.vscode
+/.pytest_cache
+*.log
