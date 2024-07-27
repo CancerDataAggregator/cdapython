@@ -7,12 +7,9 @@ import logging
 
 import tabulate
 from cda_client import openapi_client
-from cda_client.openapi_client.models import ColumnResponseObj
+from cda_client.openapi_client.models import ColumnResponseObj, UniqueValueResponseObj
 from cda_client.openapi_client import ApiException
 from cdapython.application_utilities import get_logger
-
-
-log = get_logger()
 
 
 # Nomenclature notes:
@@ -63,6 +60,7 @@ def tables():
 
     # Call columns(), extract unique values from the `table` column of the
     # resulting DataFrame, and return those values to the user as a list.
+    log = get_logger()
 
     columns_result_df = columns( return_data_as='dataframe' )
 
@@ -189,6 +187,7 @@ def columns(
         OR returns nothing, but writes results to a user-specified TSV file
     """
 
+    log = get_logger()
     #############################################################################################################################
     # TEMPORARY ban list: filtering on these columns is problematic at the API level, and we don't have a consistent modeling
     # structure for them either way. Disabling any mention of them until (a) we update to the CRDC Common Model, with its
@@ -950,7 +949,7 @@ def column_values(
 
     #############################################################################################################################
     # Ensure nothing untoward got passed into the `debug` or `force` parameters.
-
+    log = get_logger()
     loglevel = loglevel.upper()
     if debug != True and debug != False:
         
@@ -976,6 +975,8 @@ def column_values(
 
         return
 
+    log.debug('fct - get this?')
+    
     #############################################################################################################################
     # Check for our one required parameter.
 
@@ -994,13 +995,13 @@ def column_values(
     column = column.lower()
 
     # See if columns() agrees that the requested column exists.
-
+    log.debug('fct - get this?2')
     if len( columns( column=column, return_data_as='list' ) ) == 0:
         
         log.critical( f"column_values(): ERROR: parameter 'column' must be a searchable CDA column name. You supplied '{column}', which is not." )
 
         return
-
+    log.debug('fct - get this?3')
     #############################################################################################################################
     # Manage basic validation for the `data_source` parameter, which describes user-specified filtration on upstream data
     # sources.
@@ -1269,7 +1270,10 @@ def column_values(
     # The API returns responses in JSON format: convert that JSON into a DataFrame
     # using pandas' json_normalize() function.
 
+
     result_dataframe = pd.json_normalize( paged_response_data_object.result )
+
+
 
     # The data we've fetched so far might be just the first page (if the total number
     # of results is greater than `records_per_page`).
@@ -1280,7 +1284,118 @@ def column_values(
     incremented_offset = starting_offset + records_per_page
 
     more_than_one_result_page = False
+    if debug == True and paged_response_data_object.next_url is not None:
+        
+        print( f"Fetching remaining results in pages...", file=sys.stderr )
 
+        more_than_one_result_page = True
+
+    while paged_response_data_object.next_url is not None:
+        
+        if debug == True:
+            
+            # Show the `next_url` address returned to us by the API.
+
+            print( f"   ...fetching {paged_response_data_object.next_url}...", file=sys.stderr )
+
+        # Note that the API doesn't preserve all the query parameters we included
+        # in our original request, e.g.:
+        # 
+        # (original request)
+        #     http://localhost:8080/api/v1/unique-values?count=true&includeCount=true&offset=0&limit=100
+        # 
+        # vs
+        # 
+        # (the `next_url` value in the response to the above)
+        #     http://localhost:8080/api/v1/unique-values?offset=100&limit=100
+        # 
+        # ...so we have to put the lost parameters back, in the form of arguments to
+        # the `unique_values` endpoint call just below. Note that we're not actually using
+        # the `next_url` value in the following call, because it's incomplete. We're just
+        # checking to see if it exists (in the while-loop condition governing this block),
+        # so we can determine whether or not to continue fetching more pages:
+
+        # paged_response_data_object = query_api_instance.unique_values(
+        #     body=column,
+        #     system=data_source,
+        #     count=True,
+        #     async_req=True,
+        #     offset=incremented_offset,
+        #     limit=records_per_page,
+        #     include_count=True
+        # )
+
+        paged_response_data_object = query_api_instance.unique_values_endpoint_unique_values_columnname_post(
+            columnname, 
+            system=system, 
+            count=count, 
+            total_count=total_count, 
+            limit=records_per_page, 
+            offset=incremented_offset)
+
+
+        # if isinstance( paged_response_data_object, UniqueValueResponseObj ):
+            
+        #     while paged_response_data_object.ready() is False:
+                
+        #         paged_response_data_object.wait( 5 )
+
+        #     try:
+                
+        #         paged_response_data_object = paged_response_data_object.get()
+
+        #     except ApiException as e:
+                
+        #         try:
+                    
+        #             # Ordinarily, this exception represents a structured complaint
+        #             # from the API service that something went wrong. In this case,
+        #             # the `body` property of the ApiException object will contain
+        #             # a JSON-encoded message generated by the API describing the
+        #             # unfortunate circumstance.
+
+        #             error_message = json.loads( e.body )['message']
+
+        #         except:
+                    
+        #             # Unfortunately, if something goes wrong at the level of the
+        #             # HTTP service on which the API relies -- that is, when we
+        #             # can't actually communicate with the API as such because
+        #             # something's gone wrong with our ability to talk to the web
+        #             # server -- the ApiException class is overloaded to encode
+        #             # that HTTP protocol error (and not throw any further exceptions),
+        #             # instead of handling such events somewhere more appropriate
+        #             # (like via a different exception class altogether).
+
+        #             error_message = str( e )
+
+        #         print( f"column_values(): ERROR: error message from API: '{error_message}'.", file=sys.stderr )
+
+        #         return
+
+        #     except BaseException as e:
+                
+        #         if re.search( 'urllib3.exceptions.MaxRetryError', str( type(e) ) ) is not None:
+                    
+        #             print( "column_values(): ERROR: Can't connect to the CDA API service.", file=sys.stderr )
+
+        #         else:
+                    
+        #             print( f"column_values(): ERROR: Something ({type(e)}) went wrong when trying to connect to the API. Please check settings (rerunning the last call with debug=True will give more information).", file=sys.stderr )
+
+        #         return
+
+        next_result_batch = pd.json_normalize( paged_response_data_object.result )
+
+        if not result_dataframe.empty and not next_result_batch.empty:
+            
+            # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
+            
+            next_result_batch = next_result_batch.astype( result_dataframe.dtypes )
+
+            result_dataframe = pd.concat( [ result_dataframe, next_result_batch ] )
+
+        incremented_offset = incremented_offset + records_per_page
         
     if more_than_one_result_page:
         
@@ -1310,6 +1425,11 @@ def column_values(
 
     # Term-count values come in as floats. Make them not that.
 
+    if 'count' not in result_dataframe.columns:
+
+        log.critical(f"column_values: No column called count in api response." )
+        return
+    
     result_dataframe['count'] = result_dataframe['count'].astype( int )
 
     # `X_id` columns come back labeled just as `id`. Fix.
@@ -1462,7 +1582,7 @@ def column_values(
         
         print_regex = f"/{print_regex}/"
 
-    print( f"Applying pattern filters: {print_regex}" )
+    log.debug( f"Applying pattern filters: {print_regex}" )
 
     # Filter results to match the full aggregated regular expression in `match_pattern_string`.
 
