@@ -1,0 +1,60 @@
+0. As before, the openapi generator must generate a client named "cda_client" which should be a sibling directory to "cdapython"
+
+To do this, I launch an instance of the cda-api (fastapi service) and do the following. It should be possible to do this without a running service but I seemed to run into issues when doing so, and this worked so...
+
+openapi-generator-cli.ps1 generate -g python -o cda_client -i http://127.0.0.1:8000/openapi.json
+
+Tool can be found here:
+https://github.com/OpenAPITools/openapi-generator
+
+1. For unknown reasons (to me) I had to manually set my python system path in order to find the client. Not sure if this was necessary with the previous client, so I believe I have missed some type of magical setup. 
+
+import sys
+sys.path.append('./cda_client')
+
+2. I have changed all the print statements to use the logger functionality. This was basically cribbed from the cda-api code. One thing to note is that the logger acts like a singleton where changing the log level would affect all instances of the logger. This meant that having a debug flag in the individual functions was a bit cumbersome, as the functions call each other, and you'd have to ensure that the same log level was passed to all functions. Instead I made a set of log functions:
+
+def get_available_log_levels() :
+def set_default_log_level() :
+def set_log_level(debug = False, loglevel = 'WARNING') :
+
+As a help I still have debug = True|False as an option for set_log_level, but it can be much more fine-grained than that. I understand this might be undesirable and may change based on user feedback. 
+
+3. I tried to create a set of functions to setup the connection details, instead of having the same thing replicated across all the main interface functions.
+
+def get_api_client():
+def get_data_api_client():
+def get_columns_api_client():
+def get_unique_values_api_client():
+
+"get_api_client" is useful but will need to be "upgraded" in the future to remove the hardcoded usage of the local server to some deployed one.  
+
+4. Work on columns and tables was pretty straightforward. 
+tables is implemented in terms of columns (as before). I believe this should largely work as before.
+
+5. Data appeared right as my time was ending, but I tried to get a preliminary version of unique_values and fetch_rows working. This necessitated some back and forth with Tanner re: the api, which was still being modified and fixed up. 
+
+6. One thing I did with fetch_rows was cache the usage of columns() so that it only occurred once (well, no more than twice). Then I would "query" the result to do what we had done with individual columns() calls before - this was done to save runtime as it was being called a lot previously. 
+
+fetch_rows functionality is partially complete, with the following holes:
+a. "match_from_file" not tested
+b. "provenance" not tested or tried
+c. cases where mutation had an exemption, which I'm guessing doesn't exist anymore. These cases in the code need to be audited and tested. 
+d. count_only mode not tested or tried. Previously we would perform 2 queries and use the results to provide a count.
+e. Our fixup of the resultant data to remove NaNs, nulls, empty strings, has been disabled (this has been commented on in place.) The reason for this was the usage of lists to populate joined columns, which breaks the "one cell, one data type" concept that is baked into the code. There's probably a clever way to just ignore lists that are in a cell, but there's some bookkeeping involved in this. This is the note I left:
+
+        # Finny's Note:
+        #
+        # This code that has been commented out fixes up the output so that NaNs, None's, nulls, etc. 
+        # However the new API can insert lists into columns, and this code assumes that every cell of a dataframe
+        # is some type of value (that we keep track of with the result_column_data_types dict.) So something needs to be
+        # changed, for cases where we are joining a table that produces a list as a cell for this fixup code to work. 
+
+I mostly tested the subject endpoint, not the file one, but from that initial testing I think that match_all, match_any, data_source, add_columns, exclude_columns, and link_to_table are working as I'd expect. 
+
+Note that we have removed the "single table join" restriction in fetch_rows via "add_columns". 
+
+7. In the future we will probably want to support async server responses, like we used to have. This is largely driven by the api but it shouldn't be very difficult.
+
+8. I have not touched the release_metadata or summary endpoints. As I understand it these are relatively simple though - just pass throughs? 
+ 
