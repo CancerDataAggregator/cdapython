@@ -9,8 +9,9 @@ import tabulate
 from cda_client import openapi_client
 from cda_client.openapi_client.models import ColumnResponseObj, UniqueValueResponseObj
 from cda_client.openapi_client import ApiException
-from cdapython.application_utilities import get_logger
+from cdapython.application_utilities import get_logger, get_columns_api_client, get_unique_values_api_client
 
+log = get_logger()
 
 # Nomenclature notes:
 # 
@@ -60,8 +61,7 @@ def tables():
 
     # Call columns(), extract unique values from the `table` column of the
     # resulting DataFrame, and return those values to the user as a list.
-    log = get_logger()
-
+    
     columns_result_df = columns( return_data_as='dataframe' )
 
     if columns_result_df is None:
@@ -97,8 +97,6 @@ def columns(
     return_data_as = '',
     output_file = '',
     sort_by = '',
-    debug = False,
-    loglevel = 'WARNING',
     **filter_arguments
 ):
     """
@@ -127,14 +125,6 @@ def columns(
             Any field with a suffix of ':desc' appended to it will be sorted
             in reverse order; adding ':asc' will ensure ascending sort order.
             Example: sort_by=[ 'table', 'nullable:desc', 'column:asc' ]
-
-        debug( boolean; optional ):
-            If set to True, print internal process details to the standard
-            error stream. Deprecated in favor of loglevel but will still work
-            if set. 
-
-        loglevel ( str; 'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ):
-            If debug is false, and one of these values is set, set the loglevel to it.
 
     Filter arguments:
         table ( string or list of strings; optional ):
@@ -187,7 +177,6 @@ def columns(
         OR returns nothing, but writes results to a user-specified TSV file
     """
 
-    log = get_logger()
     #############################################################################################################################
     # TEMPORARY ban list: filtering on these columns is problematic at the API level, and we don't have a consistent modeling
     # structure for them either way. Disabling any mention of them until (a) we update to the CRDC Common Model, with its
@@ -204,30 +193,6 @@ def columns(
         'file_associated_project',
         'subject_associated_project'
     ]
-
-    #############################################################################################################################
-    # Ensure nothing untoward got passed into the `debug` parameter.
-    # 
-    # Fun exercise for reader: compare results if `isinstance( debug, bool )` is used.
-
-    loglevel = loglevel.upper()
-    if debug != True and debug != False:
-        
-        log.error( f"columns(): ERROR: The `debug` parameter must be set to True or False; you specified '{debug}', which is neither.")
-        return
-    
-    elif debug == True:
-
-        log.setLevel('DEBUG')
-
-    elif debug == False and loglevel in {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}:
-
-        log.setLevel(loglevel)
-
-    else:
-
-        log.warning( f"columns(): loglevel set to '{loglevel}'. Should be one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. Setting to 'WARNING'." )
-        log.setLevel( 'WARNING' )
 
     #############################################################################################################################
     # Process return-type directives `return_data_as` and `output_file`.
@@ -513,27 +478,11 @@ def columns(
     #############################################################################################################################
     # Fetch data from the API.
 
-    # Make an ApiClient object containing the information necessary to connect to the CDA database.
-
-    # Allow users to override the system-default URL for the CDA API by setting their CDA_API_URL
-    # environment variable.
-
-
-    # Make a QueryApi object using the connection information in the ApiClient object.
-
-    url = "http://localhost:8000"
-    url_override = os.environ.get( 'CDA_API_URL' )
-    if url_override is not None and len( url_override ) > 0:
-        url = url_override
-    configuration = openapi_client.Configuration(host = url)
-
-    # Enter a context with an instance of the API client
-    api_client = openapi_client.ApiClient(configuration)
-    query_api_instance = openapi_client.ColumnsApi(api_client)
+    query_api_instance = get_columns_api_client()
 
     #try:
         # Columns Endpoint
-    columns_response_data_object = query_api_instance.columns_endpoint_columns_post()
+    columns_response_data_object = query_api_instance.columns_endpoint_columns_get()
 
     #except openapi_client.ApiException as e:
     #    print("Exception when calling ColumnsApi->columns_endpoint_columns_post: %s\n" % e)
@@ -872,9 +821,7 @@ def column_values(
     sort_by = '',
     filters = None,
     data_source = '',
-    force = False,
-    debug = False,
-    loglevel = 'WARNING'
+    force = False
 ):
     """
     Show all distinct values present in `column`, along with a count
@@ -933,49 +880,11 @@ def column_values(
             in which case attempts to retrieve values for flagged columns
             will result in a warning.
 
-        debug( boolean; optional ):
-            If set to True, print internal process details to the standard
-            error stream. Deprecated in favor of loglevel but will still work
-            if set. 
-
-        loglevel ( str; 'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ):
-            If debug is false, and one of these values is set, set the loglevel to it.
-
 
     Returns:
         pandas.DataFrame OR list OR returns nothing, but writes retrieved
         data to a user-specified TSV file
     """
-
-    #############################################################################################################################
-    # Ensure nothing untoward got passed into the `debug` or `force` parameters.
-    log = get_logger()
-    loglevel = loglevel.upper()
-    if debug != True and debug != False:
-        
-        log.error( f"column_values(): ERROR: The `debug` parameter must be set to True or False; you specified '{debug}', which is neither.")
-        return
-    
-    elif debug == True:
-
-        log.setLevel('DEBUG')
-
-    elif debug == False and loglevel in {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}:
-
-        log.setLevel(loglevel)
-
-    else:
-
-        log.warning( f"column_values(): loglevel set to '{loglevel}'. Should be one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. Setting to 'WARNING'." )
-        log.setLevel( 'WARNING' )
-
-    if force != True and force != False:
-        
-        log.critical( f"column_values(): ERROR: The `force` parameter must be set to True or False; you specified '{force}', which is neither." )
-
-        return
-
-    log.debug('fct - get this?')
     
     #############################################################################################################################
     # Check for our one required parameter.
@@ -995,13 +904,11 @@ def column_values(
     column = column.lower()
 
     # See if columns() agrees that the requested column exists.
-    log.debug('fct - get this?2')
     if len( columns( column=column, return_data_as='list' ) ) == 0:
         
         log.critical( f"column_values(): ERROR: parameter 'column' must be a searchable CDA column name. You supplied '{column}', which is not." )
 
         return
-    log.debug('fct - get this?3')
     #############################################################################################################################
     # Manage basic validation for the `data_source` parameter, which describes user-specified filtration on upstream data
     # sources.
@@ -1208,8 +1115,7 @@ def column_values(
         'sort_by': sort_by,
         'filters': filters,
         'data_source': data_source,
-        'force': force,
-        'debug': debug
+        'force': force
     }
 
     log.debug( parameter_dict )
@@ -1223,27 +1129,13 @@ def column_values(
     #############################################################################################################################
     # Fetch data from the API.
 
-    # Make an ApiClient object containing the information necessary to connect to the CDA database.
-    # 
-    # Allow users to override the system-default URL for the CDA API by setting their CDA_API_URL
-    # environment variable.
-
-    url = "http://localhost:8000"
-    url_override = os.environ.get( 'CDA_API_URL' )
-    if url_override is not None and len( url_override ) > 0:
-        url = url_override
-    configuration = openapi_client.Configuration(host = url)
-
-
-    api_client = openapi_client.ApiClient(configuration)
-    # Create an instance of the API class
-    query_api_instance = openapi_client.UniqueValuesApi(api_client)
+    query_api_instance = get_unique_values_api_client()
     columnname = column # str | 
     system = data_source # str |  (optional) (default to '')
-    count = False # bool |  (optional) (default to False)
-    total_count = False # bool |  (optional) (default to False)
-    records_per_page = 56 # int |  (optional)
-    starting_offset = 56 # int |  (optional)
+    count = True # bool |  (optional) (default to False)
+    total_count = True # bool |  (optional) (default to False)
+    records_per_page = 500000 # int |  (optional)
+    starting_offset = 0 # int |  (optional)
 
     #try:
         # Unique Values Endpoint
@@ -1273,8 +1165,6 @@ def column_values(
 
     result_dataframe = pd.json_normalize( paged_response_data_object.result )
 
-
-
     # The data we've fetched so far might be just the first page (if the total number
     # of results is greater than `records_per_page`).
     # 
@@ -1284,19 +1174,16 @@ def column_values(
     incremented_offset = starting_offset + records_per_page
 
     more_than_one_result_page = False
-    if debug == True and paged_response_data_object.next_url is not None:
+    if paged_response_data_object.next_url is not None:
         
-        print( f"Fetching remaining results in pages...", file=sys.stderr )
+        log.debug( f"Fetching remaining results in pages..." )
 
         more_than_one_result_page = True
 
-    while paged_response_data_object.next_url is not None:
-        
-        if debug == True:
-            
-            # Show the `next_url` address returned to us by the API.
 
-            print( f"   ...fetching {paged_response_data_object.next_url}...", file=sys.stderr )
+    while paged_response_data_object.next_url is not None and len(paged_response_data_object.next_url) > 0:
+        
+        log.debug( f"   ...fetching {paged_response_data_object.next_url}..." )
 
         # Note that the API doesn't preserve all the query parameters we included
         # in our original request, e.g.:
@@ -1425,12 +1312,12 @@ def column_values(
 
     # Term-count values come in as floats. Make them not that.
 
-    if 'count' not in result_dataframe.columns:
+    if 'value_count' not in result_dataframe.columns:
 
-        log.critical(f"column_values: No column called count in api response." )
+        log.critical(f"column_values: No column called value_count in api response." )
         return
     
-    result_dataframe['count'] = result_dataframe['count'].astype( int )
+    result_dataframe['value_count'] = result_dataframe['value_count'].astype( int )
 
     # `X_id` columns come back labeled just as `id`. Fix.
 
@@ -1609,13 +1496,13 @@ def column_values(
         
         # Sort by count; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
 
-        result_dataframe = result_dataframe.sort_values( by=[ 'count', column ], ascending=[ True, True ] )
+        result_dataframe = result_dataframe.sort_values( by=[ 'value_count', column ], ascending=[ True, True ] )
 
     elif sort_by == 'count:desc':
         
         # Sort by count, descending; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
 
-        result_dataframe = result_dataframe.sort_values( by=[ 'count', column ], ascending=[ False, True ] )
+        result_dataframe = result_dataframe.sort_values( by=[ 'value_count', column ], ascending=[ False, True ] )
 
     elif sort_by == 'value':
         
