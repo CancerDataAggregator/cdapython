@@ -2,10 +2,7 @@
 
 To do this, I launch an instance of the cda-api (fastapi service) and do the following. It should be possible to do this without a running service but I seemed to run into issues when doing so, and this worked so...
 
-openapi-generator-cli.ps1 generate -g python -o cda_client -i http://127.0.0.1:8000/openapi.json
-
-Tool can be found here:
-https://github.com/OpenAPITools/openapi-generator
+https://github.com/openapi-generators/openapi-python-client
 
 1. For unknown reasons (to me) I had to manually set my python system path in order to find the client. Not sure if this was necessary with the previous client, so I believe I have missed some type of magical setup. 
 

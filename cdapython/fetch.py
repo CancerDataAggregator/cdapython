@@ -1,61 +1,54 @@
 import json
-import pandas as pd
-import os
 import re
-import sys
 
-from cdapython.explore import columns, tables
-import openapi_client
-from openapi_client.rest import ApiException
-from openapi_client.models.paged_response_obj import PagedResponseObj
-from cdapython.application_utilities import get_logger, get_data_api_client
+import pandas as pd
 
-import time
+import cda_client
+
+# from cda_client.rest import ApiException
+from cda_client.models.q_node import QNode
+from cdapython.application_utilities import get_api_client, get_logger
+from cdapython.explore import columns
 
 log = get_logger()
 
 # Nomenclature notes:
-# 
+#
 # * try to standardize all potential user-facing synonyms for basic database data structures
 #   (field, entity, endpoint, cell, value, term, etc.) to "table", "column", "row" and "value".
 
-class CdaApiQueryEncoder( json.JSONEncoder ):
 
-    def default( self, o ):
-        
-        if type( o ) == 'mappingproxy':
-            
+class CdaApiQueryEncoder(json.JSONEncoder):
+    def default(self, o):
+        if type(o) == "mappingproxy":
             return None
 
-        tmp_dict = vars( o )
+        tmp_dict = vars(o)
 
         if "query" in tmp_dict:
-            
             return tmp_dict["query"]
 
         if "_data_store" in tmp_dict:
-            
             return tmp_dict["_data_store"]
 
         return None
-    
+
+
 #############################################################################################################################
 #
 # cleanup_match_statement(column_data, match_statement) : Parse `match_*` filter expressions: complain if
-# 
+#
 #     * requested columns don't exist
 #     * illegal or type-inappropriate operators are used
 #     * filter values don't match the data types of the columns they're paired with
 #     * wildcards appear anywhere but at the ends of a filter string
-# 
+#
 # ...and recombine elements for use in querying
 #
 #############################################################################################################################
 
-def cleanup_match_statement(
-    column_data, 
-    match_statement
-) :
+
+def cleanup_match_statement(column_data, match_statement):
     """
     Parse `match_*` filter expressions and transform for validity with API
 
@@ -64,7 +57,7 @@ def cleanup_match_statement(
             Result of columns() call. Parameterized to save from calling columns() multiple times
 
         match_statement ( list of strings; optional ):
-            One or more conditions, expressed as filter strings 
+            One or more conditions, expressed as filter strings
 
     Returns:
         List of transformed and cleaned up match statements, or an empty list if no inputs were given
@@ -73,180 +66,158 @@ def cleanup_match_statement(
     queries_for_match_statement = []
 
     if len(match_statement) == 0:
-        
         return queries_for_match_statement
 
     #############################################################################################################################
     # Define the list of supported filter-string operators.
 
-    allowed_operators = {
-        
-        '>',
-        '>=',
-        '<',
-        '<=',
-        '=',
-        '!='
-    }
+    allowed_operators = {">", ">=", "<", "<=", "=", "!="}
 
     #############################################################################################################################
     # Enumerate restrictions on operator use to appropriate data types.
 
     operators_by_data_type = {
-        
-        'bigint': allowed_operators,
-        'boolean': { '=', '!=' },
-        'integer': allowed_operators,
-        'numeric': allowed_operators,
-        'text': { '=', '!=' }
+        "bigint": allowed_operators,
+        "boolean": {"=", "!="},
+        "integer": allowed_operators,
+        "numeric": allowed_operators,
+        "text": {"=", "!="},
     }
 
     #############################################################################################################################
     # Enable aliases for various ways to say "True" and "False". (Case will be lowered as soon as each literal is received.)
 
-    boolean_alias = {
-        
-        'true': 'true',
-        't': 'true',
-        'false': 'false',
-        'f': 'false'
-    }
+    boolean_alias = {"true": "true", "t": "true", "false": "false", "f": "false"}
 
     for item in match_statement:
-        
         # Try to extract a column name from this filter expression. Don't be case-sensitive.
 
-        filter_column_name = re.sub( r'^([\S]+)\s.*', r'\1', item ).lower()
+        filter_column_name = re.sub(r"^([\S]+)\s.*", r"\1", item).lower()
 
         # Let's see if this thing exists.
 
-        filter_column_metadata = column_data.query(f"column == \"{filter_column_name}\"")
+        filter_column_metadata = column_data.query(f'column == "{filter_column_name}"')
 
-        if filter_column_metadata is None or len( filter_column_metadata ) != 1:
-            
-            raise RuntimeError( f"ERROR: requested column '{filter_column_name}' is not a searchable CDA column." )
+        if filter_column_metadata is None or len(filter_column_metadata) != 1:
+            raise RuntimeError(f"ERROR: requested column '{filter_column_name}' is not a searchable CDA column.")
 
         # See what the operator is.
 
-        filter_operator = re.sub( r'^\S+\s+(\S+)\s.*', r'\1', item )
+        filter_operator = re.sub(r"^\S+\s+(\S+)\s.*", r"\1", item)
 
-        if filter_operator == '==':
-            
+        if filter_operator == "==":
             # Be kind to computer scientists.
 
-            filter_operator = '='
+            filter_operator = "="
 
         elif filter_operator not in allowed_operators:
-            
-            raise RuntimeError( f"ERROR:  operator '{filter_operator}' is not supported." )
+            raise RuntimeError(f"ERROR:  operator '{filter_operator}' is not supported.")
 
         # Identify the data type in the column being filtered.
 
-        target_data_type = filter_column_metadata['data_type'].iloc[0]
+        target_data_type = filter_column_metadata["data_type"].iloc[0]
 
         # Make sure the operator specified is allowed for the data type of the column being filtered.
 
         if filter_operator not in operators_by_data_type[target_data_type]:
-            
-            raise RuntimeError( f"ERROR: operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
+            raise RuntimeError(
+                f"ERROR: operator '{filter_operator}' is not usable for values of type '{target_data_type}'."
+            )
 
         # We said quotes weren't required for string values. Doesn't technically mean they can't be used. Remove them.
 
-        filter_value = re.sub( r'^\S+\s+\S+\s+(\S.*)$', r'\1', item )
+        filter_value = re.sub(r"^\S+\s+\S+\s+(\S.*)$", r"\1", item)
 
-        filter_value = re.sub( r"""^['"]+""", r'', filter_value )
-        filter_value = re.sub( r"""['"]+$""", r'', filter_value )
+        filter_value = re.sub(r"""^['"]+""", r"", filter_value)
+        filter_value = re.sub(r"""['"]+$""", r"", filter_value)
 
         # Validate VALUE types and process wildcards.
 
-        if target_data_type != 'text':
-            
+        if target_data_type != "text":
             # Ignore leading and trailing whitespace unless we're dealing with strings.
 
-            filter_value = re.sub( r'^\s+', r'', filter_value )
-            filter_value = re.sub( r'\s+$', r'', filter_value )
+            filter_value = re.sub(r"^\s+", r"", filter_value)
+            filter_value = re.sub(r"\s+$", r"", filter_value)
 
-        if filter_value.lower() != 'null':
-            
-            if target_data_type == 'boolean':
-                
+        if filter_value.lower() != "null":
+            if target_data_type == "boolean":
                 # If we're supposed to be in a boolean column, make sure we've got a true/false value.
 
                 filter_value = filter_value.lower()
 
                 if filter_value not in boolean_alias:
-                    
-                    raise RuntimeError( f"ERROR: requested column {filter_column_name} has data type 'boolean', requiring a true/false value; you specified '{filter_value}', which is neither." )
+                    raise RuntimeError(
+                        f"ERROR: requested column {filter_column_name} has data type 'boolean', requiring a true/false value; you specified '{filter_value}', which is neither."
+                    )
 
                 else:
-                    
                     filter_value = boolean_alias[filter_value]
 
-            elif target_data_type in [ 'bigint', 'integer', 'numeric' ]:
-                
+            elif target_data_type in ["bigint", "integer", "numeric"]:
                 # If we're supposed to be in a numeric column, make sure we've got a number.
 
-                if re.search( r'^[-+]?\d+(\.\d+)?$', filter_value ) is None:
-                    
-                    raise RuntimeError( f"ERROR: requested column {filter_column_name} has data type '{target_data_type}', requiring a number value; you specified '{filter_value}', which is not." )
+                if re.search(r"^[-+]?\d+(\.\d+)?$", filter_value) is None:
+                    raise RuntimeError(
+                        f"ERROR: requested column {filter_column_name} has data type '{target_data_type}', requiring a number value; you specified '{filter_value}', which is not."
+                    )
 
-            elif target_data_type == 'text':
-                
+            elif target_data_type == "text":
                 # Check for wildcards: if found, adjust operator and
                 # wildcard syntax to match API expectations on incoming queries.
 
                 original_filter_value = filter_value
 
-                if re.search( r'^\*', filter_value ) is not None or re.search( r'\*$', filter_value ) is not None:
-                    
-                    filter_value = re.sub( r'^\*+', r'%', filter_value )
+                if re.search(r"^\*", filter_value) is not None or re.search(r"\*$", filter_value) is not None:
+                    filter_value = re.sub(r"^\*+", r"%", filter_value)
 
-                    filter_value = re.sub( r'\*+$', r'%', filter_value )
+                    filter_value = re.sub(r"\*+$", r"%", filter_value)
 
-                    if filter_operator == '!=':
-                        
-                        filter_operator = 'NOT LIKE'
+                    if filter_operator == "!=":
+                        filter_operator = "NOT LIKE"
 
                     else:
-                        
-                        filter_operator = 'LIKE'
+                        filter_operator = "LIKE"
 
-                if re.search( r'\*', filter_value ) is not None:
-                    
-                    raise RuntimeError( f"ERROR: wildcards (*) are only allowed at the ends of string values; string '{original_filter_value}' is noncompliant (it has one in the middle). Please fix." )
+                if re.search(r"\*", filter_value) is not None:
+                    raise RuntimeError(
+                        f"ERROR: wildcards (*) are only allowed at the ends of string values; string '{original_filter_value}' is noncompliant (it has one in the middle). Please fix."
+                    )
 
             else:
-                
                 # Just to be safe. Types change.
-                
-                raise RuntimeError( f"ERROR: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
-        
-        filtered_match_statement = filter_column_name + ' ' + filter_operator + ' ' + filter_value
 
-        queries_for_match_statement.append( filtered_match_statement )
-        
+                raise RuntimeError(
+                    f"ERROR: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers."
+                )
+
+        filtered_match_statement = filter_column_name + " " + filter_operator + " " + filter_value
+
+        queries_for_match_statement.append(filtered_match_statement)
+
     return queries_for_match_statement
-    
+
+
 #############################################################################################################################
-# 
+#
 # fetch_rows( table=`table` ): Get CDA data records ('result rows') from `table` that match user-specified criteria.
-# 
+#
 #############################################################################################################################
+
 
 def fetch_rows(
     table=None,
     *,
-    match_all = [],
-    match_any = [],
-    match_from_file = { 'input_file': '', 'input_column': '', 'cda_column_to_match': '' },
-    data_source = [],
-    add_columns = [],
-    exclude_columns = [],
-    link_to_table = '',
-    provenance = False,
-    count_only = False,
-    return_data_as = 'dataframe',
-    output_file = ''
+    match_all=[],
+    match_any=[],
+    match_from_file={"input_file": "", "input_column": "", "cda_column_to_match": ""},
+    data_source=[],
+    add_columns=[],
+    exclude_columns=[],
+    link_to_table="",
+    provenance=False,
+    count_only=False,
+    return_data_as="dataframe",
+    output_file="",
 ):
     """
     Get CDA data records ('result rows') from `table` that match user-specified criteria.
@@ -335,7 +306,7 @@ def fetch_rows(
         Filter strings are expressions of the form "COLUMN_NAME OP VALUE"
         (note in particular that the whitespace surrounding OP is required),
         where
-            
+
             COLUMN_NAME is a searchable CDA column (see the columns() function
             for details)
 
@@ -352,20 +323,20 @@ def fetch_rows(
 
         Users can require partial matches to string VALUEs by adding * to either or
         both ends. For example:
-                
+
             primary_disease_type = *duct*
             sex = F*
 
         String VALUEs need not be quoted inside of filter strings. For example, to include
         the filters specified just above in the `match_all` argument, when querying
         the `subject` table, we can write:
-            
+
             fetch_rows( table='subject', match_all=[ 'primary_disease_type = *duct*', 'sex = F*' ] )
 
         NULL is a special VALUE which can be used to match missing data. For
         example, to get `researchsubject` rows where the `primary_diagnosis_site` field
         is missing data, we can write:
-            
+
             fetch_rows( table='researchsubject', match_all=[ 'primary_diagnosis_site = NULL' ] )
 
     Returns:
@@ -387,7 +358,7 @@ def fetch_rows(
 
     #############################################################################################################################
 
-    #cache the columns call and tables info so we don't have to call it more than once during fetch_rows
+    # cache the columns call and tables info so we don't have to call it more than once during fetch_rows
 
     column_values = columns()
 
@@ -396,166 +367,173 @@ def fetch_rows(
     # Top-level type and sanity checking (i.e. not examining list contents yet): ensure nothing untoward got passed into our parameters.
 
     if column_values is None:
-        
-        log.critical( f"fetch_rows(): ERROR: Something went fatally wrong with columns(); can't complete tables(), aborting.")
+        log.critical(
+            "fetch_rows(): ERROR: Something went fatally wrong with columns(); can't complete tables(), aborting."
+        )
         return
 
     else:
-        
         # So - yes we have a function "def tables()" that does this already, but since we already have the columns data
-        # we use this one-liner to extract the tables. 
-        table_results = sorted( column_values['table'].unique() )
-    
+        # we use this one-liner to extract the tables.
+        table_results = sorted(column_values["table"].unique())
+
     # Make sure the requested table exists.
-    if table is None or not isinstance( table, str ) or table not in table_results:
-        
-        log.critical( f"fetch_rows(): ERROR: The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list.")
+    if table is None or not isinstance(table, str) or table not in table_results:
+        log.critical(
+            f"fetch_rows(): ERROR: The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list."
+        )
 
         return
 
     # `match_all`
 
-    if isinstance( match_all, str ):
-        
+    if isinstance(match_all, str):
         # Listify, so we don't have to care later about whether this was a string or a list of strings.
 
-        match_all = [ match_all ]
+        match_all = [match_all]
 
-    if not isinstance( match_all, list ):
-        
-        log.critical( f"fetch_rows(): ERROR: value assigned to 'match_all' parameter must be a filter string or a list of filter strings; you specified '{match_all}', which is neither." )
+    if not isinstance(match_all, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'match_all' parameter must be a filter string or a list of filter strings; you specified '{match_all}', which is neither."
+        )
 
         return
 
     # `match_any`
 
-    if isinstance( match_any, str ):
-        
+    if isinstance(match_any, str):
         # Listify, so we don't have to care later about whether this was a string or a list of strings.
 
-        match_any = [ match_any ]
+        match_any = [match_any]
 
-    if not isinstance( match_any, list ):
-        
-        log.critical( f"fetch_rows(): ERROR: value assigned to 'match_any' parameter must be a filter string or a list of filter strings; you specified '{match_any}', which is neither." )
+    if not isinstance(match_any, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'match_any' parameter must be a filter string or a list of filter strings; you specified '{match_any}', which is neither."
+        )
 
         return
 
     # `match_from_file`
 
-    if not isinstance( match_from_file, dict ):
-        
-        log.critical( f"fetch_rows(): ERROR: value assigned to 'match_from_file' parameter must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not." )
+    if not isinstance(match_from_file, dict):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'match_from_file' parameter must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not."
+        )
 
         return
 
     else:
-        
-        received_keys = set( match_from_file.keys() )
+        received_keys = set(match_from_file.keys())
 
-        expected_keys = { 'input_file', 'input_column', 'cda_column_to_match' }
+        expected_keys = {"input_file", "input_column", "cda_column_to_match"}
 
         if received_keys != expected_keys:
-            
-            log.critical( f"fetch_rows(): ERROR: value assigned to 'match_from_file' parameter must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not." )
+            log.critical(
+                f"fetch_rows(): ERROR: value assigned to 'match_from_file' parameter must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not."
+            )
 
             return
 
     # `data_source`
 
-    if isinstance( data_source, str ):
-        
+    if isinstance(data_source, str):
         # Listify, so we don't have to care later about whether this was a string or a list of strings.
 
-        data_source = [ data_source ]
+        data_source = [data_source]
 
-    elif not isinstance( data_source, list ):
-        
-        log.critical( f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither." )
+    elif not isinstance(data_source, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither."
+        )
 
         return
 
     # `add_columns`
 
-    if isinstance( add_columns, str ):
-        
+    if isinstance(add_columns, str):
         # Listify, so we don't have to care later about whether this was a string or a list of strings.
 
-        add_columns = [ add_columns ]
+        add_columns = [add_columns]
 
-    if not isinstance( add_columns, list ):
-        
-        log.critical( f"fetch_rows(): ERROR: value assigned to 'add_columns' parameter must be a string (e.g. 'primary_diagnosis_site') or a list of strings (e.g. [ 'specimen_type', 'primary_diagnosis_condition' ]); you specified '{add_columns}', which is neither." )
+    if not isinstance(add_columns, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'add_columns' parameter must be a string (e.g. 'primary_diagnosis_site') or a list of strings (e.g. [ 'specimen_type', 'primary_diagnosis_condition' ]); you specified '{add_columns}', which is neither."
+        )
 
         return
 
     # `exclude_columns`
 
-    if isinstance( exclude_columns, str ):
-        
+    if isinstance(exclude_columns, str):
         # Listify, so we don't have to care later about whether this was a string or a list of strings.
 
-        exclude_columns = [ exclude_columns ]
+        exclude_columns = [exclude_columns]
 
-    if not isinstance( exclude_columns, list ):
-        
-        log.critical( f"fetch_rows(): ERROR: value assigned to 'exclude_columns' parameter must be a string (e.g. 'primary_diagnosis_site') or a list of strings (e.g. [ 'specimen_type', 'primary_diagnosis_condition' ]); you specified '{exclude_columns}', which is neither." )
+    if not isinstance(exclude_columns, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'exclude_columns' parameter must be a string (e.g. 'primary_diagnosis_site') or a list of strings (e.g. [ 'specimen_type', 'primary_diagnosis_condition' ]); you specified '{exclude_columns}', which is neither."
+        )
 
         return
-
 
     # `link_to_table`
 
-    if not isinstance( link_to_table, str ):
-        
-        log.critical( f"fetch_rows(): ERROR: parameter 'link_to_table' must be a string; you supplied '{link_to_table}', which is not." )
+    if not isinstance(link_to_table, str):
+        log.critical(
+            f"fetch_rows(): ERROR: parameter 'link_to_table' must be a string; you supplied '{link_to_table}', which is not."
+        )
 
         return
 
-    elif link_to_table != '' and link_to_table not in table_results:
-        
-        log.critical( f"fetch_rows(): ERROR: parameter 'link_to_table' must be the name of a searchable CDA table; you provided '{link_to_table}', which is not. See tables() for a list of valid table names." )
+    elif link_to_table != "" and link_to_table not in table_results:
+        log.critical(
+            f"fetch_rows(): ERROR: parameter 'link_to_table' must be the name of a searchable CDA table; you provided '{link_to_table}', which is not. See tables() for a list of valid table names."
+        )
 
         return
 
-    elif link_to_table != '' and link_to_table == table:
-        
-        log.critical( f"fetch_rows(): ERROR: parameter 'link_to_table' can't specify the same table as the 'table' parameter. Please try again." )
+    elif link_to_table != "" and link_to_table == table:
+        log.critical(
+            "fetch_rows(): ERROR: parameter 'link_to_table' can't specify the same table as the 'table' parameter. Please try again."
+        )
 
         return
 
     # `provenance`
 
     if provenance != True and provenance != False:
-        
-        log.critical( f"fetch_rows(): ERROR: The `provenance` parameter must be set to True or False; you specified '{provenance}', which is neither." )
+        log.critical(
+            f"fetch_rows(): ERROR: The `provenance` parameter must be set to True or False; you specified '{provenance}', which is neither."
+        )
 
         return
 
     # `return_data_as`
 
-    if not isinstance( return_data_as, str ):
-        
-        log.critical( f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'." )
+    if not isinstance(return_data_as, str):
+        log.critical(
+            f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'."
+        )
 
         return
 
     # `output_file`
 
-    if not isinstance( output_file, str ):
-        
-        log.critical( f"fetch_rows(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path." )
+    if not isinstance(output_file, str):
+        log.critical(
+            f"fetch_rows(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path."
+        )
 
         return
 
     # `count_only`
 
     if count_only != True and count_only != False:
-        
-        log.critical( f"fetch_rows(): ERROR: The `count_only` parameter must be set to True or False; you specified '{count_only}', which is neither." )
+        log.critical(
+            f"fetch_rows(): ERROR: The `count_only` parameter must be set to True or False; you specified '{count_only}', which is neither."
+        )
 
         return
-
 
     #############################################################################################################################
     # Preprocess table metadata, to enable consistent processing (and reporting) throughout.
@@ -570,20 +548,18 @@ def fetch_rows(
 
     source_table_columns_in_order = list()
 
-    table_cols = column_values.query(f"table == \"{table}\"")
+    table_cols = column_values.query(f'table == "{table}"')
 
     if table_cols is None:
-
         # Since we've checked for the existence of table previously, this case should never happen.
         log.critical(f"No such table {table}. Please retry with an existent table.")
 
         return
 
     for row_index, column_record in table_cols.iterrows():
-        
-        result_column_data_types[column_record['column']] = column_record['data_type']
+        result_column_data_types[column_record["column"]] = column_record["data_type"]
 
-        source_table_columns_in_order.append( column_record['column'] )
+        source_table_columns_in_order.append(column_record["column"])
 
     # "`table`_associated_project" and "`table`_identifier", provided by the API
     # as non-atomic objects (a list and a list of dicts, respectively) and
@@ -591,31 +567,26 @@ def fetch_rows(
     # that we returned to users as as result data, are now to be withheld
     # from default user-facing endpoint results, to allow us to meet expectations
     # about basic uniformity (and rapid usability) of CDA result data.
-    # 
+    #
     # Reliable retrieval of one-to-many project associations is deferred
     # until the CRDC Common Model is implemented, with its own dedicated
     # `project` entity.
-    # 
+    #
     # If `provenance` is set to True, we will retain the identifier information
     # and include its contents in restructured results.
-    # 
+    #
     # These two columns don't appear in columns() output right now,
     # so they never make it into `source_table_columns_in_order`.
     # If we want one, we need to add it back.
-    if provenance == True and table != 'mutation':
-        
-        source_table_columns_in_order.append( f"{table}_identifier" )
+    if provenance == True and table != "mutation":
+        source_table_columns_in_order.append(f"{table}_identifier")
 
-        result_column_data_types[f"{table}_identifier"] = 'array_of_id_dictionaries'
+        result_column_data_types[f"{table}_identifier"] = "array_of_id_dictionaries"
 
     #############################################################################################################################
     # Process return-type directives `return_data_as` and `output_file`.
 
-    allowed_return_types = {
-        '',
-        'dataframe',
-        'tsv'
-    }
+    allowed_return_types = {"", "dataframe", "tsv"}
 
     # Let's not be picky if someone wants to give us return_data_as='DataFrame' or return_data_as='TSV'
 
@@ -629,61 +600,59 @@ def fetch_rows(
     output_file = output_file.strip()
 
     if return_data_as not in allowed_return_types:
-        
         # Complain if we receive an unexpected `return_data_as` value.
 
-        log.critical( f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'." )
+        log.critical(
+            f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'."
+        )
 
         return
 
-    elif return_data_as == 'tsv' and output_file == '':
-        
+    elif return_data_as == "tsv" and output_file == "":
         # If the user asks for TSV, they also have to give us a path for the output file. If they didn't, complain.
 
-        log.critical( f"fetch_rows(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'." )
+        log.critical(
+            "fetch_rows(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'."
+        )
 
         return
 
-    elif return_data_as != 'tsv' and output_file != '':
-        
+    elif return_data_as != "tsv" and output_file != "":
         # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
         # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
         # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
         # so we complain and ask them to clarify.
 
-        log.critical( f"fetch_rows(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'." )
-        log.critical( f"(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
+        log.critical(
+            f"fetch_rows(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'."
+        )
+        log.critical("(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.).")
 
         return
 
     #############################################################################################################################
     # Enable aliases for various ways to say "True" and "False". (Case will be lowered as soon as each literal is received.)
 
-    boolean_alias = {
-        
-        'true': 'true',
-        't': 'true',
-        'false': 'false',
-        'f': 'false'
-    }
+    boolean_alias = {"true": "true", "t": "true", "false": "false", "f": "false"}
 
     #############################################################################################################################
     # Manage basic validation for the `match_all` parameter, which enumerates user-specified requirements that returned
     # rows must all simultaneously satisfy (AND; intersection; 'all of these must apply').
 
     for item in match_all:
-
-        if not isinstance( item, str ) or len( item ) == 0:
-            
-            log.critical( f"fetch_rows(): ERROR: value assigned to 'match_all' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_all}', which is neither." )
+        if not isinstance(item, str) or len(item) == 0:
+            log.critical(
+                f"fetch_rows(): ERROR: value assigned to 'match_all' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_all}', which is neither."
+            )
 
             return
 
         # Check overall format.
 
-        if re.search( r'^\S+\s+\S+\s+\S.*$', item ) is None:
-            
-            log.critical( f"fetch_rows(): ERROR: match_all: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format." )
+        if re.search(r"^\S+\s+\S+\s+\S.*$", item) is None:
+            log.critical(
+                f"fetch_rows(): ERROR: match_all: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format."
+            )
 
             return
 
@@ -692,18 +661,19 @@ def fetch_rows(
     # returned rows must satisfy at least one (OR; union; 'at least one of these must apply').
 
     for item in match_any:
-        
-        if not isinstance( item, str ) or len( item ) == 0:
-            
-            log.critical( f"fetch_rows(): ERROR: value assigned to 'match_any' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_any}', which is neither." )
+        if not isinstance(item, str) or len(item) == 0:
+            log.critical(
+                f"fetch_rows(): ERROR: value assigned to 'match_any' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_any}', which is neither."
+            )
 
             return
 
         # Check overall format.
 
-        if re.search( r'^\S+\s+\S+\s+\S.*$', item ) is None:
-            
-            log.critical( f"fetch_rows(): ERROR: match_any: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format." )
+        if re.search(r"^\S+\s+\S+\s+\S.*$", item) is None:
+            log.critical(
+                f"fetch_rows(): ERROR: match_any: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format."
+            )
 
             return
 
@@ -715,11 +685,11 @@ def fetch_rows(
     # Cache metadata about this parameter, if it's used.
     # ( We already checked above that `match_from_file` is a dictionary with exactly three keys possessing the expected names.)
 
-    match_from_file_target_column = match_from_file['cda_column_to_match']
+    match_from_file_target_column = match_from_file["cda_column_to_match"]
 
-    match_from_file_input_file = match_from_file['input_file']
+    match_from_file_input_file = match_from_file["input_file"]
 
-    match_from_file_source_column_name = match_from_file['input_column']
+    match_from_file_source_column_name = match_from_file["input_column"]
 
     match_from_file_target_values = set()
 
@@ -732,68 +702,65 @@ def fetch_rows(
 
     # Make sure the dictionary values are either all null or all not null.
 
-    if match_from_file_target_column == '':
-        
-        if match_from_file['input_file'] != '' or match_from_file['input_column'] != '':
-            
-            log.critical( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+    if match_from_file_target_column == "":
+        if match_from_file["input_file"] != "" or match_from_file["input_column"] != "":
+            log.critical(
+                f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that."
+            )
 
             return
 
-    elif match_from_file['input_file'] == '':
-        
-        if match_from_file_target_column != '' or match_from_file['input_column'] != '':
-            
-            log.critical( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+    elif match_from_file["input_file"] == "":
+        if match_from_file_target_column != "" or match_from_file["input_column"] != "":
+            log.critical(
+                f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that."
+            )
 
             return
 
-    elif match_from_file['input_column'] == '':
-        
-        if match_from_file_target_column != '' or match_from_file['input_file'] != '':
-            
-            log.critical( f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+    elif match_from_file["input_column"] == "":
+        if match_from_file_target_column != "" or match_from_file["input_file"] != "":
+            log.critical(
+                f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that."
+            )
 
             return
 
     else:
-        
         # See if columns() agrees that the requested column exists.
 
-        if len( columns( column=match_from_file_target_column, return_data_as='list' ) ) == 0:
-            
-            log.critical( f"fetch_rows(): ERROR: CDA column '{match_from_file_target_column}' (specified in your 'match_from_file' parameter) does not exist. Please see the output of columns() for a list of those that do." )
+        if len(columns(column=match_from_file_target_column, return_data_as="list")) == 0:
+            log.critical(
+                f"fetch_rows(): ERROR: CDA column '{match_from_file_target_column}' (specified in your 'match_from_file' parameter) does not exist. Please see the output of columns() for a list of those that do."
+            )
 
             return
 
         if match_from_file_input_file == output_file:
-            
-            log.critical( f"fetch_rows(): ERROR: You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different." )
+            log.critical(
+                f"fetch_rows(): ERROR: You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different."
+            )
 
             return
 
         try:
-            
-            with open( match_from_file_input_file ) as IN:
-                
-                column_names = next( IN ).rstrip( '\n' ).split( '\t' )
+            with open(match_from_file_input_file) as IN:
+                column_names = next(IN).rstrip("\n").split("\t")
 
                 if match_from_file_source_column_name not in column_names:
-                    
-                    log.critical( f"fetch_rows(): ERROR: TSV column '{match_from_file_source_column_name}' (specified in your 'match_from_file' parameter) does not exist. Columns in your specified input file ('{match_from_file_input_file}') are:\n\n    {column_names}\n" )
+                    log.critical(
+                        f"fetch_rows(): ERROR: TSV column '{match_from_file_source_column_name}' (specified in your 'match_from_file' parameter) does not exist. Columns in your specified input file ('{match_from_file_input_file}') are:\n\n    {column_names}\n"
+                    )
 
                     return
 
                 else:
-                    
-                    for line in [ next_line.rstrip( '\n' ) for next_line in IN ]:
-                        
-                        record = dict( zip( column_names, line.split( '\t' ) ) )
+                    for line in [next_line.rstrip("\n") for next_line in IN]:
+                        record = dict(zip(column_names, line.split("\t")))
 
                         target_value = record[match_from_file_source_column_name]
 
-                        if target_value is None or target_value == '' or target_value == '<NA>':
-                            
+                        if target_value is None or target_value == "" or target_value == "<NA>":
                             # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
                             # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
                             # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
@@ -802,12 +769,12 @@ def fetch_rows(
                             match_from_file_nulls_allowed = True
 
                         else:
-                            
-                            match_from_file_target_values.add( target_value )
+                            match_from_file_target_values.add(target_value)
 
         except Exception as error:
-            
-            log.critical( f"fetch_rows(): ERROR: Couldn't load requested column '{match_from_file_source_column_name}' from requested TSV file '{match_from_file_input_file}': got error of type '{type(error)}', with error message '{error}'." )
+            log.critical(
+                f"fetch_rows(): ERROR: Couldn't load requested column '{match_from_file_source_column_name}' from requested TSV file '{match_from_file_input_file}': got error of type '{type(error)}', with error message '{error}'."
+            )
 
             return
 
@@ -816,38 +783,31 @@ def fetch_rows(
     # sources.
 
     for item in data_source:
-        
-        if not isinstance( item, str ) or len( item ) == 0:
-            
-            log.critical( f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither." )
+        if not isinstance(item, str) or len(item) == 0:
+            log.critical(
+                f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither."
+            )
 
             return
 
     # Let us not care about case, and remove any whitespace before it can do any damage.
 
-    data_source = [ re.sub( r'\s+', r'', item ).lower() for item in data_source ]
+    data_source = [re.sub(r"\s+", r"", item).lower() for item in data_source]
 
     # TEMPORARY: enumerate valid values and warn the user if they supplied something else.
     # At time of writing this is too expensive to retrieve dynamically from the API,
     # so the valid value list is hard-coded here and in the docstring for this function.
-    # 
+    #
     # This should be replaced ASAP with a fetch from a 'release metadata' table or something
     # similar.
 
-    allowed_data_source_values = {
-        
-        'gdc',
-        'pdc',
-        'idc',
-        'cds',
-        'icdc'
-    }
+    allowed_data_source_values = {"gdc", "pdc", "idc", "cds", "icdc"}
 
     for item in data_source:
-        
         if item not in allowed_data_source_values:
-            
-            log.critical( f"fetch_rows(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{item}', which is not." )
+            log.critical(
+                f"fetch_rows(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{item}', which is not."
+            )
 
             return
 
@@ -860,20 +820,21 @@ def fetch_rows(
 
     join_table_id_field = None
 
-    if link_to_table != '' and len( add_columns ) > 0:
-        
-        log.critical( f"fetch_rows(): ERROR: if 'link_to_table' is specified, 'add_columns' cannot also be used. Please choose one of those." )
+    if link_to_table != "" and len(add_columns) > 0:
+        log.critical(
+            "fetch_rows(): ERROR: if 'link_to_table' is specified, 'add_columns' cannot also be used. Please choose one of those."
+        )
 
         return
 
-    elif provenance == True and ( link_to_table != '' or len( add_columns ) > 0 ):
-        
-        log.critical( f"fetch_rows(): ERROR: if 'provenance' is set to True, neither 'link_to_table' nor 'add_columns' can be used. Please choose one." )
+    elif provenance == True and (link_to_table != "" or len(add_columns) > 0):
+        log.critical(
+            "fetch_rows(): ERROR: if 'provenance' is set to True, neither 'link_to_table' nor 'add_columns' can be used. Please choose one."
+        )
 
         return
 
     elif provenance == False:
-        
         #############################################################################################################################
         # Manage basic validation for `add_columns`, which enumerates user-specified non-`table` columns to be
         # joined with the main `table` result rows, and `link_to_table`, which specifies an entire non-`table` table
@@ -884,138 +845,130 @@ def fetch_rows(
         # above that `add_columns` is always empty whenever `link_to_table` is nonempty -- see
         # the docstring entry for `link_to_table` for context).
 
-        if link_to_table != '':
-            
-            add_columns = column_values.query( f"table == \"{link_to_table}\"" )['column'].tolist()
+        if link_to_table != "":
+            add_columns = column_values.query(f'table == "{link_to_table}"')["column"].tolist()
 
         # Eliminate undesirable characters and convert all values to lowercase.
 
-        add_columns = [ re.sub( r'[^a-z0-9_]', r'', column_to_add ).lower() for column_to_add in add_columns ]
+        add_columns = [re.sub(r"[^a-z0-9_]", r"", column_to_add).lower() for column_to_add in add_columns]
 
         join_tables = set()
 
         for column_to_add in add_columns:
+            columns_response = column_values.query(f'column == "{column_to_add}"')
 
-            columns_response = column_values.query(f"column == \"{column_to_add}\"")
-
-            if columns_response is None or len( columns_response ) != 1:
-                
+            if columns_response is None or len(columns_response) != 1:
                 # There should be exactly one columns() result for a well-defined column name. If there's not one result, fail.
 
-                log.critical( f"fetch_rows(): ERROR: values assigned to 'add_columns' parameter must all be searchable CDA column names: you included '{column_to_add}', which is not." )
+                log.critical(
+                    f"fetch_rows(): ERROR: values assigned to 'add_columns' parameter must all be searchable CDA column names: you included '{column_to_add}', which is not."
+                )
 
                 return
 
             else:
-                
                 # Log the table from which this column comes.
 
-                join_tables.add( columns_response['table'].iloc[0] )
+                join_tables.add(columns_response["table"].iloc[0])
 
             # Track the data type present in each column, so we can
             # format things properly downstream.
 
-            result_column_data_types[column_to_add] = columns_response['data_type'].iloc[0]
+            result_column_data_types[column_to_add] = columns_response["data_type"].iloc[0]
 
-    try :
+    try:
         queries_for_match_all = cleanup_match_statement(column_values, match_all)
     except Exception as e:
-        log.critical( e )
+        log.critical(e)
         return
-    
-    try :
+
+    try:
         queries_for_match_any = cleanup_match_statement(column_values, match_any)
     except Exception as e:
-        log.critical( e )
+        log.critical(e)
         return
-
-
 
     #############################################################################################################################
     # Parse `match_from_file` filter values: complain if
-    # 
+    #
     #     * filter values don't match the data types of the columns they're paired with
     #     * wildcards appear anywhere
-    # 
+    #
     # ...and save parse results as a combined filter expression in a Query object (to be combined with others later).
 
     # Identify the data type of the target column.
 
     target_data_type = ""
-    
+
     if len(match_from_file_target_column) > 0:
+        file_match_query = column_values.query(f'column == "{match_from_file_target_column}"')
 
-        file_match_query = column_values.query( f"column == \"{match_from_file_target_column}\"" )
-        
         if file_match_query is not None:
-
-            target_data_type = file_match_query['data_type'].iloc[0]
+            target_data_type = file_match_query["data_type"].iloc[0]
 
     processed_target_values = set()
 
     for target_value in match_from_file_target_values:
-        
         # Validate value types and test for wildcards.
 
-        if target_data_type != 'text':
-            
+        if target_data_type != "text":
             # Ignore leading and trailing whitespace unless we're dealing with strings.
 
-            target_value = re.sub( r'^\s+', r'', target_value )
-            target_value = re.sub( r'\s+$', r'', target_value )
+            target_value = re.sub(r"^\s+", r"", target_value)
+            target_value = re.sub(r"\s+$", r"", target_value)
 
-        if target_data_type == 'boolean':
-            
+        if target_data_type == "boolean":
             # If we're supposed to be in a boolean column, make sure we've got a true/false value.
 
             target_value = target_value.lower()
 
             if target_value not in boolean_alias:
-                
-                log.critical( f"fetch_rows(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither." )
+                log.critical(
+                    f"fetch_rows(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither."
+                )
 
                 return
 
             else:
-                
                 target_value = boolean_alias[target_value]
 
-        elif target_data_type in [ 'bigint', 'integer', 'numeric' ]:
-            
+        elif target_data_type in ["bigint", "integer", "numeric"]:
             # If we're supposed to be in a numeric column, make sure we've got a number.
 
-            if re.search( r'^[-+]?\d+(\.\d+)?$', target_value ) is None:
-                
-                log.critical( f"fetch_rows(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not." )
+            if re.search(r"^[-+]?\d+(\.\d+)?$", target_value) is None:
+                log.critical(
+                    f"fetch_rows(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not."
+                )
 
                 return
 
-        elif target_data_type == 'text':
-            
+        elif target_data_type == "text":
             # Check for wildcards: if found, vomit.
 
-            if re.search( r'\*', target_value ) is not None:
-                
-                log.critical( f"fetch_rows(): ERROR: match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); string '{target_value}' is noncompliant. Please fix." )
+            if re.search(r"\*", target_value) is not None:
+                log.critical(
+                    f"fetch_rows(): ERROR: match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); string '{target_value}' is noncompliant. Please fix."
+                )
 
                 return
 
         else:
-            
             # Just to be safe. Types change.
 
-            log.critical( f"fetch_rows(): ERROR: match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
+            log.critical(
+                f"fetch_rows(): ERROR: match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers."
+            )
 
             return
 
-        processed_target_values.add( target_value )
+        processed_target_values.add(target_value)
 
     # Build a Query object for the column data loaded according to `match_from_file`.
 
     query_for_match_from_file = None
 
     # if match_from_file_nulls_allowed == True:
-        
+
     #     query_for_match_from_file = Query()
 
     #     query_for_match_from_file.node_type = 'OR'
@@ -1053,17 +1006,17 @@ def fetch_rows(
     #     match_from_file_allowed_values_subquery.r.node_type = 'unquoted'
 
     #     if target_data_type == 'text':
-            
+
     #         match_from_file_allowed_values_subquery.r.value = r'("' + r'","'.join( sorted( processed_target_values ) ) + r'")'
 
     #     else:
-            
+
     #         match_from_file_allowed_values_subquery.r.value = r'(' + r','.join( sorted( processed_target_values ) ) + r')'
 
     #     query_for_match_from_file.r = match_from_file_allowed_values_subquery
 
     # elif len( processed_target_values ) > 0:
-        
+
     #     query_for_match_from_file = Query()
 
     #     query_for_match_from_file.node_type = 'IN'
@@ -1079,11 +1032,11 @@ def fetch_rows(
     #     query_for_match_from_file.r.node_type = 'unquoted'
 
     #     if target_data_type == 'text':
-            
+
     #         query_for_match_from_file.r.value = r'("' + r'","'.join( sorted( processed_target_values ) ) + r'")'
 
     #     else:
-            
+
     #         query_for_match_from_file.r.value = r'(' + r','.join( sorted( processed_target_values ) ) + r')'
 
     #############################################################################################################################
@@ -1093,8 +1046,7 @@ def fetch_rows(
     queries_for_data_source = []
 
     for ds in data_source:
-        
-        queries_for_match_all.append( f"{table}_data_at_{ds} = True" )
+        queries_for_match_all.append(f"{table}_data_at_{ds} = True")
 
     #############################################################################################################################
     # Parse `add_columns` list: use the API's SELECT and SELECTVALUES operators
@@ -1104,7 +1056,7 @@ def fetch_rows(
 
     # Always begin by including all `table` fields, to which any extra
     # columns requested via `add_columns` will be added in each result row.
-    # 
+    #
     # If anyone wants, we can upgrade later to let users select specific
     # `table` columns to withhold from returned results.
 
@@ -1118,43 +1070,37 @@ def fetch_rows(
     # If we're adding extra columns from some non-`table` table*, always
     # include that table's ID field, whether or not it was requested.
     if join_table_id_field is not None:
+        columns_to_fetch.append(join_table_id_field)
 
-        columns_to_fetch.append( join_table_id_field )
-        
         use_only_default_columns = False
 
     for column_to_add in add_columns:
-        
         # Ignore requests for columns that are already present by default.
 
         if column_to_add not in columns_to_fetch:
-            
             use_only_default_columns = False
 
-            columns_to_fetch.append( column_to_add )
+            columns_to_fetch.append(column_to_add)
 
     columns_to_remove = []
 
     for col in exclude_columns:
-        
         # Ignore requests to exclude columns that are already excluded.
 
         if col in columns_to_fetch:
+            columns_to_fetch.remove(col)
 
-            columns_to_fetch.remove( col )
-
-            columns_to_remove.append( col )
+            columns_to_remove.append(col)
 
         else:
-            
-            log.debug(f"Ignoring request to remove column \"{col}\" because it doesn't exist or is already excluded.")
+            log.debug(f'Ignoring request to remove column "{col}" because it doesn\'t exist or is already excluded.')
 
     #############################################################################################################################
     # Fetch data from the API.
 
-    query_api_instance = get_data_api_client()
+    query_api_instance = get_api_client()
 
-    q_node = openapi_client.QNode() 
+    q_node = QNode()
 
     q_node.match_all = queries_for_match_all
 
@@ -1162,7 +1108,7 @@ def fetch_rows(
 
     q_node.add_columns = columns_to_fetch
 
-    q_node.exclude_columns = columns_to_remove 
+    q_node.exclude_columns = columns_to_remove
 
     # try:
     #     # Default Paged Endpoint
@@ -1172,24 +1118,22 @@ def fetch_rows(
     # except ApiException as e:
     #     print("Exception when calling DataApi->subject_paged_endpoint_data_subject_post: %s\n" % e)
 
-    fetch_message = 'fetching all results'
+    fetch_message = "fetching all results"
 
     if count_only:
-        
-        fetch_message = 'counting results only: not a comprehensive fetch'
+        fetch_message = "counting results only: not a comprehensive fetch"
 
-    log.debug( f"BEGIN DEBUG MESSAGE: fetch_rows(): Querying CDA API '{table}' endpoint ({fetch_message})" )
+    log.debug(f"BEGIN DEBUG MESSAGE: fetch_rows(): Querying CDA API '{table}' endpoint ({fetch_message})")
 
     query_selector = {
-        
-        'subject': query_api_instance.subject_paged_endpoint_data_subject_post,
-        'file': query_api_instance.file_paged_endpoint_data_file_post
+        "file": cda_client.api.data.file_fetch_rows_endpoint_data_file_post,
+        "subject": cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post,
     }
     # Unless we've been asked just to count the anticipated result set, we return all results
     # to users at once. Paging occurs internally, but is made transparent to the user.
     # By default (unless overridden by a `count_only` directive from the user), the
     # following two variables are coded according to CDA performance needs. They
-    
+
     # should ultimately be moved to a central system-parameter store for easier
     # access: right now, they're replicated everywhere a fetch is performed, which
     # is error-prone when it comes to long-term maintenance.
@@ -1204,17 +1148,15 @@ def fetch_rows(
     # function to get data from the REST API.
 
     log.debug(f"Sending qnode: {q_node}")
-    
-    paged_response_data_object = query_selector[table](
-        q_node,
-        limit = rows_per_page,
-        offset = starting_offset
+
+    paged_response_data_object = query_selector[table].sync(
+        client=query_api_instance, body=q_node, limit=rows_per_page, offset=starting_offset
     )
 
     # Report some metadata about the results we got back.
-    # 
+    #
     # print( f"Total row count in result: {paged_response_data_object.total_row_count}", file=sys.stderr )
-    # 
+    #
     # print( f"Query SQL: {paged_response_data_object.query_sql}", file=sys.stderr )
 
     """
@@ -1238,48 +1180,43 @@ def fetch_rows(
     """
 
     # Make a Pandas DataFrame out of the first batch of results.
-    # 
+    #
     # The API returns responses in JSON format: convert that JSON into a DataFrame
     # using pandas' json_normalize() function.
 
-    result_dataframe = pd.json_normalize( paged_response_data_object.result )
+    result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()["result"])
 
     # The data we've fetched so far might be just the first page (if the total number
     # of results is greater than `rows_per_page`).
-    # 
+    #
     # Get the rest of the result pages, if there are any, and add each page's data
     # onto the end of our results DataFrame.
 
     incremented_offset = starting_offset + rows_per_page
 
     while paged_response_data_object.next_url is not None and len(paged_response_data_object.next_url) > 0:
-        
         # Show the `next_url` address returned to us by the API.
-        # 
+        #
         # print( paged_response_data_object['next_url'], file=sys.stderr )
-
-        paged_response_data_object = query_selector[table](
-            q_node,
-            offset=incremented_offset,
-            limit=rows_per_page
+        paged_response_data_object = query_selector[table].sync(
+            client=query_api_instance, body=q_node, offset=incremented_offset, limit=rows_per_page
         )
 
-        next_result_batch = pd.json_normalize( paged_response_data_object.result )
+        next_result_batch = pd.json_normalize(paged_response_data_object.to_dict()["result"])
 
         if not result_dataframe.empty and not next_result_batch.empty:
-            
             # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
-            
-            next_result_batch = next_result_batch.astype( result_dataframe.dtypes )
 
-            result_dataframe = pd.concat( [ result_dataframe, next_result_batch ] )
+            next_result_batch = next_result_batch.astype(result_dataframe.dtypes)
+
+            result_dataframe = pd.concat([result_dataframe, next_result_batch])
 
         incremented_offset = incremented_offset + rows_per_page
 
     #############################################################################################################################
     # Postprocess API result data.
 
-    log.debug( 'Organizing result data...' )
+    log.debug("Organizing result data...")
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
@@ -1289,27 +1226,22 @@ def fetch_rows(
     # columns' assignment that we use a little later to sort the remaining output
     # columns, but I think this way is much easier to understand.
 
-
-
     columns_to_drop = list()
 
     added_columns = list()
+    log.info(result_dataframe.head())
 
     for column_name in result_dataframe:
-        
         if column_name not in columns_to_fetch:
-            
-            columns_to_drop.append( column_name )
+            columns_to_drop.append(column_name)
 
         elif column_name not in source_table_columns_in_order:
-            
-            added_columns.append( column_name )
+            added_columns.append(column_name)
 
-    if len( columns_to_drop ) > 0:
-        
-        log.debug( f"   -- filtering API columns: {columns_to_drop}" )
+    if len(columns_to_drop) > 0:
+        log.debug(f"   -- filtering API columns: {columns_to_drop}")
 
-        result_dataframe = result_dataframe.drop( columns=columns_to_drop )
+        result_dataframe = result_dataframe.drop(columns=columns_to_drop)
 
     # Resequence the output columns according to the sequence given by the columns() function.
 
@@ -1318,20 +1250,16 @@ def fetch_rows(
     # First, all the native fields from this endpoint, in the default (relative) order.
 
     for column in columns_to_fetch:
-        
         if column not in added_columns:
-            
-            final_column_order.append( column )
+            final_column_order.append(column)
 
     # Then the fields from other tables that the user added.
 
     for added_column in added_columns:
-        
-        final_column_order.append( added_column )
+        final_column_order.append(added_column)
 
-    if len( result_dataframe.columns ) > 0:
-        
-        #result_dataframe = result_dataframe[ final_column_order ]
+    if len(result_dataframe.columns) > 0:
+        # result_dataframe = result_dataframe[ final_column_order ]
 
         # Joins that transit through intermediate entity tables can come back from the API with phantom missing data (e.g.
         """
@@ -1355,45 +1283,44 @@ def fetch_rows(
         }
         """
         # ...will produce a weird table with missing diagnosis rows, apparently because it thought it had to bring _something_ back for each researchsubject it checked.
-        # 
+        #
         # So we strip out all rows whose requested joined table data is missing ID information (if any such extra data was asked for in the first place):
 
         if join_table_id_field is not None:
-            
-            result_dataframe = result_dataframe.loc[ ~( result_dataframe[join_table_id_field].isna() ) ]
+            result_dataframe = result_dataframe.loc[~(result_dataframe[join_table_id_field].isna())]
 
-        log.debug( 'Handling missing values...' )
+        log.debug("Handling missing values...")
 
         # for column in columns_to_fetch:
-            
+
         #     # CDA has no float values. Cast all numeric data to integers.
 
         #     print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(result_column_data_types[column]))
 
         #     if result_column_data_types[column] in { 'numeric', 'integer', 'bigint' }:
-                
+
         #         # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
         #         # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
         #         # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
         #         # storage of missing values. These will print as '<NA>'.
-                
+
         #         result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
 
         #     elif result_column_data_types[column] in { 'text', 'boolean' }:
-                
+
         #         # Replace values that are None (== null) with empty strings. (This has been tested and works
         #         # for both strings and booleans.)
 
         #         result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
 
         #     elif result_column_data_types[column] == 'array_of_id_dictionaries':
-                
+
         #         # All good here, these shouldn't ever be null -- every `table` row has at least one entry in `table`_identifier.
 
         #         pass
 
         #     else:
-                
+
         #         # This isn't anticipated. Yell if we get something unexpected.
 
         #         log.critical( f"fetch_rows(): ERROR: Unexpected data type `{result_column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
@@ -1403,25 +1330,23 @@ def fetch_rows(
         # Consolidate provenance information if present.
 
         if provenance == True:
-            
-            if table == 'mutation':
-                
+            if table == "mutation":
                 rename_columns = {
-                    
-                    'subject_identifier_system' : 'subject_data_source',
-                    'subject_identifier_field_name': 'subject_data_source_id'
+                    "subject_identifier_system": "subject_data_source",
+                    "subject_identifier_field_name": "subject_data_source_id",
                 }
 
-                result_dataframe = result_dataframe.rename( columns=rename_columns )
+                result_dataframe = result_dataframe.rename(columns=rename_columns)
 
-                result_dataframe['subject_data_source_id'] = result_dataframe['subject_data_source_id'] + ':' + result_dataframe['subject_identifier_value']
+                result_dataframe["subject_data_source_id"] = (
+                    result_dataframe["subject_data_source_id"] + ":" + result_dataframe["subject_identifier_value"]
+                )
 
                 # axis=0: rows; axis=1: columns.
 
-                result_dataframe = result_dataframe.drop( 'subject_identifier_value', axis=1 )
+                result_dataframe = result_dataframe.drop("subject_identifier_value", axis=1)
 
             else:
-                
                 # We'll need to build a new result matrix, including one copy of
                 # each row for each identifier present. Iteratively build a list of
                 # tuples (rows) and convert the list to a new DataFrame when complete.
@@ -1430,71 +1355,68 @@ def fetch_rows(
 
                 new_result_column_names = result_dataframe.columns.tolist()
 
-                new_result_column_names.remove( f"{table}_identifier" )
+                new_result_column_names.remove(f"{table}_identifier")
 
                 # There are likely more efficient ways to do this; target this block
                 # for optimization if it ever becomes a bottleneck.
 
                 for result_row_index, result_row in result_dataframe.iterrows():
-                    
                     identifier_array = result_row[f"{table}_identifier"]
 
                     for identifier_record in identifier_array:
-                        
-                        data_source = identifier_record['system']
+                        data_source = identifier_record["system"]
 
-                        data_source_id = identifier_record['field_name'] + ':' + identifier_record['value']
+                        data_source_id = identifier_record["field_name"] + ":" + identifier_record["value"]
 
                         new_row = list()
 
                         for column_name in new_result_column_names:
-                            
-                            new_row.append( result_row[column_name] )
+                            new_row.append(result_row[column_name])
 
-                        new_row = new_row + [ data_source, data_source_id ]
+                        new_row = new_row + [data_source, data_source_id]
 
-                        new_result_matrix.append( tuple( new_row ) )
+                        new_result_matrix.append(tuple(new_row))
 
-                new_result_column_names = new_result_column_names + [ f"{table}_data_source", f"{table}_data_source_id" ]
-                
-                result_dataframe = pd.DataFrame( new_result_matrix, columns=new_result_column_names )
+                new_result_column_names = new_result_column_names + [f"{table}_data_source", f"{table}_data_source_id"]
 
-    if return_data_as == '' or return_data_as == 'dataframe':
-        
+                result_dataframe = pd.DataFrame(new_result_matrix, columns=new_result_column_names)
+
+    if return_data_as == "" or return_data_as == "dataframe":
         # Right now, the default is the same as if the user had
         # specified return_data_as='dataframe'.
 
         return result_dataframe
 
-    elif return_data_as == 'tsv':
-        
+    elif return_data_as == "tsv":
         # Write results to a user-specified TSV.
-            
-        log.debug( '-' * 80 )
 
-        log.debug( f"      DEBUG MESSAGE: fetch_rows(): Printing results to TSV file '{output_file}'" )
+        log.debug("-" * 80)
 
-        log.debug( '-' * 80 )
+        log.debug(f"      DEBUG MESSAGE: fetch_rows(): Printing results to TSV file '{output_file}'")
+
+        log.debug("-" * 80)
 
         try:
-            
-            result_dataframe.to_csv( output_file, sep='\t', index=False )
+            result_dataframe.to_csv(output_file, sep="\t", index=False)
 
             return
 
         except Exception as error:
-            
-            log.critical( f"fetch_rows(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
+            log.critical(
+                f"fetch_rows(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'."
+            )
 
             return
 
-    log.critical( f"fetch_rows(): ERROR: Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error." )
+    log.critical(
+        "fetch_rows(): ERROR: Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error."
+    )
 
     return
 
 
 #############################################################################################################################
-# 
+#
 # END fetch_rows
-# 
+#
 #############################################################################################################################

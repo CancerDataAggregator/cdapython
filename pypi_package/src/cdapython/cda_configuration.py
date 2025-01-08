@@ -1,13 +1,10 @@
-from os import path
-from ssl import get_default_verify_paths
-
 from cda_client.configuration import Configuration
 
+
 class CdaConfiguration(Configuration):
-    
     def __init__(
         self,
-        host = None,
+        host=None,
         api_key=None,
         api_key_prefix=None,
         access_token=None,
@@ -20,12 +17,11 @@ class CdaConfiguration(Configuration):
         server_operation_index=None,
         server_operation_variables=None,
         ssl_ca_cert=None,
-        verify = None,
-        verbose = None,
+        verify=None,
+        verbose=None,
     ):
         if host is None:
-            
-            host = 'https://cancerdata.dsde-prod.broadinstitute.org/'
+            host = "https://cancerdata.dsde-prod.broadinstitute.org/"
 
         self._host = host.strip("/")
 
@@ -56,9 +52,7 @@ class CdaConfiguration(Configuration):
         """
         return [
             {
-                'url': self._host,
-                'description': 'URL of CDA REST API service',
+                "url": self._host,
+                "description": "URL of CDA REST API service",
             }
         ]
-
-
