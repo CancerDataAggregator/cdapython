@@ -17,6 +17,7 @@ zz01_install_somewhere
 
 # Virtual environment files
 /venv*/
+.venv
 
 # Data subdirs
 /extracted_data/
@@ -27,3 +28,7 @@ zz01_install_somewhere
 /SQL_data/
 
 
+*.ipynb
+/.vscode
+/.pytest_cache
+*.log
