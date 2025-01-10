@@ -7,7 +7,7 @@ import pandas as pd
 import cda_client
 
 # from cda_client.api import ApiException
-from .application_utilities import get_api_client, get_logger
+from .application_utilities import get_api_client, get_logger, set_log_level
 
 log = get_logger()
 
@@ -57,6 +57,7 @@ def tables():
 
     # Call columns(), extract unique values from the `table` column of the
     # resulting DataFrame, and return those values to the user as a list.
+    
 
     columns_result_df = columns(return_data_as="dataframe")
 
@@ -88,7 +89,7 @@ def tables():
 #############################################################################################################################
 
 
-def columns(*, return_data_as="", output_file="", sort_by="", **filter_arguments):
+def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **filter_arguments):
     """
     Get structured metadata describing searchable CDA columns.
 
@@ -166,6 +167,8 @@ def columns(*, return_data_as="", output_file="", sort_by="", **filter_arguments
 
         OR returns nothing, but writes results to a user-specified TSV file
     """
+
+    set_log_level(log, debug)
 
     #############################################################################################################################
     # TEMPORARY ban list: filtering on these columns is problematic at the API level, and we don't have a consistent modeling
@@ -759,7 +762,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", **filter_arguments
 
 
 def column_values(
-    column="", *, return_data_as="", output_file="", sort_by="", filters=None, data_source="", force=False
+    column="", *, return_data_as="", output_file="", sort_by="", filters=None, data_source="", force=False, debug = False
 ):
     """
     Show all distinct values present in `column`, along with a count
@@ -823,6 +826,8 @@ def column_values(
         pandas.DataFrame OR list OR returns nothing, but writes retrieved
         data to a user-specified TSV file
     """
+
+    set_log_level(log, debug)
 
     #############################################################################################################################
     # Check for our one required parameter.

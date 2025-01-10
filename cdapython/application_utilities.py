@@ -43,6 +43,14 @@ def get_logger() -> logging.Logger:
 
 log = get_logger()
 
+def set_log_level(log, debug):
+    if debug:
+        for handler in log.handlers:
+            handler.setLevel('DEBUG')
+    else:
+        for handler in log.handlers:
+            handler.setLevel('INFO')
+
 
 #############################################################################################################################
 #

@@ -7,7 +7,7 @@ import cda_client
 
 # from cda_client.rest import ApiException
 from cda_client.models.q_node import QNode
-from cdapython.application_utilities import get_api_client, get_logger
+from cdapython.application_utilities import get_api_client, get_logger, set_log_level
 from cdapython.explore import columns
 
 log = get_logger()
@@ -361,13 +361,7 @@ def fetch_rows(
 
     # cache the columns call and tables info so we don't have to call it more than once during fetch_rows
 
-    # Set debug level
-    if debug == True:
-        for handler in log.handlers:
-            handler.setLevel('DEBUG')
-    else:
-        for handler in log.handlers:
-            handler.setLevel('INFO')
+    set_log_level(log, debug)
 
     column_values = columns()
 
