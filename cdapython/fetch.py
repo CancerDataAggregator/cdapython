@@ -218,6 +218,7 @@ def fetch_rows(
     count_only=False,
     return_data_as="dataframe",
     output_file="",
+    debug=False
 ):
     """
     Get CDA data records ('result rows') from `table` that match user-specified criteria.
@@ -359,6 +360,14 @@ def fetch_rows(
     #############################################################################################################################
 
     # cache the columns call and tables info so we don't have to call it more than once during fetch_rows
+
+    # Set debug level
+    if debug == True:
+        for handler in log.handlers:
+            handler.setLevel('DEBUG')
+    else:
+        for handler in log.handlers:
+            handler.setLevel('INFO')
 
     column_values = columns()
 
