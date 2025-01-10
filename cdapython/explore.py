@@ -168,7 +168,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
         OR returns nothing, but writes results to a user-specified TSV file
     """
     log = get_logger()
-    set_log_level(log, debug)
+    set_log_level(log=log, debug=debug)
 
     #############################################################################################################################
     # TEMPORARY ban list: filtering on these columns is problematic at the API level, and we don't have a consistent modeling
@@ -827,7 +827,7 @@ def column_values(
         data to a user-specified TSV file
     """
     log = get_logger()
-    set_log_level(log, debug)
+    set_log_level(log=log, debug=debug)
 
     #############################################################################################################################
     # Check for our one required parameter.

@@ -361,8 +361,9 @@ def fetch_rows(
 
     # cache the columns call and tables info so we don't have to call it more than once during fetch_rows
 
-    set_log_level(log, debug)
-
+    log = get_logger()
+    set_log_level(log=log, debug=debug)
+    
     column_values = columns()
 
     table_results = pd.DataFrame()
