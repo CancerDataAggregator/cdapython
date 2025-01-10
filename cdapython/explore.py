@@ -9,7 +9,7 @@ import cda_client
 # from cda_client.api import ApiException
 from .application_utilities import get_api_client, get_logger, set_log_level
 
-log = get_logger()
+
 
 # Nomenclature notes:
 #
@@ -58,7 +58,7 @@ def tables():
     # Call columns(), extract unique values from the `table` column of the
     # resulting DataFrame, and return those values to the user as a list.
     
-
+    log = get_logger()
     columns_result_df = columns(return_data_as="dataframe")
 
     if columns_result_df is None:
@@ -167,7 +167,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
         OR returns nothing, but writes results to a user-specified TSV file
     """
-
+    log = get_logger()
     set_log_level(log, debug)
 
     #############################################################################################################################
@@ -826,7 +826,7 @@ def column_values(
         pandas.DataFrame OR list OR returns nothing, but writes retrieved
         data to a user-specified TSV file
     """
-
+    log = get_logger()
     set_log_level(log, debug)
 
     #############################################################################################################################
