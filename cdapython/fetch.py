@@ -7,10 +7,9 @@ import cda_client
 
 # from cda_client.rest import ApiException
 from cda_client.models.q_node import QNode
-from cdapython.application_utilities import get_api_client, get_logger, set_log_level
+from cdapython.application_utilities import get_api_client, set_log_level, log, cleanup_match_statement
 from cdapython.explore import columns
 
-log = get_logger()
 
 # Nomenclature notes:
 #
@@ -34,167 +33,6 @@ class CdaApiQueryEncoder(json.JSONEncoder):
         return None
 
 
-#############################################################################################################################
-#
-# cleanup_match_statement(column_data, match_statement) : Parse `match_*` filter expressions: complain if
-#
-#     * requested columns don't exist
-#     * illegal or type-inappropriate operators are used
-#     * filter values don't match the data types of the columns they're paired with
-#     * wildcards appear anywhere but at the ends of a filter string
-#
-# ...and recombine elements for use in querying
-#
-#############################################################################################################################
-
-
-def cleanup_match_statement(column_data, match_statement):
-    """
-    Parse `match_*` filter expressions and transform for validity with API
-
-    Arguments:
-        column_data ( list of strings; required ):
-            Result of columns() call. Parameterized to save from calling columns() multiple times
-
-        match_statement ( list of strings; optional ):
-            One or more conditions, expressed as filter strings
-
-    Returns:
-        List of transformed and cleaned up match statements, or an empty list if no inputs were given
-
-    """
-    queries_for_match_statement = []
-
-    if len(match_statement) == 0:
-        return queries_for_match_statement
-
-    #############################################################################################################################
-    # Define the list of supported filter-string operators.
-
-    allowed_operators = {">", ">=", "<", "<=", "=", "!="}
-
-    #############################################################################################################################
-    # Enumerate restrictions on operator use to appropriate data types.
-
-    operators_by_data_type = {
-        "bigint": allowed_operators,
-        "boolean": {"=", "!="},
-        "integer": allowed_operators,
-        "numeric": allowed_operators,
-        "text": {"=", "!="},
-    }
-
-    #############################################################################################################################
-    # Enable aliases for various ways to say "True" and "False". (Case will be lowered as soon as each literal is received.)
-
-    boolean_alias = {"true": "true", "t": "true", "false": "false", "f": "false"}
-
-    for item in match_statement:
-        # Try to extract a column name from this filter expression. Don't be case-sensitive.
-
-        filter_column_name = re.sub(r"^([\S]+)\s.*", r"\1", item).lower()
-
-        # Let's see if this thing exists.
-
-        filter_column_metadata = column_data.query(f'column == "{filter_column_name}"')
-
-        if filter_column_metadata is None or len(filter_column_metadata) != 1:
-            raise RuntimeError(f"ERROR: requested column '{filter_column_name}' is not a searchable CDA column.")
-
-        # See what the operator is.
-
-        filter_operator = re.sub(r"^\S+\s+(\S+)\s.*", r"\1", item)
-
-        if filter_operator == "==":
-            # Be kind to computer scientists.
-
-            filter_operator = "="
-
-        elif filter_operator not in allowed_operators:
-            raise RuntimeError(f"ERROR:  operator '{filter_operator}' is not supported.")
-
-        # Identify the data type in the column being filtered.
-
-        target_data_type = filter_column_metadata["data_type"].iloc[0]
-
-        # Make sure the operator specified is allowed for the data type of the column being filtered.
-
-        if filter_operator not in operators_by_data_type[target_data_type]:
-            raise RuntimeError(
-                f"ERROR: operator '{filter_operator}' is not usable for values of type '{target_data_type}'."
-            )
-
-        # We said quotes weren't required for string values. Doesn't technically mean they can't be used. Remove them.
-
-        filter_value = re.sub(r"^\S+\s+\S+\s+(\S.*)$", r"\1", item)
-
-        filter_value = re.sub(r"""^['"]+""", r"", filter_value)
-        filter_value = re.sub(r"""['"]+$""", r"", filter_value)
-
-        # Validate VALUE types and process wildcards.
-
-        if target_data_type != "text":
-            # Ignore leading and trailing whitespace unless we're dealing with strings.
-
-            filter_value = re.sub(r"^\s+", r"", filter_value)
-            filter_value = re.sub(r"\s+$", r"", filter_value)
-
-        if filter_value.lower() != "null":
-            if target_data_type == "boolean":
-                # If we're supposed to be in a boolean column, make sure we've got a true/false value.
-
-                filter_value = filter_value.lower()
-
-                if filter_value not in boolean_alias:
-                    raise RuntimeError(
-                        f"ERROR: requested column {filter_column_name} has data type 'boolean', requiring a true/false value; you specified '{filter_value}', which is neither."
-                    )
-
-                else:
-                    filter_value = boolean_alias[filter_value]
-
-            elif target_data_type in ["bigint", "integer", "numeric"]:
-                # If we're supposed to be in a numeric column, make sure we've got a number.
-
-                if re.search(r"^[-+]?\d+(\.\d+)?$", filter_value) is None:
-                    raise RuntimeError(
-                        f"ERROR: requested column {filter_column_name} has data type '{target_data_type}', requiring a number value; you specified '{filter_value}', which is not."
-                    )
-
-            elif target_data_type == "text":
-                # Check for wildcards: if found, adjust operator and
-                # wildcard syntax to match API expectations on incoming queries.
-
-                original_filter_value = filter_value
-
-                if re.search(r"^\*", filter_value) is not None or re.search(r"\*$", filter_value) is not None:
-                    filter_value = re.sub(r"^\*+", r"%", filter_value)
-
-                    filter_value = re.sub(r"\*+$", r"%", filter_value)
-
-                    if filter_operator == "!=":
-                        filter_operator = "NOT LIKE"
-
-                    else:
-                        filter_operator = "LIKE"
-
-                if re.search(r"\*", filter_value) is not None:
-                    raise RuntimeError(
-                        f"ERROR: wildcards (*) are only allowed at the ends of string values; string '{original_filter_value}' is noncompliant (it has one in the middle). Please fix."
-                    )
-
-            else:
-                # Just to be safe. Types change.
-
-                raise RuntimeError(
-                    f"ERROR: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers."
-                )
-
-        filtered_match_statement = filter_column_name + " " + filter_operator + " " + filter_value
-
-        queries_for_match_statement.append(filtered_match_statement)
-
-    return queries_for_match_statement
 
 
 #############################################################################################################################
@@ -361,10 +199,10 @@ def fetch_rows(
 
     # cache the columns call and tables info so we don't have to call it more than once during fetch_rows
 
-    log = get_logger()
-    set_log_level(log=log, debug=debug)
     
     column_values = columns()
+
+    set_log_level(debug=debug)
 
     table_results = pd.DataFrame()
 
@@ -1152,7 +990,7 @@ def fetch_rows(
     # function to get data from the REST API.
 
     log.debug(f"Sending qnode: {q_node}")
-
+    
     paged_response_data_object = query_selector[table].sync(
         client=query_api_instance, body=q_node, limit=rows_per_page, offset=starting_offset
     )
@@ -1188,6 +1026,7 @@ def fetch_rows(
     # The API returns responses in JSON format: convert that JSON into a DataFrame
     # using pandas' json_normalize() function.
 
+    # TODO need to catch errors here. .to_dict() doesnt work when the API returns an error
     result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()["result"])
 
     # The data we've fetched so far might be just the first page (if the total number
@@ -1233,7 +1072,6 @@ def fetch_rows(
     columns_to_drop = list()
 
     added_columns = list()
-    log.info(result_dataframe.head())
 
     for column_name in result_dataframe:
         if column_name not in columns_to_fetch:
