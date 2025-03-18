@@ -100,12 +100,12 @@ def set_log_level(debug=False, loglevel="INFO"):
         return
 
     elif debug == True:
-        print('debug is true...')
+        # print('debug is true...')
         for handler in log.handlers:
             handler.setLevel('DEBUG')
 
     elif debug == False and loglevel in get_available_log_levels():
-        print('debug is false...')
+        # print('debug is false...')
         for handler in log.handlers:
             handler.setLevel(loglevel)
 
@@ -252,7 +252,7 @@ def cleanup_match_statement(column_data, match_statement):
     #############################################################################################################################
     # Define the list of supported filter-string operators.
 
-    allowed_operators = {">", ">=", "<", "<=", "=", "!="}
+    allowed_operators = {">", ">=", "<", "<=", "=", "!=", "like"}
 
     #############################################################################################################################
     # Enumerate restrictions on operator use to appropriate data types.
@@ -262,7 +262,7 @@ def cleanup_match_statement(column_data, match_statement):
         "boolean": {"=", "!="},
         "integer": allowed_operators,
         "numeric": allowed_operators,
-        "text": {"=", "!="},
+        "text": {"=", "!=", "like"},
     }
 
     #############################################################################################################################

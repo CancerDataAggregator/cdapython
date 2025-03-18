@@ -2,6 +2,7 @@ import json
 import re
 
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 
 import cda_client
 
@@ -1049,6 +1050,11 @@ def fetch_rows(
 
         if not result_dataframe.empty and not next_result_batch.empty:
             # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
+
+            #TODO: double check this
+            for col in next_result_batch.columns:
+                if is_numeric_dtype(next_result_batch[col]):
+                    next_result_batch[col] = next_result_batch[col].fillna(0)
 
             next_result_batch = next_result_batch.astype(result_dataframe.dtypes)
 
