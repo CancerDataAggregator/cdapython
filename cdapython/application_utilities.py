@@ -3,6 +3,7 @@ import logging.config
 import os
 from pathlib import Path
 import re
+import pandas as pd
 
 import yaml
 
@@ -376,3 +377,169 @@ def cleanup_match_statement(column_data, match_statement):
         queries_for_match_statement.append(filtered_match_statement)
 
     return queries_for_match_statement
+
+
+def cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source):
+    # Listify, so we don't have to care later about whether this was a string or a list of strings.
+    if isinstance(match_all, str):
+        match_all = [match_all]
+    if isinstance(match_any, str):
+        match_any = [match_any]
+    if isinstance(add_columns, str):
+        add_columns = [add_columns]
+    if isinstance(exclude_columns, str):
+        exclude_columns = [exclude_columns]
+    if isinstance(data_source, str):
+        data_source = [data_source]
+
+    return match_all, match_any, add_columns, exclude_columns, data_source
+
+def verify_inputs(
+        column_values,
+        match_all, 
+        match_any, 
+        add_columns, 
+        exclude_columns, 
+        data_source,
+        table,
+        match_from_file,
+        link_to_table,
+        provenance,
+        return_data_as,
+        output_file,
+        count_only
+        ):
+    # Top-level type and sanity checking (i.e. not examining list contents yet): ensure nothing untoward got passed into our parameters.
+    table_results = pd.DataFrame()
+
+    if column_values is None:
+        log.critical(
+            "fetch_rows(): ERROR: Something went fatally wrong with columns(); can't complete tables(), aborting."
+        )
+        return
+
+    else:
+        # So - yes we have a function "def tables()" that does this already, but since we already have the columns data
+        # we use this one-liner to extract the tables.
+        table_results = sorted(column_values["table"].unique())
+
+    # Make sure the requested table exists.
+    if table is None or not isinstance(table, str) or table not in table_results:
+        log.critical(
+            f"fetch_rows(): ERROR: The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list."
+        )
+
+        return
+
+    # `match_all`
+    if not isinstance(match_all, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'match_all' parameter must be a filter string or a list of filter strings; you specified '{match_all}', which is neither."
+        )
+
+        return
+
+    # `match_any`
+    if not isinstance(match_any, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'match_any' parameter must be a filter string or a list of filter strings; you specified '{match_any}', which is neither."
+        )
+
+        return
+
+    # `match_from_file`
+    if not isinstance(match_from_file, dict):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'match_from_file' parameter must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not."
+        )
+
+        return
+
+    else:
+        received_keys = set(match_from_file.keys())
+
+        expected_keys = {"input_file", "input_column", "cda_column_to_match"}
+
+        if received_keys != expected_keys:
+            log.critical(
+                f"fetch_rows(): ERROR: value assigned to 'match_from_file' parameter must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not."
+            )
+
+            return
+
+    # `data_source`
+    if not isinstance(data_source, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither."
+        )
+
+        return
+
+    # `add_columns`
+    if not isinstance(add_columns, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'add_columns' parameter must be a string (e.g. 'primary_diagnosis_site') or a list of strings (e.g. [ 'specimen_type', 'primary_diagnosis_condition' ]); you specified '{add_columns}', which is neither."
+        )
+
+        return
+
+    # `exclude_columns`
+    if not isinstance(exclude_columns, list):
+        log.critical(
+            f"fetch_rows(): ERROR: value assigned to 'exclude_columns' parameter must be a string (e.g. 'primary_diagnosis_site') or a list of strings (e.g. [ 'specimen_type', 'primary_diagnosis_condition' ]); you specified '{exclude_columns}', which is neither."
+        )
+
+        return
+
+    # `link_to_table`
+    if not isinstance(link_to_table, str):
+        log.critical(
+            f"fetch_rows(): ERROR: parameter 'link_to_table' must be a string; you supplied '{link_to_table}', which is not."
+        )
+
+        return
+
+    elif link_to_table != "" and link_to_table not in table_results:
+        log.critical(
+            f"fetch_rows(): ERROR: parameter 'link_to_table' must be the name of a searchable CDA table; you provided '{link_to_table}', which is not. See tables() for a list of valid table names."
+        )
+
+        return
+
+    elif link_to_table != "" and link_to_table == table:
+        log.critical(
+            "fetch_rows(): ERROR: parameter 'link_to_table' can't specify the same table as the 'table' parameter. Please try again."
+        )
+
+        return
+
+    # `provenance`
+    if provenance != True and provenance != False:
+        log.critical(
+            f"fetch_rows(): ERROR: The `provenance` parameter must be set to True or False; you specified '{provenance}', which is neither."
+        )
+
+        return
+    # `return_data_as`
+    if not isinstance(return_data_as, str):
+        log.critical(
+            f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'."
+        )
+
+        return
+
+    # `output_file`
+    if not isinstance(output_file, str):
+        log.critical(
+            f"fetch_rows(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path."
+        )
+
+        return
+
+    # `count_only`
+    if count_only != True and count_only != False:
+        log.critical(
+            f"fetch_rows(): ERROR: The `count_only` parameter must be set to True or False; you specified '{count_only}', which is neither."
+        )
+
+        return
