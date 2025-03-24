@@ -674,7 +674,6 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
             else:
                 # Retain all rows where the value of `target_field` matches any of the given filter patterns.
-
                 result_dataframe = result_dataframe.loc[
                     result_dataframe[target_field].str.contains(match_pattern_string, case=False)
                 ]
@@ -1270,7 +1269,7 @@ def column_values(
     log.debug("Handling missing values...")
 
     # CDA has no float values. If the API gives us some, cast them to integers.
-
+    
     if result_dataframe[column].dtype == "float64":
         # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
         # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.

@@ -248,7 +248,6 @@ def fetch_rows(
 
         source_table_columns_in_order.append(column_record["column"])
     
-    log.info(source_table_columns_in_order)
 
     # "`table`_associated_project" and "`table`_identifier", provided by the API
     # as non-atomic objects (a list and a list of dicts, respectively) and
@@ -799,7 +798,6 @@ def fetch_rows(
 
     q_node.exclude_columns = columns_to_remove
 
-    print(q_node)
 
     # try:
     #     # Default Paged Endpoint
