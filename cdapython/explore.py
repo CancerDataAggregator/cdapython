@@ -1542,6 +1542,7 @@ def summary_counts(
     data_source=[],
     add_columns=[],
     exclude_columns=[],
+    link_to_table="",
     debug=False,
 ):
     """
@@ -2195,6 +2196,9 @@ def summary_counts(
     # column set from `table`?
 
     use_only_default_columns = True
+    column_values = columns()
+    if link_to_table != "":
+        add_columns.extend(column_values.query(f'table == "{link_to_table}"')["column"].tolist())
 
     for column_to_add in add_columns:
         # Ignore requests for columns that are already present by default.
