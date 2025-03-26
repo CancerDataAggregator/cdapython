@@ -798,7 +798,7 @@ def fetch_rows(
 
     q_node.exclude_columns = columns_to_remove
 
-
+    
     # try:
     #     # Default Paged Endpoint
     #     api_response = api_instance.subject_paged_endpoint_data_subject_post(q_node, limit=limit, offset=offset)
@@ -1058,9 +1058,9 @@ def fetch_rows(
                     identifier_array = result_row[f"{table}_identifier"]
 
                     for identifier_record in identifier_array:
-                        data_source = identifier_record["system"]
+                        data_source = identifier_record["upstream_identifiers_data_source"]
 
-                        data_source_id = identifier_record["field_name"] + ":" + identifier_record["value"]
+                        data_source_id = identifier_record["data_source_id_field_name"] + ":" + identifier_record["data_source_id_value"]
 
                         new_row = list()
 
