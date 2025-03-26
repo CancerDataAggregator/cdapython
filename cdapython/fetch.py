@@ -1023,57 +1023,57 @@ def fetch_rows(
 
         # Consolidate provenance information if present.
 
-        if provenance == True:
-            if table == "mutation":
-                rename_columns = {
-                    "subject_identifier_system": "subject_data_source",
-                    "subject_identifier_field_name": "subject_data_source_id",
-                }
+        # if provenance == True:
+        #     if table == "mutation":
+        #         rename_columns = {
+        #             "subject_identifier_system": "subject_data_source",
+        #             "subject_identifier_field_name": "subject_data_source_id",
+        #         }
 
-                result_dataframe = result_dataframe.rename(columns=rename_columns)
+        #         result_dataframe = result_dataframe.rename(columns=rename_columns)
 
-                result_dataframe["subject_data_source_id"] = (
-                    result_dataframe["subject_data_source_id"] + ":" + result_dataframe["subject_identifier_value"]
-                )
+        #         result_dataframe["subject_data_source_id"] = (
+        #             result_dataframe["subject_data_source_id"] + ":" + result_dataframe["subject_identifier_value"]
+        #         )
 
-                # axis=0: rows; axis=1: columns.
+        #         # axis=0: rows; axis=1: columns.
 
-                result_dataframe = result_dataframe.drop("subject_identifier_value", axis=1)
+        #         result_dataframe = result_dataframe.drop("subject_identifier_value", axis=1)
 
-            else:
-                # We'll need to build a new result matrix, including one copy of
-                # each row for each identifier present. Iteratively build a list of
-                # tuples (rows) and convert the list to a new DataFrame when complete.
+        #     else:
+        #         # We'll need to build a new result matrix, including one copy of
+        #         # each row for each identifier present. Iteratively build a list of
+        #         # tuples (rows) and convert the list to a new DataFrame when complete.
 
-                new_result_matrix = list()
+        #         new_result_matrix = list()
 
-                new_result_column_names = result_dataframe.columns.tolist()
+        #         new_result_column_names = result_dataframe.columns.tolist()
 
-                new_result_column_names.remove(f"{table}_identifier")
+        #         new_result_column_names.remove(f"{table}_identifier")
 
-                # There are likely more efficient ways to do this; target this block
-                # for optimization if it ever becomes a bottleneck.
+        #         # There are likely more efficient ways to do this; target this block
+        #         # for optimization if it ever becomes a bottleneck.
 
-                for result_row_index, result_row in result_dataframe.iterrows():
-                    identifier_array = result_row[f"{table}_identifier"]
+        #         for result_row_index, result_row in result_dataframe.iterrows():
+        #             identifier_array = result_row[f"{table}_identifier"]
 
-                    for identifier_record in identifier_array:
-                        data_source = identifier_record["upstream_identifiers_data_source"]
+        #             for identifier_record in identifier_array:
+        #                 data_source = identifier_record["upstream_identifiers_data_source"]
 
-                        data_source_id = identifier_record["data_source_id_field_name"] + ":" + identifier_record["data_source_id_value"]
+        #                 data_source_id = identifier_record["data_source_id_field_name"] + ":" + identifier_record["data_source_id_value"]
 
-                        new_row = list()
+        #                 new_row = list()
 
-                        for column_name in new_result_column_names:
-                            new_row.append(result_row[column_name])
+        #                 for column_name in new_result_column_names:
+        #                     new_row.append(result_row[column_name])
 
-                        new_row = new_row + [data_source, data_source_id]
+        #                 new_row = new_row + [data_source, data_source_id]
 
-                        new_result_matrix.append(tuple(new_row))
+        #                 new_result_matrix.append(tuple(new_row))
 
-                new_result_column_names = new_result_column_names + [f"{table}_data_source", f"{table}_data_source_id"]
+        #         new_result_column_names = new_result_column_names + [f"{table}_data_source", f"{table}_data_source_id"]
 
-                result_dataframe = pd.DataFrame(new_result_matrix, columns=new_result_column_names)
+        #         result_dataframe = pd.DataFrame(new_result_matrix, columns=new_result_column_names)
 
     if return_data_as == "" or return_data_as == "dataframe":
         # Right now, the default is the same as if the user had
