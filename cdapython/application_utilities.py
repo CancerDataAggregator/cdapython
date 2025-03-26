@@ -43,7 +43,7 @@ def get_logger() -> logging.Logger:
     return logger
 
 
-log = get_logger()
+
 
 
 #############################################################################################################################
@@ -85,7 +85,7 @@ def set_default_log_level():
 #############################################################################################################################
 
 
-def set_log_level(debug=False, loglevel="INFO"):
+def set_log_level(log, debug=False, loglevel="INFO"):
     """
     Changes the current log level
 

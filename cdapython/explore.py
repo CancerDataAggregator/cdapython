@@ -9,7 +9,7 @@ import tabulate
 import cda_client
 
 # from cda_client.api import ApiException
-from .application_utilities import get_api_client, set_log_level, log, cleanup_match_statement
+from .application_utilities import get_api_client, set_log_level, get_logger, cleanup_match_statement
 from cda_client.models.q_node import QNode
 from cda_client.errors import UnexpectedStatus
 from cda_client.api.summary import file_summary_endpoint_summary_file_post as summary_file_endpoint
@@ -64,7 +64,8 @@ def tables():
 
     # Call columns(), extract unique values from the `table` column of the
     # resulting DataFrame, and return those values to the user as a list.
-    
+    log = get_logger()
+
     columns_result_df = columns(return_data_as="dataframe")
 
     if columns_result_df is None:
@@ -173,7 +174,8 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
         OR returns nothing, but writes results to a user-specified TSV file
     """
-    set_log_level(debug=debug)
+    log = get_logger()
+    set_log_level(log, debug=debug)
 
     #############################################################################################################################
     # TEMPORARY ban list: filtering on these columns is problematic at the API level, and we don't have a consistent modeling
@@ -830,7 +832,9 @@ def column_values(
         pandas.DataFrame OR list OR returns nothing, but writes retrieved
         data to a user-specified TSV file
     """
-    set_log_level(debug=debug)
+    log = get_logger()
+    set_log_level(log, debug=debug)
+
 
     #############################################################################################################################
     # Check for our one required parameter.
@@ -1677,9 +1681,11 @@ def summary_counts(
     #############################################################################################################################
     # Ensure nothing untoward got passed into the `debug` parameter.
 
-    col_values = columns()
+    col_values = columns(debug=debug)
 
-    set_log_level(debug=debug)
+    log = get_logger()
+    set_log_level(log, debug=debug)
+
 
     table_results = pd.DataFrame()
 
