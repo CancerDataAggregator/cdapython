@@ -63,20 +63,6 @@ def get_available_log_levels():
     return {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 
 
-#############################################################################################################################
-#
-# set_default_log_level(): Changes the current log level to be 'WARNING", our default level.
-#
-#############################################################################################################################
-
-
-def set_default_log_level():
-    """
-    Sets default log level ('WARNING').
-
-    """
-    log.setLevel("WARNING")
-
 
 #############################################################################################################################
 #
@@ -407,7 +393,8 @@ def verify_inputs(
         provenance,
         return_data_as,
         output_file,
-        count_only
+        count_only,
+        log
         ):
     # Top-level type and sanity checking (i.e. not examining list contents yet): ensure nothing untoward got passed into our parameters.
     table_results = pd.DataFrame()

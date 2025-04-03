@@ -220,7 +220,8 @@ def fetch_rows(
         provenance,
         return_data_as,
         output_file,
-        count_only
+        count_only,
+        log
         )
 
     #############################################################################################################################
@@ -842,6 +843,7 @@ def fetch_rows(
     paged_response_data_object = query_selector[table].sync(
         client=query_api_instance, body=q_node, limit=rows_per_page, offset=starting_offset
     )
+    # print(type(paged_response_data_object))
 
     # Report some metadata about the results we got back.
     #
@@ -875,6 +877,7 @@ def fetch_rows(
     # using pandas' json_normalize() function.
 
     # TODO need to catch errors here. .to_dict() doesnt work when the API returns an error
+    # print(paged_response_data_object)
     result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()["result"])
 
     # The data we've fetched so far might be just the first page (if the total number
