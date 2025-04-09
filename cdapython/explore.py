@@ -174,7 +174,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
         OR returns nothing, but writes results to a user-specified TSV file
     """
-    log = get_logger()
+    log = get_logger( level='DEBUG' )
     set_log_level(log, debug=debug)
 
     #############################################################################################################################

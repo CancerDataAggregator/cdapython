@@ -24,7 +24,7 @@ import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnn
 #############################################################################################################################
 
 
-def get_logger( level ) -> logging.Logger:
+def get_logger( level=None ) -> logging.Logger:
     """
     Returns logger instance that uses config file settings to initialize.
 
