@@ -33,6 +33,8 @@ def get_logger() -> logging.Logger:
         log: logging tool that can be used to output messages of varying granularity
     """
 
+    print os.path.dirname( os.path.abspath( __file__ ) )
+
     parent_dir = Path(__file__).parent
     log_config = Path(parent_dir / "config/logger.yml").resolve()
     with open(log_config) as log_config_file:
