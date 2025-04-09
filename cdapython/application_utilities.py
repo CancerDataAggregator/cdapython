@@ -17,8 +17,6 @@ import cda_client.api.summary
 import cda_client.api.unique_values
 import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post
 
-from cdapython import __CDA_LOG_TO_CONSOLE, __CDA_LOG_TO_FILE
-
 #############################################################################################################################
 #
 # get_logger(): Returns logger instance that uses config file settings and optional user config inputs to initialize
@@ -42,14 +40,13 @@ def get_logger( level=None ) -> logging.Logger:
 
     # Echo log messages to standard output? (Default: yes)
 
-    #global __CDA_LOG_TO_CONSOLE
+    if '__CDA_LOG_TO_CONSOLE' not in os.environ:
+        os.environ['__CDA_LOG_TO_CONSOLE'] = True
 
-    if __CDA_LOG_TO_CONSOLE is None:
-        __CDA_LOG_TO_CONSOLE = True
+    # Echo log messages to a file? (Default: no, i.e. __CDA_LOG_TO_FILE == None)
 
-    # Echo log messages to a file? (Default: no, i.e.: __CDA_LOG_TO_FILE == None)
-
-    #global __CDA_LOG_TO_FILE
+    if '__CDA_LOG_TO_FILE' not in os.environ:
+        os.environ['__CDA_LOG_TO_FILE'] = None
 
     # Load the default logger configuration.
 
@@ -61,12 +58,12 @@ def get_logger( level=None ) -> logging.Logger:
 
     # Modify logger configuration defaults according to user-modified session-level settings.
 
-    if __CDA_LOG_TO_CONSOLE == False:
+    if os.environ['__CDA_LOG_TO_CONSOLE'] == False:
         logger_configuration['loggers']['default']['handlers'].remove( 'console' )
 
-    if __CDA_LOG_TO_FILE is not None:
+    if os.environ['__CDA_LOG_TO_FILE'] is not None:
         logger_configuration['loggers']['default']['handlers'].append( 'file' )
-        logger_configuration['handlers']['file']['filename'] = __CDA_LOG_TO_FILE
+        logger_configuration['handlers']['file']['filename'] = os.environ['__CDA_LOG_TO_FILE']
 
     # Make sure we didn't remove all possible handlers.
 
