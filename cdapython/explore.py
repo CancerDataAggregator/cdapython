@@ -64,7 +64,7 @@ def tables():
 
     # Call columns(), extract unique values from the `table` column of the
     # resulting DataFrame, and return those values to the user as a list.
-    log = get_logger()
+    log = get_logger( level=logger.DEBUG )
 
     columns_result_df = columns(return_data_as="dataframe")
 

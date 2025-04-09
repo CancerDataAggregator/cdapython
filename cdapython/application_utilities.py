@@ -3,7 +3,7 @@ import logging.config
 import os
 import re
 import pandas as pd
-
+import sys
 import yaml
 
 import cda_client
@@ -19,12 +19,12 @@ import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnn
 
 #############################################################################################################################
 #
-# get_logger(): Returns logger instance that uses config file settings to initialize
+# get_logger(): Returns logger instance that uses config file settings and optional user config inputs to initialize
 #
 #############################################################################################################################
 
 
-def get_logger() -> logging.Logger:
+def get_logger( level=None ) -> logging.Logger:
     """
     Returns logger instance that uses config file settings to initialize.
 
@@ -32,14 +32,49 @@ def get_logger() -> logging.Logger:
         log: logging tool that can be used to output messages of varying granularity
     """
 
+    # Require an affirmation of what level of logging is desired. Any system default would be arbitrary.
+
+    if level is None:
+        
+        sys.exit( 'FATAL: get_logger(): level is required.' )
+
+    # Echo log messages to standard output? (Default: yes)
+
+    global __CDA_LOG_TO_CONSOLE
+
+    if __CDA_LOG_TO_CONSOLE is None:
+        __CDA_LOG_TO_CONSOLE = True
+
+    # Echo log messages to a file? (Default: no, i.e.: __CDA_LOG_TO_FILE == None)
+
+    global __CDA_LOG_TO_FILE
+
+    # Load the default logger configuration.
+
     parent_dir = os.path.dirname( os.path.abspath( __file__ ) )
-    log_config = os.path.join( parent_dir, 'config', 'logger.yml' )
+    logger_default_config_file = os.path.join( parent_dir, 'config', 'logger_default_config.yml' )
 
-    with open(log_config) as log_config_file:
-        log_config = yaml.safe_load(log_config_file)
+    with open( logger_default_config_file ) as IN:
+        logger_configuration = yaml.safe_load( IN )
 
-    logging.config.dictConfig(log_config)
-    logger = logging.getLogger("simple")
+    # Modify logger configuration defaults according to user-modified session-level settings.
+
+    if __CDA_LOG_TO_CONSOLE == False:
+        logger_configuration['loggers']['default']['handlers'].remove( 'console' )
+
+    if __CDA_LOG_TO_FILE is not None:
+        logger_configuration['loggers']['default']['handlers'].append( 'file' )
+        logger_configuration['handlers']['file']['filename'] = __CDA_LOG_TO_FILE
+
+    # Make sure we didn't remove all possible handlers.
+
+    if len( logger_configuration['loggers']['default']['handlers'] ) == 0:
+        sys.exit( 'FATAL: get_logger(): console and file output both disabled; can\'t create logger.' )
+
+    logging.config.dictConfig( logger_configuration )
+
+    logger = logging.getLogger('default')
+
     return logger
 
 
@@ -48,19 +83,19 @@ def get_logger() -> logging.Logger:
 
 #############################################################################################################################
 #
-# get_available_log_levels(): Returns list of log level strings that can be used to set_log_level
+# get_valid_log_levels(): Returns list of log level strings that can be used to set_log_level
 #
 #############################################################################################################################
 
 
-def get_available_log_levels():
+def get_valid_log_levels():
     """
     Returns list of log level strings that can be used to set_log_level.
 
     Returns:
-        list of strings: names of log levels that can be passed to set_log_level.
+        set of module-defined integer codes and strings: all valid labels for log levels that can be passed to Handler.setLevel() (via set_log_level()).
     """
-    return {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+    return { logger.DEBUG, "DEBUG", logger.INFO, "INFO", logger.WARNING, "WARNING", logger.ERROR, "ERROR", logger.CRITICAL, "CRITICAL" }
 
 
 
@@ -91,7 +126,7 @@ def set_log_level(log, debug=False, loglevel="INFO"):
         for handler in log.handlers:
             handler.setLevel('DEBUG')
 
-    elif debug == False and loglevel in get_available_log_levels():
+    elif debug == False and loglevel in get_valid_log_levels():
         # print('debug is false...')
         for handler in log.handlers:
             handler.setLevel(loglevel)
