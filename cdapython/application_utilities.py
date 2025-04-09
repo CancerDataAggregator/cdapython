@@ -95,7 +95,7 @@ def get_valid_log_levels():
     Returns:
         set of module-defined integer codes and strings: all valid labels for log levels that can be passed to Handler.setLevel() (via set_log_level()).
     """
-    return { logger.DEBUG, "DEBUG", logger.INFO, "INFO", logger.WARNING, "WARNING", logger.ERROR, "ERROR", logger.CRITICAL, "CRITICAL" }
+    return { logging.DEBUG, "DEBUG", logging.INFO, "INFO", logging.WARNING, "WARNING", logging.ERROR, "ERROR", logging.CRITICAL, "CRITICAL" }
 
 
 
