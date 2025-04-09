@@ -783,7 +783,7 @@ def fetch_rows(
             columns_to_remove.append(col)
 
         else:
-            log.debug(f'Ignoring request to remove column "{col}" because it doesn\'t exist or is already excluded.')
+            log.debug( f'Ignoring request to remove column "{col}" because it doesn\'t exist or is already excluded.' )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -814,7 +814,7 @@ def fetch_rows(
     if count_only:
         fetch_message = "counting results only: not a comprehensive fetch"
 
-    log.debug(f"BEGIN DEBUG MESSAGE: fetch_rows(): Querying CDA API '{table}' endpoint ({fetch_message})")
+    log.debug( f"Querying CDA API '{table}' endpoint ({fetch_message})" )
 
     query_selector = {
         "file": cda_client.api.data.file_fetch_rows_endpoint_data_file_post,
@@ -838,7 +838,7 @@ def fetch_rows(
     # Use the QueryApi instance object's `{table}_query` endpoint-accessor
     # function to get data from the REST API.
 
-    log.debug(f"Sending qnode: {q_node}")
+    log.debug( f"Sending qnode: {q_node}" )
     
     paged_response_data_object = query_selector[table].sync(
         client=query_api_instance, body=q_node, limit=rows_per_page, offset=starting_offset
@@ -915,7 +915,7 @@ def fetch_rows(
     #############################################################################################################################
     # Postprocess API result data.
 
-    log.debug("Organizing result data...")
+    log.debug( "Organizing result data..." )
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
@@ -937,7 +937,7 @@ def fetch_rows(
             added_columns.append(column_name)
 
     if len(columns_to_drop) > 0:
-        log.debug(f"   -- filtering API columns: {columns_to_drop}")
+        log.debug( f"   -- filtering API columns: {columns_to_drop}" )
 
         result_dataframe = result_dataframe.drop(columns=columns_to_drop)
 
@@ -987,7 +987,7 @@ def fetch_rows(
         if join_table_id_field is not None:
             result_dataframe = result_dataframe.loc[~(result_dataframe[join_table_id_field].isna())]
 
-        log.debug("Handling missing values...")
+        log.debug( "Handling missing values..." )
 
         # for column in columns_to_fetch:
 
@@ -1088,11 +1088,7 @@ def fetch_rows(
     elif return_data_as == "tsv":
         # Write results to a user-specified TSV.
 
-        log.debug("-" * 80)
-
-        log.debug(f"      DEBUG MESSAGE: fetch_rows(): Printing results to TSV file '{output_file}'")
-
-        log.debug("-" * 80)
+        log.debug( f"Printing results to TSV file '{output_file}'" )
 
         try:
             result_dataframe.to_csv(output_file, sep="\t", index=False)

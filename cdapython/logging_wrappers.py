@@ -99,7 +99,7 @@ def get_logger(  ) -> logging.Logger:
     # Make sure we didn't remove all possible handlers.
 
     if len( logger_configuration['loggers']['default']['handlers'] ) == 0:
-        sys.exit( 'FATAL: get_logger(): console and file output both disabled; can\'t create logger.' )
+        print( 'ERROR: get_logger(): console and file output both disabled; can\'t create logger.', file=sys.stderr )
 
     logging.config.dictConfig( logger_configuration )
 
