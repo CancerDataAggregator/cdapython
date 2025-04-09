@@ -17,6 +17,8 @@ import cda_client.api.summary
 import cda_client.api.unique_values
 import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post
 
+from cdapython import __CDA_LOG_TO_CONSOLE, __CDA_LOG_TO_FILE
+
 #############################################################################################################################
 #
 # get_logger(): Returns logger instance that uses config file settings and optional user config inputs to initialize
@@ -40,14 +42,14 @@ def get_logger( level=None ) -> logging.Logger:
 
     # Echo log messages to standard output? (Default: yes)
 
-    global __CDA_LOG_TO_CONSOLE
+    #global __CDA_LOG_TO_CONSOLE
 
     if __CDA_LOG_TO_CONSOLE is None:
         __CDA_LOG_TO_CONSOLE = True
 
     # Echo log messages to a file? (Default: no, i.e.: __CDA_LOG_TO_FILE == None)
 
-    global __CDA_LOG_TO_FILE
+    #global __CDA_LOG_TO_FILE
 
     # Load the default logger configuration.
 
