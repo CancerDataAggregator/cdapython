@@ -40,14 +40,14 @@ def get_logger( level=None ) -> logging.Logger:
 
     # Echo log messages to standard output? (Default: yes)
 
-    #global __CDA_LOG_TO_CONSOLE
+    global __CDA_LOG_TO_CONSOLE
 
     if __CDA_LOG_TO_CONSOLE is None:
         __CDA_LOG_TO_CONSOLE = True
 
     # Echo log messages to a file? (Default: no, i.e.: __CDA_LOG_TO_FILE == None)
 
-    #global __CDA_LOG_TO_FILE
+    global __CDA_LOG_TO_FILE
 
     # Load the default logger configuration.
 
