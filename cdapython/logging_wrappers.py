@@ -128,7 +128,7 @@ def get_valid_log_levels():
 #
 #############################################################################################################################
 
-def set_log_level( level=None )
+def set_log_level( level=None ):
     """
     Changes the current log level. Valid values are 'debug', 'info', 'warning', 'error', and 'critical'.
     """
