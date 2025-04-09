@@ -61,8 +61,8 @@ def get_logger( level=None ) -> logging.Logger:
 
     # Require an affirmation of what level of logging is desired. Any system default would be arbitrary.
 
-    if level is None:
-        sys.exit( 'FATAL: get_logger(): level is required.' )
+    if level not in get_valid_log_levels():
+        sys.exit( 'FATAL: get_logger(): a valid level is required.' )
 
     # Echo log messages to standard output? (Default: yes)
 
@@ -81,6 +81,10 @@ def get_logger( level=None ) -> logging.Logger:
 
     with open( logger_default_config_file ) as IN:
         logger_configuration = yaml.safe_load( IN )
+
+    # Set the log level.
+
+    logger_configuration['loggers']['default']['level'] = level
 
     # Modify logger configuration defaults according to user-modified session-level settings.
 
