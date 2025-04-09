@@ -34,6 +34,7 @@ def get_logger() -> logging.Logger:
     """
 
     print( os.path.dirname( os.path.abspath( __file__ ) ) )
+    print( Path(__file__).parent )
 
     parent_dir = Path(__file__).parent
     log_config = Path(parent_dir / "config/logger.yml").resolve()
