@@ -1,7 +1,7 @@
 version: 1
 formatters:
   default:
-    format: '%(levelname)-8s [%(asctime)s]: IN FUNCTION "%(funcName)s()": MESSAGE: "%(message)s"'
+    format: '%(levelname)-8s [%(asctime)s] %(filename)s->%(funcName)s() line %(lineno)d: %(message)s'
 handlers:
   console:
     class: logging.StreamHandler
