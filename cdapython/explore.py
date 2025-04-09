@@ -66,6 +66,8 @@ def tables():
     # resulting DataFrame, and return those values to the user as a list.
     log = get_logger( level='DEBUG' )
 
+    log.debug( "Calling columns()" )
+
     columns_result_df = columns(return_data_as="dataframe")
 
     if columns_result_df is None:
