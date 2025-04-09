@@ -41,12 +41,12 @@ def get_logger( level=None ) -> logging.Logger:
     # Echo log messages to standard output? (Default: yes)
 
     if '__CDA_LOG_TO_CONSOLE' not in os.environ:
-        os.environ['__CDA_LOG_TO_CONSOLE'] = True
+        os.environ['__CDA_LOG_TO_CONSOLE'] = 'True'
 
     # Echo log messages to a file? (Default: no, i.e. __CDA_LOG_TO_FILE == None)
 
     if '__CDA_LOG_TO_FILE' not in os.environ:
-        os.environ['__CDA_LOG_TO_FILE'] = None
+        os.environ['__CDA_LOG_TO_FILE'] = ''
 
     # Load the default logger configuration.
 
@@ -58,10 +58,10 @@ def get_logger( level=None ) -> logging.Logger:
 
     # Modify logger configuration defaults according to user-modified session-level settings.
 
-    if os.environ['__CDA_LOG_TO_CONSOLE'] == False:
+    if os.environ['__CDA_LOG_TO_CONSOLE'] == 'False':
         logger_configuration['loggers']['default']['handlers'].remove( 'console' )
 
-    if os.environ['__CDA_LOG_TO_FILE'] is not None:
+    if os.environ['__CDA_LOG_TO_FILE'] != '':
         logger_configuration['loggers']['default']['handlers'].append( 'file' )
         logger_configuration['handlers']['file']['filename'] = os.environ['__CDA_LOG_TO_FILE']
 
