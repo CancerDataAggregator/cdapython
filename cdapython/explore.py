@@ -9,7 +9,8 @@ import tabulate
 import cda_client
 
 # from cda_client.api import ApiException
-from .application_utilities import get_api_client, set_log_level, get_logger, cleanup_match_statement
+from cdapython.logging_wrappers import set_log_level, get_logger
+from cdapython.application_utilities import get_api_client, cleanup_match_statement
 from cda_client.models.q_node import QNode
 from cda_client.errors import UnexpectedStatus
 from cda_client.api.summary import file_summary_endpoint_summary_file_post as summary_file_endpoint
@@ -834,7 +835,7 @@ def column_values(
         pandas.DataFrame OR list OR returns nothing, but writes retrieved
         data to a user-specified TSV file
     """
-    log = get_logger()
+    log = get_logger( level='DEBUG' )
     set_log_level(log, debug=debug)
 
 
@@ -1685,7 +1686,7 @@ def summary_counts(
 
     col_values = columns(debug=debug)
 
-    log = get_logger()
+    log = get_logger( level='DEBUG' )
     set_log_level(log, debug=debug)
 
 
