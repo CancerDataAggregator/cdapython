@@ -34,10 +34,17 @@ def get_logger() -> logging.Logger:
     """
 
     print( os.path.dirname( os.path.abspath( __file__ ) ) )
-    print( Path(__file__).parent )
 
     parent_dir = Path(__file__).parent
     log_config = Path(parent_dir / "config/logger.yml").resolve()
+
+    print( log_config )
+
+    parent_dir = os.path.dirname( os.path.abspath( __file__ ) )
+    log_config = os.path.join( parent_dir, 'config', 'logger.yml' )
+
+    print( log_config )
+
     with open(log_config) as log_config_file:
         log_config = yaml.safe_load(log_config_file)
 
