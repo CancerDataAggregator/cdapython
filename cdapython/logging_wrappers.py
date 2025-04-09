@@ -44,15 +44,13 @@ def disable_file_logging():
     
     os.environ['__CDA_LOG_TO_FILE'] = ''
 
-
 #############################################################################################################################
 #
 # get_logger(): Returns logger instance that uses config file settings and optional user config inputs to initialize
 #
 #############################################################################################################################
 
-
-def get_logger( level=None ) -> logging.Logger:
+def get_logger(  ) -> logging.Logger:
     """
     Returns logger instance that uses config file settings to initialize.
 
@@ -60,10 +58,12 @@ def get_logger( level=None ) -> logging.Logger:
         log: logging tool that can be used to output messages of varying granularity
     """
 
-    # Require an affirmation of what level of logging is desired. Any system default would be arbitrary.
+    # Establish the current log level. If none exists, default to `logging.WARNING`.
 
-    if level not in get_valid_log_levels():
-        sys.exit( 'FATAL: get_logger(): a valid level is required.' )
+    if '__CDA_LOG_LEVEL' not in os.environ:
+        os.environ['__CDA_LOG_LEVEL'] = 'WARNING'
+
+    level = os.environ['__CDA_LOG_LEVEL']
 
     # Echo log messages to standard output? (Default: yes)
 
@@ -83,7 +83,7 @@ def get_logger( level=None ) -> logging.Logger:
     with open( logger_default_config_file ) as IN:
         logger_configuration = yaml.safe_load( IN )
 
-    # Set the log level.
+    # Set the log level in the configuration object to whatever the current environment dictates.
 
     logger_configuration['loggers']['default']['level'] = level
 
@@ -107,16 +107,11 @@ def get_logger( level=None ) -> logging.Logger:
 
     return logger
 
-
-
-
-
 #############################################################################################################################
 #
 # get_valid_log_levels(): Returns list of log level strings that can be used to set_log_level
 #
 #############################################################################################################################
-
 
 def get_valid_log_levels():
     """
@@ -127,45 +122,25 @@ def get_valid_log_levels():
     """
     return { logging.DEBUG, "DEBUG", logging.INFO, "INFO", logging.WARNING, "WARNING", logging.ERROR, "ERROR", logging.CRITICAL, "CRITICAL" }
 
-
-
 #############################################################################################################################
 #
 # set_log_level(): Changes the current log level
 #
 #############################################################################################################################
 
-
-def set_log_level(log, debug=False, loglevel="INFO"):
+def set_log_level( level=None )
     """
-    Changes the current log level
-
-    Returns:
-        query_api_instance: query api instance that can be used to communicate with CDA API
+    Changes the current log level. Valid values are 'debug', 'info', 'warning', 'error', and 'critical'.
     """
-    loglevel = loglevel.upper()
-
-    if debug != True and debug != False:
-        log.error(
-            f"set_log_level(): ERROR: The `debug` parameter must be set to True or False; you specified '{debug}', which is neither."
-        )
-        return
-
-    elif debug == True:
-        # print('debug is true...')
-        for handler in log.handlers:
-            handler.setLevel('DEBUG')
-
-    elif debug == False and loglevel in get_valid_log_levels():
-        # print('debug is false...')
-        for handler in log.handlers:
-            handler.setLevel(loglevel)
+    if level is None:
+        print( f"ERROR: set_log_level(): log level cannot be null. Try something like 'set_log_level( 'debug' )'.", file=sys.stderr )
 
     else:
-        for handler in log.handlers:
-            handler.setLevel('WARNING')
-        log.warning(
-            f"set_log_level(): loglevel set to '{loglevel}'. Should be one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. Setting to 'WARNING'."
-        )
+        level = level.upper()
+
+    if level not in get_valid_log_levels():
+        print( f"ERROR: set_log_level(): log level '{level}' invalid. Try help( set_log_level ) for a list of valid level names.", file=sys.stderr )
+    else:
+        os.environ['__CDA_LOG_LEVEL'] = level
 
 

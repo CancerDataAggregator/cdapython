@@ -9,7 +9,7 @@ import cda_client
 # from cda_client.rest import ApiException
 from cda_client.models.q_node import QNode
 from cdapython.application_utilities import get_api_client, cleanup_match_statement, cleanup_inputs, verify_inputs
-from cdapython.logging_wrappers import set_log_level, get_logger
+from cdapython.logging_wrappers import get_logger
 from cdapython.explore import columns
 
 
@@ -200,9 +200,8 @@ def fetch_rows(
     #############################################################################################################################
 
     # cache the columns call and tables info so we don't have to call it more than once during fetch_rows
-    log = get_logger( level='DEBUG' )
+    log = get_logger()
     column_values = columns(debug=debug)
-    set_log_level(log, debug=debug)
 
     # Make sure inputs are clean
     match_all, match_any, add_columns, exclude_columns, data_source = cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source)

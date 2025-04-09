@@ -9,7 +9,7 @@ import tabulate
 import cda_client
 
 # from cda_client.api import ApiException
-from cdapython.logging_wrappers import set_log_level, get_logger
+from cdapython.logging_wrappers import get_logger
 from cdapython.application_utilities import get_api_client, cleanup_match_statement
 from cda_client.models.q_node import QNode
 from cda_client.errors import UnexpectedStatus
@@ -65,7 +65,7 @@ def tables():
 
     # Call columns(), extract unique values from the `table` column of the
     # resulting DataFrame, and return those values to the user as a list.
-    log = get_logger( level='DEBUG' )
+    log = get_logger()
 
     log.debug( "Calling columns()" )
 
@@ -177,8 +177,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
         OR returns nothing, but writes results to a user-specified TSV file
     """
-    log = get_logger( level='DEBUG' )
-    set_log_level(log, debug=debug)
+    log = get_logger()
 
     #############################################################################################################################
     # TEMPORARY ban list: filtering on these columns is problematic at the API level, and we don't have a consistent modeling
@@ -835,8 +834,7 @@ def column_values(
         pandas.DataFrame OR list OR returns nothing, but writes retrieved
         data to a user-specified TSV file
     """
-    log = get_logger( level='DEBUG' )
-    set_log_level(log, debug=debug)
+    log = get_logger()
 
 
     #############################################################################################################################
@@ -1686,8 +1684,7 @@ def summary_counts(
 
     col_values = columns(debug=debug)
 
-    log = get_logger( level='DEBUG' )
-    set_log_level(log, debug=debug)
+    log = get_logger()
 
 
     table_results = pd.DataFrame()
