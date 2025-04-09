@@ -1,7 +1,6 @@
 import logging
 import logging.config
 import os
-from pathlib import Path
 import re
 import pandas as pd
 
@@ -20,7 +19,7 @@ import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnn
 
 #############################################################################################################################
 #
-# get_api_client(): Returns logger instance that uses config file settings to initialize
+# get_logger(): Returns logger instance that uses config file settings to initialize
 #
 #############################################################################################################################
 
@@ -33,17 +32,8 @@ def get_logger() -> logging.Logger:
         log: logging tool that can be used to output messages of varying granularity
     """
 
-    print( os.path.dirname( os.path.abspath( __file__ ) ) )
-
-    parent_dir = Path(__file__).parent
-    log_config = Path(parent_dir / "config/logger.yml").resolve()
-
-    print( log_config )
-
     parent_dir = os.path.dirname( os.path.abspath( __file__ ) )
     log_config = os.path.join( parent_dir, 'config', 'logger.yml' )
-
-    print( log_config )
 
     with open(log_config) as log_config_file:
         log_config = yaml.safe_load(log_config_file)
