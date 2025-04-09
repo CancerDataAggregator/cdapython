@@ -134,13 +134,14 @@ def set_log_level( level=None ):
     """
     if level is None:
         print( f"ERROR: set_log_level(): log level cannot be null. Try something like 'set_log_level( 'debug' )'.", file=sys.stderr )
+        return
 
-    else:
-        level = level.upper()
+    level = level.upper()
 
     if level not in get_valid_log_levels():
         print( f"ERROR: set_log_level(): log level '{level}' invalid. Try help( set_log_level ) for a list of valid level names.", file=sys.stderr )
-    else:
-        os.environ['__CDA_LOG_LEVEL'] = level
+        return
+
+    os.environ['__CDA_LOG_LEVEL'] = level
 
 
