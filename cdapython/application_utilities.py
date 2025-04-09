@@ -17,6 +17,21 @@ import cda_client.api.summary
 import cda_client.api.unique_values
 import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post
 
+
+
+# Enable console logging (on by default, but can be turned off).
+
+def enable_console_logging:
+    
+    os.environ['__CDA_LOG_TO_CONSOLE'] = 'True'
+
+# Disable console logging.
+
+def disable_console_logging:
+    
+    os.environ['__CDA_LOG_TO_CONSOLE'] = 'False'
+
+
 #############################################################################################################################
 #
 # get_logger(): Returns logger instance that uses config file settings and optional user config inputs to initialize
