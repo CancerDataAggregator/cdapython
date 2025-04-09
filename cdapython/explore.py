@@ -358,7 +358,13 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
     sort_dataframe = pd.DataFrame({"sort_by": by_list, "ascending?": ascending_list})
 
-    log.debug( f"Processed sort directives: {sort_dataframe}" )
+    if not sort_dataframe.empty:
+        
+        log.debug( f"Processed sort directives: {sort_dataframe}" )
+
+    else:
+        
+        log.debug( f"Processed sort directives: <default>" )
 
     #############################################################################################################################
     # Process user-supplied filter directives.
@@ -1588,7 +1594,7 @@ def summary_counts(
         return
 
     else:
-        # So - yes we have a function "def tables()" that does this already, but since we already have the columns data
+        # We have a function tables() that does this already, but since we already have the columns data
         # we use this one-liner to extract the tables.
         table_results = sorted(col_values["table"].unique())
 
