@@ -31,6 +31,18 @@ def disable_console_logging():
     
     os.environ['__CDA_LOG_TO_CONSOLE'] = 'False'
 
+# Enable file logging.
+
+def enable_file_logging( filename='cdapython_log.txt' ):
+    
+    os.environ['__CDA_LOG_TO_FILE'] = filename
+
+# Disable file logging (off by default, but can be turned on).
+
+def disable_file_logging():
+    
+    os.environ['__CDA_LOG_TO_FILE'] = ''
+
 
 #############################################################################################################################
 #
@@ -50,7 +62,6 @@ def get_logger( level=None ) -> logging.Logger:
     # Require an affirmation of what level of logging is desired. Any system default would be arbitrary.
 
     if level is None:
-        
         sys.exit( 'FATAL: get_logger(): level is required.' )
 
     # Echo log messages to standard output? (Default: yes)
