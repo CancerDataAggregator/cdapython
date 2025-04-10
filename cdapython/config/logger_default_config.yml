@@ -1,0 +1,19 @@
+version: 1
+formatters:
+  default:
+    format: '%(levelname)-8s [%(asctime)s] %(filename)s line %(lineno)5d, in %(funcName)s(): %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: default
+    stream: ext://sys.stdout
+  file:
+    class: logging.FileHandler
+    formatter: default
+    filename: cdapython_log.txt
+    encoding: utf8
+    mode: a
+loggers:
+  default:
+    handlers: [console]
+    propagate: yes

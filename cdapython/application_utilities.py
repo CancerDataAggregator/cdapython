@@ -1,11 +1,6 @@
-import logging
-import logging.config
 import os
-from pathlib import Path
 import re
 import pandas as pd
-
-import yaml
 
 import cda_client
 import cda_client.api
@@ -17,92 +12,6 @@ import cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post
 import cda_client.api.summary
 import cda_client.api.unique_values
 import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post
-
-#############################################################################################################################
-#
-# get_api_client(): Returns logger instance that uses config file settings to initialize
-#
-#############################################################################################################################
-
-
-def get_logger() -> logging.Logger:
-    """
-    Returns logger instance that uses config file settings to initialize.
-
-    Returns:
-        log: logging tool that can be used to output messages of varying granularity
-    """
-
-    parent_dir = Path(__file__).parent
-    log_config = Path(parent_dir / "config/logger.yml").resolve()
-    with open(log_config) as log_config_file:
-        log_config = yaml.safe_load(log_config_file)
-
-    logging.config.dictConfig(log_config)
-    logger = logging.getLogger("simple")
-    return logger
-
-
-
-
-
-#############################################################################################################################
-#
-# get_available_log_levels(): Returns list of log level strings that can be used to set_log_level
-#
-#############################################################################################################################
-
-
-def get_available_log_levels():
-    """
-    Returns list of log level strings that can be used to set_log_level.
-
-    Returns:
-        list of strings: names of log levels that can be passed to set_log_level.
-    """
-    return {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
-
-
-
-#############################################################################################################################
-#
-# set_log_level(): Changes the current log level
-#
-#############################################################################################################################
-
-
-def set_log_level(log, debug=False, loglevel="INFO"):
-    """
-    Changes the current log level
-
-    Returns:
-        query_api_instance: query api instance that can be used to communicate with CDA API
-    """
-    loglevel = loglevel.upper()
-
-    if debug != True and debug != False:
-        log.error(
-            f"set_log_level(): ERROR: The `debug` parameter must be set to True or False; you specified '{debug}', which is neither."
-        )
-        return
-
-    elif debug == True:
-        # print('debug is true...')
-        for handler in log.handlers:
-            handler.setLevel('DEBUG')
-
-    elif debug == False and loglevel in get_available_log_levels():
-        # print('debug is false...')
-        for handler in log.handlers:
-            handler.setLevel(loglevel)
-
-    else:
-        for handler in log.handlers:
-            handler.setLevel('WARNING')
-        log.warning(
-            f"set_log_level(): loglevel set to '{loglevel}'. Should be one of 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. Setting to 'WARNING'."
-        )
-
 
 #############################################################################################################################
 #

@@ -10,10 +10,10 @@ import cda_client
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
 from cda_client.models.q_node import QNode
-from cdapython.application_utilities import get_api_client, set_log_level, get_logger, cleanup_match_statement, cleanup_inputs, verify_inputs, build_match_from_file_filter
+from cdapython.application_utilities import get_api_client, cleanup_match_statement, cleanup_inputs, verify_inputs, build_match_from_file_filter
+from cdapython.logging_wrappers import get_logger
 from cdapython.explore import columns
 
-SEP = "-" * 80
 
 # Nomenclature notes:
 #
@@ -203,8 +203,7 @@ def fetch_rows(
 
     # cache the columns call and tables info so we don't have to call it more than once during fetch_rows
     log = get_logger()
-    column_values = columns()
-    set_log_level(log, debug=debug)
+    column_values = columns(debug=debug)
 
     # Make sure inputs are clean
     match_all, match_any, add_columns, exclude_columns, data_source, link_to = cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source, link_to)
@@ -226,6 +225,55 @@ def fetch_rows(
         count_only,
         log
         )
+
+    #############################################################################################################################
+    # Preprocess table metadata, to enable consistent processing (and reporting) throughout.
+
+    # Track the data type present in each `table` column, so we can
+    # format results properly downstream.
+
+    result_column_data_types = dict()
+
+    # Store the default column ordering as provided by the columns() function,
+    # to enable us to always display the same data in the same way.
+
+    source_table_columns_in_order = list()
+
+    table_cols = column_values.query(f'table == "{table}"')
+
+    if table_cols is None:
+        # Since we've checked for the existence of table previously, this case should never happen.
+        log.critical(f"No such table {table}. Please retry with an existent table.")
+
+        return
+
+    for row_index, column_record in table_cols.iterrows():
+        result_column_data_types[column_record["column"]] = column_record["data_type"]
+
+        source_table_columns_in_order.append(column_record["column"])
+    
+
+    # "`table`_associated_project" and "`table`_identifier", provided by the API
+    # as non-atomic objects (a list and a list of dicts, respectively) and
+    # previously embedded whole into single cells of the rectangular matrices
+    # that we returned to users as as result data, are now to be withheld
+    # from default user-facing endpoint results, to allow us to meet expectations
+    # about basic uniformity (and rapid usability) of CDA result data.
+    #
+    # Reliable retrieval of one-to-many project associations is deferred
+    # until the CRDC Common Model is implemented, with its own dedicated
+    # `project` entity.
+    #
+    # If `provenance` is set to True, we will retain the identifier information
+    # and include its contents in restructured results.
+    #
+    # These two columns don't appear in columns() output right now,
+    # so they never make it into `source_table_columns_in_order`.
+    # If we want one, we need to add it back.
+    if provenance == True and table != "mutation":
+        source_table_columns_in_order.append(f"{table}_identifier")
+
+        result_column_data_types[f"{table}_identifier"] = "array_of_id_dictionaries"
 
     #############################################################################################################################
     # Process return-type directives `return_data_as` and `output_file`.
@@ -428,7 +476,7 @@ def fetch_rows(
             columns_to_remove.append(col)
 
         else:
-            log.debug(f'Ignoring request to remove column "{col}" because it doesn\'t exist or is already excluded.')
+            log.debug( f'Ignoring request to remove column "{col}" because it doesn\'t exist or is already excluded.' )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -451,7 +499,7 @@ def fetch_rows(
     if count_only:
         fetch_message = "counting results only: not a comprehensive fetch"
 
-    log.debug(f"BEGIN DEBUG MESSAGE: fetch_rows(): Querying CDA API '{table}' endpoint ({fetch_message})")
+    log.debug( f"Querying CDA API '{table}' endpoint ({fetch_message})" )
 
     query_selector = {
         "file": cda_client.api.data.file_fetch_rows_endpoint_data_file_post,
@@ -475,7 +523,7 @@ def fetch_rows(
     # Use the QueryApi instance object's `{table}_query` endpoint-accessor
     # function to get data from the REST API.
 
-    log.debug(f"Sending qnode: {q_node}")
+    log.debug( f"Sending qnode: {q_node}" )
     
     paged_response_data_object = query_selector[table].sync(
         client=query_api_instance, body=q_node, limit=rows_per_page, offset=starting_offset
@@ -513,6 +561,7 @@ def fetch_rows(
         paged_response_data_object = query_selector[table].sync(
             client=query_api_instance, body=q_node, offset=incremented_offset, limit=rows_per_page
         )
+        #TODO catch api exceptions
 
         next_result_batch = pd.json_normalize(paged_response_data_object.to_dict()["result"])
 
@@ -533,8 +582,169 @@ def fetch_rows(
     #############################################################################################################################
     # Postprocess API result data.
 
-    log.debug('Completed fetching rows from API')
+    log.debug("Organizing result data...")
 
+    # Ensure the contents and ordering of the set of default columns for this endpoint
+    # is the same whether or not additional column data (from other tables, or provenance
+    # metadata for `table` rows) has been requested.
+
+    # Note that we could just filter `result_dataframe` with the 'specify target
+    # columns' assignment that we use a little later to sort the remaining output
+    # columns, but I think this way is much easier to understand.
+
+    columns_to_drop = list()
+
+    added_columns = list()
+
+    for column_name in result_dataframe:
+        if column_name not in columns_to_fetch:
+            columns_to_drop.append(column_name)
+
+        elif column_name not in source_table_columns_in_order:
+            added_columns.append(column_name)
+
+    if len(columns_to_drop) > 0:
+        log.debug(f"   -- filtering API columns: {columns_to_drop}")
+
+        result_dataframe = result_dataframe.drop(columns=columns_to_drop)
+
+    # Resequence the output columns according to the sequence given by the columns() function.
+
+    final_column_order = list()
+
+    # First, all the native fields from this endpoint, in the default (relative) order.
+
+    for column in columns_to_fetch:
+        if column not in added_columns:
+            final_column_order.append(column)
+
+    # Then the fields from other tables that the user added.
+
+    for added_column in added_columns:
+        final_column_order.append(added_column)
+
+    if len(result_dataframe.columns) > 0:
+        # result_dataframe = result_dataframe[ final_column_order ]
+
+        # Joins that transit through intermediate entity tables can come back from the API with phantom missing data (e.g.
+        """
+        {
+            "node_type": "SELECT",
+            "l": {
+                "node_type": "SELECTVALUES",
+                "value": "subject_id, cause_of_death, days_to_birth, days_to_death, ethnicity, race, sex, species, vital_status, diagnosis_id, method_of_diagnosis"
+            },
+            "r": {
+                "node_type": "LIKE",
+            "l": {
+                "node_type": "column",
+                "value": "subject_id"
+            },
+                "r": {
+                    "node_type": "quoted",
+                    "value": "TCGA.TCGA-Z2%"
+                }
+            }
+        }
+        """
+        # ...will produce a weird table with missing diagnosis rows, apparently because it thought it had to bring _something_ back for each researchsubject it checked.
+        #
+        # So we strip out all rows whose requested joined table data is missing ID information (if any such extra data was asked for in the first place):
+
+        if join_table_id_field is not None:
+            result_dataframe = result_dataframe.loc[~(result_dataframe[join_table_id_field].isna())]
+
+        log.debug("Handling missing values...")
+
+        # for column in columns_to_fetch:
+
+        #     # CDA has no float values. Cast all numeric data to integers.
+
+        #     print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(result_column_data_types[column]))
+
+        #     if result_column_data_types[column] in { 'numeric', 'integer', 'bigint' }:
+
+        #         # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
+        #         # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
+        #         # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
+        #         # storage of missing values. These will print as '<NA>'.
+
+        #         result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
+
+        #     elif result_column_data_types[column] in { 'text', 'boolean' }:
+
+        #         # Replace values that are None (== null) with empty strings. (This has been tested and works
+        #         # for both strings and booleans.)
+
+        #         result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
+
+        #     elif result_column_data_types[column] == 'array_of_id_dictionaries':
+
+        #         # All good here, these shouldn't ever be null -- every `table` row has at least one entry in `table`_identifier.
+
+        #         pass
+
+        #     else:
+
+        #         # This isn't anticipated. Yell if we get something unexpected.
+
+        #         log.critical( f"fetch_rows(): ERROR: Unexpected data type `{result_column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
+
+        #         return
+
+        # Consolidate provenance information if present.
+
+        # if provenance == True:
+        #     if table == "mutation":
+        #         rename_columns = {
+        #             "subject_identifier_system": "subject_data_source",
+        #             "subject_identifier_field_name": "subject_data_source_id",
+        #         }
+
+        #         result_dataframe = result_dataframe.rename(columns=rename_columns)
+
+        #         result_dataframe["subject_data_source_id"] = (
+        #             result_dataframe["subject_data_source_id"] + ":" + result_dataframe["subject_identifier_value"]
+        #         )
+
+        #         # axis=0: rows; axis=1: columns.
+
+        #         result_dataframe = result_dataframe.drop("subject_identifier_value", axis=1)
+
+        #     else:
+        #         # We'll need to build a new result matrix, including one copy of
+        #         # each row for each identifier present. Iteratively build a list of
+        #         # tuples (rows) and convert the list to a new DataFrame when complete.
+
+        #         new_result_matrix = list()
+
+        #         new_result_column_names = result_dataframe.columns.tolist()
+
+        #         new_result_column_names.remove(f"{table}_identifier")
+
+        #         # There are likely more efficient ways to do this; target this block
+        #         # for optimization if it ever becomes a bottleneck.
+
+        #         for result_row_index, result_row in result_dataframe.iterrows():
+        #             identifier_array = result_row[f"{table}_identifier"]
+
+        #             for identifier_record in identifier_array:
+        #                 data_source = identifier_record["upstream_identifiers_data_source"]
+
+        #                 data_source_id = identifier_record["data_source_id_field_name"] + ":" + identifier_record["data_source_id_value"]
+
+        #                 new_row = list()
+
+        #                 for column_name in new_result_column_names:
+        #                     new_row.append(result_row[column_name])
+
+        #                 new_row = new_row + [data_source, data_source_id]
+
+        #                 new_result_matrix.append(tuple(new_row))
+
+        #         new_result_column_names = new_result_column_names + [f"{table}_data_source", f"{table}_data_source_id"]
+
+        #         result_dataframe = pd.DataFrame(new_result_matrix, columns=new_result_column_names)
 
     if return_data_as == "" or return_data_as == "dataframe":
         # Right now, the default is the same as if the user had
@@ -544,8 +754,8 @@ def fetch_rows(
 
     elif return_data_as == "tsv":
         # Write results to a user-specified TSV.
-        log.debug(f"{SEP}\n      DEBUG MESSAGE: fetch_rows(): Printing results to TSV file '{output_file}'\n{SEP}")
 
+        log.debug( f"Printing results to TSV file '{output_file}'" )
 
         try:
             result_dataframe.to_csv(output_file, sep="\t", index=False)
@@ -571,3 +781,5 @@ def fetch_rows(
 # END fetch_rows
 #
 #############################################################################################################################
+
+
