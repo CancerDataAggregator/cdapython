@@ -9,7 +9,8 @@ import tabulate
 import cda_client
 
 # from cda_client.api import ApiException
-from .application_utilities import get_api_client, set_log_level, get_logger, cleanup_match_statement
+from cdapython.logging_wrappers import get_logger
+from cdapython.application_utilities import get_api_client, cleanup_match_statement
 from cda_client.models.q_node import QNode
 from cda_client.errors import UnexpectedStatus
 from cda_client.api.summary import file_summary_endpoint_summary_file_post as summary_file_endpoint
@@ -66,10 +67,12 @@ def tables():
     # resulting DataFrame, and return those values to the user as a list.
     log = get_logger()
 
+    log.debug( "Calling columns()" )
+
     columns_result_df = columns(return_data_as="dataframe")
 
     if columns_result_df is None:
-        log.error("tables(): ERROR: Something went fatally wrong with columns(); can't complete tables(), aborting.")
+        log.error("Something went fatally wrong with columns().")
         return
 
     else:
@@ -175,7 +178,6 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
         OR returns nothing, but writes results to a user-specified TSV file
     """
     log = get_logger()
-    set_log_level(log, debug=debug)
 
     #############################################################################################################################
     # TEMPORARY ban list: filtering on these columns is problematic at the API level, and we don't have a consistent modeling
@@ -197,9 +199,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
     allowed_return_types = {"", "dataframe", "tsv", "list"}
 
     if not isinstance(return_data_as, str):
-        log.critical(
-            f"columns(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'."
-        )
+        log.error( f"Unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
 
         return
 
@@ -213,9 +213,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
     # file-access operation (later, below) in a try{} block.
 
     if not isinstance(output_file, str):
-        log.critical(
-            f"columns(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path."
-        )
+        log.error( f"The `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path." )
 
         return
 
@@ -358,21 +356,15 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
     # Report details of the final parsed sort logic.
 
-    log.debug("-" * 80)
-
-    log.debug("BEGIN DEBUG MESSAGE: columns(): Processed sort directives")
-
-    log.debug("-" * 80)
-
     sort_dataframe = pd.DataFrame({"sort_by": by_list, "ascending?": ascending_list})
 
-    log.debug(sort_dataframe)
+    if not sort_dataframe.empty:
+        
+        log.debug( f"Processed sort directives: {sort_dataframe}" )
 
-    log.debug("-" * 80)
-
-    log.debug("END   DEBUG MESSAGE: columns(): Processed sort directives")
-
-    log.debug("-" * 80)
+    else:
+        
+        log.debug( f"Processed sort directives: <default>" )
 
     #############################################################################################################################
     # Process user-supplied filter directives.
@@ -437,19 +429,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
         else:
             status_report = status_report + f", {filter_argument_name}={filter_arguments[filter_argument_name]}"
 
-    log.debug("-" * 80)
-
-    log.debug("BEGIN DEBUG MESSAGE: columns(): Processed filter directives; summary")
-
-    log.debug("-" * 80)
-
-    log.debug("running explore.py columns( " + status_report + " )")
-
-    log.debug("-" * 80)
-
-    log.debug("END   DEBUG MESSAGE: columns(): Processed filter directives; summary")
-
-    log.debug("-" * 80)
+    log.debug( f"Processed filter directives: '{status_report}'" )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -508,11 +488,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
     for banned_column in banned_columns:
         result_dataframe = result_dataframe.loc[result_dataframe["column"] != banned_column]
 
-    log.debug("-" * 80)
-
-    log.debug("      DEBUG MESSAGE: columns(): Created result DataFrame")
-
-    log.debug("-" * 80)
+    log.debug( "Created result DataFrame" )
 
     #############################################################################################################################
     # Execute sorting directives, if we got any; otherwise perform the default sort on the result DataFrame.
@@ -542,11 +518,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
         result_dataframe = result_dataframe.sort_values(by=by_list, ascending=ascending_list)
 
-    log.debug("-" * 80)
-
-    log.debug("      DEBUG MESSAGE: columns(): Applied sort_by directives")
-
-    log.debug("-" * 80)
+    log.debug( "Applied sort_by directives" )
 
     #############################################################################################################################
     # Iterate through whatever filters the user passed us and
@@ -680,11 +652,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
                     result_dataframe[target_field].str.contains(match_pattern_string, case=False)
                 ]
 
-    log.debug("-" * 80)
-
-    log.debug("      DEBUG MESSAGE: columns(): Applied value-filtration directives")
-
-    log.debug("-" * 80)
+    log.debug( "Applied value-filtration directives" )
 
     #############################################################################################################################
     # Send the results back to the user.
@@ -701,44 +669,28 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
         #
         # print( result_dataframe.to_string( index=False, justify='right', max_rows=25, max_colwidth=50 ), file=sys.stdout )
 
-        log.debug("-" * 80)
-
-        log.debug("      DEBUG MESSAGE: columns(): Returning results in default form (pandas.DataFrame)")
-
-        log.debug("-" * 80)
+        log.debug( "Returning results in default form (pandas.DataFrame)" )
 
         return result_dataframe
 
     elif return_data_as == "dataframe":
         # Give the user back the results DataFrame.
 
-        log.debug("-" * 80)
-
-        log.debug("      DEBUG MESSAGE: columns(): Returning results as pandas.DataFrame")
-
-        log.debug("-" * 80)
+        log.debug( "Returning results as pandas.DataFrame" )
 
         return result_dataframe
 
     elif return_data_as == "list":
         # Give the user back a list of column names.
 
-        log.debug("-" * 80)
-
-        log.debug("      DEBUG MESSAGE: columns(): Returning results as list of column names")
-
-        log.debug("-" * 80)
+        log.debug( "Returning results as list of column names" )
 
         return result_dataframe["column"].to_list()
 
     else:
         # Write the results DataFrame to a user-specified TSV file.
 
-        log.debug("-" * 80)
-
-        log.debug(f"      DEBUG MESSAGE: columns(): Printing results to TSV file '{output_file}'")
-
-        log.debug("-" * 80)
+        log.debug( f"Printing results to TSV file '{output_file}'" )
 
         try:
             result_dataframe.to_csv(output_file, sep="\t", index=False)
@@ -746,9 +698,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
             return
 
         except Exception as error:
-            log.critical(
-                f"columns(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'."
-            )
+            log.error( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
 
             return
 
@@ -833,7 +783,6 @@ def column_values(
         data to a user-specified TSV file
     """
     log = get_logger()
-    set_log_level(log, debug=debug)
 
 
     #############################################################################################################################
@@ -1024,14 +973,6 @@ def column_values(
 
     # Report details of the final parsed sort logic.
 
-    log.debug("-" * 80)
-
-    log.debug(
-        "BEGIN DEBUG MESSAGE: column_values(): Processed all parameter directives. Calling API to fetch data for:"
-    )
-
-    log.debug("-" * 80)
-
     parameter_dict = {
         "column": column,
         "return_data_as": return_data_as,
@@ -1042,13 +983,7 @@ def column_values(
         "force": force,
     }
 
-    log.debug(parameter_dict)
-
-    log.debug("-" * 80)
-
-    log.debug("END   DEBUG MESSAGE: column_values(): Processed sort directives")
-
-    log.debug("-" * 80)
+    log.debug( f"Processed all parameter directives. Calling API to fetch data for '{parameter_dict}'." )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -1079,17 +1014,13 @@ def column_values(
     # except Exception as e:
     #    print("Exception when calling UniqueValuesApi->unique_values_endpoint_unique_values_columnname_post: %s\n" % e)
 
-    log.debug("-" * 80)
-
-    log.debug("BEGIN DEBUG MESSAGE: column_values(): Querying CDA API 'unique_values' endpoint")
-
-    log.debug("-" * 80)
+    log.debug( "Querying CDA API 'unique_values' endpoint" )
 
     # Report some metadata about the results we got back.
 
-    log.debug(f"Number of result rows: {paged_response_data_object.total_row_count}")
+    log.debug( f"Number of result rows: {paged_response_data_object.total_row_count}" )
 
-    log.debug(f"Query SQL: '{paged_response_data_object.query_sql}'")
+    log.debug( f"Query SQL: '{paged_response_data_object.query_sql}'" )
 
     # Make a Pandas DataFrame out of the first batch of results.
     #
@@ -1108,12 +1039,12 @@ def column_values(
 
     more_than_one_result_page = False
     if paged_response_data_object.next_url is not None:
-        log.debug("Fetching remaining results in pages...")
+        log.debug( "Fetching remaining results in pages..." )
 
         more_than_one_result_page = True
 
     while paged_response_data_object.next_url is not None and len(paged_response_data_object.next_url) > 0:
-        log.debug(f"   ...fetching {paged_response_data_object.next_url}...")
+        log.debug( f"   ...fetching {paged_response_data_object.next_url}..." )
 
         # Note that the API doesn't preserve all the query parameters we included
         # in our original request, e.g.:
@@ -1214,15 +1145,7 @@ def column_values(
         incremented_offset = incremented_offset + records_per_page
 
     if more_than_one_result_page:
-        log.debug("...done.")
-
-    log.debug("-" * 80)
-
-    log.debug(
-        "END   DEBUG MESSAGE: column_values(): Queried CDA API 'unique_values' endpoint and created result DataFrame"
-    )
-
-    log.debug("-" * 80)
+        log.debug( "...done." )
 
     #############################################################################################################################
     # Postprocess API result data, if there is any.
@@ -1230,18 +1153,14 @@ def column_values(
     if len(result_dataframe) == 0:
         return result_dataframe
 
-    log.debug("-" * 80)
+    log.debug( "Postprocessing results" )
 
-    log.debug("BEGIN DEBUG MESSAGE: column_values(): Postprocessing results")
-
-    log.debug("-" * 80)
-
-    log.debug("Casting counts to integers and fixing symmetry for returned column labels...")
+    log.debug( "Casting counts to integers and fixing symmetry for returned column labels..." )
 
     # Term-count values come in as floats. Make them not that.
 
     if "value_count" not in result_dataframe.columns:
-        log.critical("column_values: No column called value_count in api response.")
+        log.critical("Expected column 'value_count' not present in API response.")
         return
 
     result_dataframe["value_count"] = result_dataframe["value_count"].astype(int)
@@ -1270,7 +1189,7 @@ def column_values(
 
         result_dataframe = result_dataframe.rename(columns={suffix: column})
 
-    log.debug("Handling missing values...")
+    log.debug( "Handling missing values..." )
 
     # CDA has no float values. If the API gives us some, cast them to integers.
     
@@ -1378,7 +1297,7 @@ def column_values(
     else:
         print_regex = f"/{print_regex}/"
 
-    log.debug(f"Applying pattern filters: {print_regex}")
+    log.debug( f"Applying pattern filters: {print_regex}" )
 
     # Filter results to match the full aggregated regular expression in `match_pattern_string`.
 
@@ -1404,7 +1323,7 @@ def column_values(
 
     # Sort results. Default (note that the final value of `sort_by` is determined earlier in this function) is to sort by term count, descending.
 
-    log.debug(f"Applying sort directive '{sort_by}'...")
+    log.debug( f"Applying sort directive '{sort_by}'..." )
 
     if sort_by == "count":
         # Sort by count; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
@@ -1430,12 +1349,6 @@ def column_values(
         log.error("column_values(): ERROR: something has gone horribly wrong; we should never get here.")
 
         return
-
-    log.debug("-" * 80)
-
-    log.debug("END   DEBUG MESSAGE: column_values(): Postprocessed results")
-
-    log.debug("-" * 80)
 
     #############################################################################################################################
     # Send the results back to the user.
@@ -1467,44 +1380,28 @@ def column_values(
         #
         # print( result_dataframe.to_string( index=False, justify='right', max_rows=25, max_colwidth=50 ), file=sys.stdout )
 
-        log.debug("-" * 80)
-
-        log.debug("      DEBUG MESSAGE: column_values(): Returning results in default form (pandas.DataFrame)")
-
-        log.debug("-" * 80)
+        log.debug( "Returning results in default form (pandas.DataFrame)" )
 
         return result_dataframe
 
     elif return_data_as == "dataframe":
         # Give the user back the results DataFrame.
 
-        log.debug("-" * 80)
-
-        log.debug("      DEBUG MESSAGE: column_values(): Returning results as pandas.DataFrame")
-
-        log.debug("-" * 80)
+        log.debug( "Returning results as pandas.DataFrame" )
 
         return result_dataframe
 
     elif return_data_as == "list":
         # Strip the term-values column out of the results DataFrame and give them to the user as a Python list.
 
-        log.debug("-" * 80)
-
-        log.debug("      DEBUG MESSAGE: column_values(): Returning results as list of column values")
-
-        log.debug("-" * 80)
+        log.debug( "Returning results as list of column values" )
 
         return result_dataframe[column].to_list()
 
     else:
         # Write the results DataFrame to a user-specified TSV file.
 
-        log.debug("-" * 80)
-
-        log.debug(f"      DEBUG MESSAGE: column_values(): Printing results to TSV file '{output_file}'")
-
-        log.debug("-" * 80)
+        log.debug( f"Printing results to TSV file '{output_file}'" )
 
         try:
             result_dataframe.to_csv(output_file, sep="\t", index=False)
@@ -1684,7 +1581,6 @@ def summary_counts(
     col_values = columns(debug=debug)
 
     log = get_logger()
-    set_log_level(log, debug=debug)
 
 
     table_results = pd.DataFrame()
@@ -1698,7 +1594,7 @@ def summary_counts(
         return
 
     else:
-        # So - yes we have a function "def tables()" that does this already, but since we already have the columns data
+        # We have a function tables() that does this already, but since we already have the columns data
         # we use this one-liner to extract the tables.
         table_results = sorted(col_values["table"].unique())
 
@@ -2225,7 +2121,7 @@ def summary_counts(
             columns_to_remove.append(col)
 
         else:
-            log.debug(f'Ignoring request to remove column "{col}" because it doesn\'t exist or is already excluded.')
+            log.debug( f'Ignoring request to remove column "{col}" because it doesn\'t exist or is already excluded.' )
 
     # for item in data_source:
     #     # Build a Query object for this data source and add it to the data_source list.
@@ -2577,7 +2473,7 @@ def summary_counts(
     q_node.exclude_columns = columns_to_remove
 
     # Dump JSON describing the full combined query structure.
-    log.debug(json.dumps(q_node.to_dict(), indent=4, cls=CdaApiQueryEncoder))
+    log.debug( json.dumps(q_node.to_dict(), indent=4, cls=CdaApiQueryEncoder) )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -2596,13 +2492,9 @@ def summary_counts(
 
     #     # Report that we're pulling in a hostname from the CDA_API_URL environment variable.
 
-    #     log.debug("-" * 80)
-    #     log.debug("BEGIN DEBUG MESSAGE: summary_counts(): Loaded CDA_API_URL from environment")
-    #     log.debug("-" * 80, end="\n\n")
-    #     log.debug(api_configuration.get_host_settings(), end="\n\n")
-    #     log.debug("-" * 80)
-    #     log.debug("END  DEBUG MESSAGE: summary_counts(): Loaded CDA_API_URL from environment")
-    #     log.debug("-" * 80, end="\n\n")
+    #     log.debug( "Loaded CDA_API_URL from environment" )
+    #     log.debug( api_configuration.get_host_settings() )
+    #     log.debug( "Loaded CDA_API_URL from environment" )
 
     # else:
     #     api_configuration = CdaConfiguration(verify=True, verbose=True)
@@ -2610,17 +2502,11 @@ def summary_counts(
     #     api_client_instance = ApiClient(configuration=api_configuration)
 
     #     # Report the default location data for the CDA API, as loaded from the CdaConfiguration class.
-    #     log.debug("-" * 80)
-    #     log.debug("BEGIN DEBUG MESSAGE: summary_counts(): Loaded CDA API URL from default config")
-    #     log.debug("-" * 80, "\n\n")
-    #     log.debug(api_configuration.get_host_settings(), "\n\n")
-    #     log.debug("-" * 80)
-    #     log.debug("END  DEBUG MESSAGE: summary_counts(): Loaded CDA API URL from default config")
-    #     log.debug("-" * 80, "\n\n")
+    #     log.debug( "Loaded CDA API URL from default config" )
+    #     log.debug( api_configuration.get_host_settings() )
+    #     log.debug( "Loaded CDA API URL from default config" )
 
-    # log.debug("-" * 80)
-    # log.debug(f"BEGIN DEBUG MESSAGE: summary_counts(): Querying CDA API '{table}/counts' endpoint")
-    # log.debug("-" * 80, "\n\n")
+    # log.debug( f"Querying CDA API '{table}/counts' endpoint" )
 
     # Make a QueryApi object using the connection information in the ApiClient object.
 
@@ -2695,13 +2581,7 @@ def summary_counts(
 
     # This is immensely verbose, sometimes.
 
-    log.debug("-" * 80)
-    log.debug(f"BEGIN DEBUG MESSAGE: summary_counts(): First page of '{table}/counts' endpoint response")
-    log.debug("-" * 80, "\n\n")
-    log.debug(json.dumps(paged_response_data_object.to_dict()["result"], indent=4))
-    log.debug("-" * 80)
-    log.debug(f"END DEBUG MESSAGE: summary_counts(): First page of '{table}/counts' endpoint response")
-    log.debug("-" * 80, "\n\n")
+    log.debug( f"First page of '{table}/counts' endpoint response: {json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
 
     # Make a Pandas DataFrame out of the first batch of results.
     #
@@ -2715,7 +2595,7 @@ def summary_counts(
     #############################################################################################################################
     # Postprocess API result data.
 
-    log.debug("Organizing result data...")
+    log.debug( "Organizing result data..." )
 
     #############################################################################################################################
     # Postprocess API result data.
@@ -2797,9 +2677,7 @@ def summary_counts(
                     return
 
         if return_data_as == "":
-            log.debug("-" * 80)
-            log.debug("      DEBUG MESSAGE: summary_counts(): Returning results in default form (printing list of tables to standard output)")
-            log.debug("-" * 80, "\n\n")
+            log.debug( "Returning results in default form (printing list of tables to standard output)" )
 
             with pd.option_context("display.max_rows", None, "display.max_columns", None, "display.max_colwidth", 65):
                 for dataframe in result_list:
@@ -2846,9 +2724,7 @@ def summary_counts(
             return
 
         elif return_data_as == "dataframe_list":
-            log.debug("-" * 80)
-            log.debug("      DEBUG MESSAGE: summary_counts(): Returning results as a list of pandas.DataFrame objects")
-            log.debug("-" * 80, "\n\n")
+            log.debug( "Returning results as a list of pandas.DataFrame objects" )
             return result_list
 
     elif return_data_as == "dict" or return_data_as == "json":
@@ -2888,17 +2764,13 @@ def summary_counts(
                 return
 
         if return_data_as == "dict":
-            log.debug("-" * 80)
-            log.debug("      DEBUG MESSAGE: summary_counts(): Returning results as a Python dictionary")
-            log.debug("-" * 80, "\n\n")
+            log.debug( "Returning results as a Python dictionary" )
 
             return result_dict
 
         elif return_data_as == "json":
             # Write the results to a user-specified JSON file.
-            log.debug("-" * 80)
-            log.debug(f"      DEBUG MESSAGE: summary_counts(): Printing results to JSON file '{output_file}'")
-            log.debug("-" * 80, "\n\n")
+            log.debug( f"Printing results to JSON file '{output_file}'" )
 
             try:
                 with open(output_file, "w") as OUT:
@@ -2920,3 +2792,5 @@ def summary_counts(
 # END summary_counts()
 #
 #############################################################################################################################
+
+
