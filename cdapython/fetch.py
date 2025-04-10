@@ -925,69 +925,69 @@ def fetch_rows(
     # columns' assignment that we use a little later to sort the remaining output
     # columns, but I think this way is much easier to understand.
 
-    columns_to_drop = list()
+    # columns_to_drop = list()
 
-    added_columns = list()
+    # added_columns = list()
 
-    for column_name in result_dataframe:
-        if column_name not in columns_to_fetch:
-            columns_to_drop.append(column_name)
+    # for column_name in result_dataframe:
+    #     if column_name not in columns_to_fetch:
+    #         columns_to_drop.append(column_name)
 
-        elif column_name not in source_table_columns_in_order:
-            added_columns.append(column_name)
+    #     elif column_name not in source_table_columns_in_order:
+    #         added_columns.append(column_name)
 
-    if len(columns_to_drop) > 0:
-        log.debug( f"   -- filtering API columns: {columns_to_drop}" )
+    # if len(columns_to_drop) > 0:
+    #     log.debug(f"   -- filtering API columns: {columns_to_drop}")
 
-        result_dataframe = result_dataframe.drop(columns=columns_to_drop)
+    #     result_dataframe = result_dataframe.drop(columns=columns_to_drop)
 
-    # Resequence the output columns according to the sequence given by the columns() function.
+    # # Resequence the output columns according to the sequence given by the columns() function.
 
-    final_column_order = list()
+    # final_column_order = list()
 
-    # First, all the native fields from this endpoint, in the default (relative) order.
+    # # First, all the native fields from this endpoint, in the default (relative) order.
 
-    for column in columns_to_fetch:
-        if column not in added_columns:
-            final_column_order.append(column)
+    # for column in columns_to_fetch:
+    #     if column not in added_columns:
+    #         final_column_order.append(column)
 
-    # Then the fields from other tables that the user added.
+    # # Then the fields from other tables that the user added.
 
-    for added_column in added_columns:
-        final_column_order.append(added_column)
+    # for added_column in added_columns:
+    #     final_column_order.append(added_column)
 
-    if len(result_dataframe.columns) > 0:
-        # result_dataframe = result_dataframe[ final_column_order ]
+    # if len(result_dataframe.columns) > 0:
+    #     # result_dataframe = result_dataframe[ final_column_order ]
 
-        # Joins that transit through intermediate entity tables can come back from the API with phantom missing data (e.g.
-        """
-        {
-            "node_type": "SELECT",
-            "l": {
-                "node_type": "SELECTVALUES",
-                "value": "subject_id, cause_of_death, days_to_birth, days_to_death, ethnicity, race, sex, species, vital_status, diagnosis_id, method_of_diagnosis"
-            },
-            "r": {
-                "node_type": "LIKE",
-            "l": {
-                "node_type": "column",
-                "value": "subject_id"
-            },
-                "r": {
-                    "node_type": "quoted",
-                    "value": "TCGA.TCGA-Z2%"
-                }
-            }
-        }
-        """
-        # ...will produce a weird table with missing diagnosis rows, apparently because it thought it had to bring _something_ back for each researchsubject it checked.
-        #
-        # So we strip out all rows whose requested joined table data is missing ID information (if any such extra data was asked for in the first place):
+    #     # Joins that transit through intermediate entity tables can come back from the API with phantom missing data (e.g.
+    #     """
+    #     {
+    #         "node_type": "SELECT",
+    #         "l": {
+    #             "node_type": "SELECTVALUES",
+    #             "value": "subject_id, cause_of_death, days_to_birth, days_to_death, ethnicity, race, sex, species, vital_status, diagnosis_id, method_of_diagnosis"
+    #         },
+    #         "r": {
+    #             "node_type": "LIKE",
+    #         "l": {
+    #             "node_type": "column",
+    #             "value": "subject_id"
+    #         },
+    #             "r": {
+    #                 "node_type": "quoted",
+    #                 "value": "TCGA.TCGA-Z2%"
+    #             }
+    #         }
+    #     }
+    #     """
+    #     # ...will produce a weird table with missing diagnosis rows, apparently because it thought it had to bring _something_ back for each researchsubject it checked.
+    #     #
+    #     # So we strip out all rows whose requested joined table data is missing ID information (if any such extra data was asked for in the first place):
 
-        if join_table_id_field is not None:
-            result_dataframe = result_dataframe.loc[~(result_dataframe[join_table_id_field].isna())]
+    #     if join_table_id_field is not None:
+    #         result_dataframe = result_dataframe.loc[~(result_dataframe[join_table_id_field].isna())]
 
-        log.debug( "Handling missing values..." )
+    #     log.debug("Handling missing values...")
 
         # for column in columns_to_fetch:
 

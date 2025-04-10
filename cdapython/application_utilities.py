@@ -148,7 +148,7 @@ def cleanup_match_statement(column_data, match_statement):
     #############################################################################################################################
     # Define the list of supported filter-string operators.
 
-    allowed_operators = {">", ">=", "<", "<=", "=", "!=", "like"}
+    allowed_operators = {">", ">=", "<", "<=", "=", "!=", "like", "is", "is not", "in"}
 
     #############################################################################################################################
     # Enumerate restrictions on operator use to appropriate data types.
