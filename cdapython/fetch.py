@@ -7,8 +7,10 @@ from pandas.api.types import is_numeric_dtype
 import cda_client
 
 # from cda_client.rest import ApiException
+from cda_client.models.client_error import ClientError
+from cda_client.models.internal_error import InternalError
 from cda_client.models.q_node import QNode
-from cdapython.application_utilities import get_api_client, cleanup_match_statement, cleanup_inputs, verify_inputs
+from cdapython.application_utilities import get_api_client, cleanup_match_statement, cleanup_inputs, verify_inputs, build_match_from_file_filter
 from cdapython.logging_wrappers import get_logger
 from cdapython.explore import columns
 
@@ -53,7 +55,7 @@ def fetch_rows(
     data_source=[],
     add_columns=[],
     exclude_columns=[],
-    link_to_table="",
+    link_to=[],
     provenance=False,
     count_only=False,
     return_data_as="dataframe",
@@ -103,23 +105,23 @@ def fetch_rows(
             the added data appended to each row.
 
 
-        link_to_table ( string; optional ):
-            A second table from which to fetch entire rows related to the row results
-            from `table` that this function produces. `link_to_table` results
+        link_to ( string or list of strings; optional ):
+            Other tables from which to fetch entire rows related to the row results
+            from `table` that this function produces. `link_to` results
             will be appended to `table` rows to which they're related:
-            any `table` row related to more than one `link_to_table` row will
-            be repeated in the returned data, with one distinct `link_to_table` row
+            any `table` row related to more than one `link_to` row will
+            be repeated in the returned data, with one distinct `link_to` row
             appended to each repeated copy of its related `table` row.
-            If `link_to_table` is specified, `add_columns` cannot be used.
+            If `link_to` is specified, `add_columns` cannot be used.
 
         provenance ( boolean; optional ):
             If True, fetch_rows() will attach cross-reference information
             to each row result describing the upstream data sources from
             which it was derived. Rows deriving from more than one upstream
             source will be repeated in the output, once per data source, as
-            with `link_to_table` and `add_columns` (except with provenance
+            with `link_to` and `add_columns` (except with provenance
             metadata attached, instead of information from other CDA tables).
-            If `provenance` is set to True, `link_to_table` and `add_columns`
+            If `provenance` is set to True, `link_to` and `add_columns`
             cannot be used.
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
@@ -138,7 +140,7 @@ def fetch_rows(
             `table` rows matching the specified filters, and the total number of rows
             that this function would return if `count_only` were not True. (These numbers
             will be identical if no data from outside `table` has been joined to result
-            rows (for example by using `link_to_table` or `add_columns` or
+            rows (for example by using `link_to` or `add_columns` or
             `provenance`). If `count_only` is set to False (the default), fetch_rows() will
             return a pandas DataFrame containing all CDA `table` rows that match the
             given filters.
@@ -190,7 +192,7 @@ def fetch_rows(
         OR two integers representing the total number of CDA `table` rows matching the given
             filters and the total number of result rows. These two counts will generally
             differ if extra data from non-`table` sources is joined to result rows using
-            `link_to_table` or `add_columns`, because `table` rows will be repeated for any
+            `link_to` or `add_columns`, because `table` rows will be repeated for any
             one-to-many associations that are returned; otherwise they will be the same.
 
         OR returns nothing, but writes results to a user-specified TSV file
@@ -204,7 +206,7 @@ def fetch_rows(
     column_values = columns(debug=debug)
 
     # Make sure inputs are clean
-    match_all, match_any, add_columns, exclude_columns, data_source = cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source)
+    match_all, match_any, add_columns, exclude_columns, data_source, link_to = cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source, link_to)
 
     # Make sure the inputs are what they should be
     verify_inputs(
@@ -216,7 +218,7 @@ def fetch_rows(
         data_source,
         table,
         match_from_file,
-        link_to_table,
+        link_to,
         provenance,
         return_data_as,
         output_file,
@@ -367,106 +369,7 @@ def fetch_rows(
 
             return
 
-    #############################################################################################################################
-    # Manage basic validation for the `match_from_file` parameter, which refers to a target CDA column and a list of allowed
-    # values, and restricts all returned rows only to those that contain an allowed value in the target CDA column. Also
-    # load column data here from the given TSV, so we can fail early if something goes wrong with the I/O.
-
-    # Cache metadata about this parameter, if it's used.
-    # ( We already checked above that `match_from_file` is a dictionary with exactly three keys possessing the expected names.)
-
-    match_from_file_target_column = match_from_file["cda_column_to_match"]
-
-    match_from_file_input_file = match_from_file["input_file"]
-
-    match_from_file_source_column_name = match_from_file["input_column"]
-
-    match_from_file_target_values = set()
-
-    # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
-    # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
-    # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
-    # anger and confusion.
-
-    match_from_file_nulls_allowed = False
-
-    # Make sure the dictionary values are either all null or all not null.
-
-    if match_from_file_target_column == "":
-        if match_from_file["input_file"] != "" or match_from_file["input_column"] != "":
-            log.critical(
-                f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that."
-            )
-
-            return
-
-    elif match_from_file["input_file"] == "":
-        if match_from_file_target_column != "" or match_from_file["input_column"] != "":
-            log.critical(
-                f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that."
-            )
-
-            return
-
-    elif match_from_file["input_column"] == "":
-        if match_from_file_target_column != "" or match_from_file["input_file"] != "":
-            log.critical(
-                f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that."
-            )
-
-            return
-
-    else:
-        # See if columns() agrees that the requested column exists.
-
-        if len(columns(column=match_from_file_target_column, return_data_as="list")) == 0:
-            log.critical(
-                f"fetch_rows(): ERROR: CDA column '{match_from_file_target_column}' (specified in your 'match_from_file' parameter) does not exist. Please see the output of columns() for a list of those that do."
-            )
-
-            return
-
-        if match_from_file_input_file == output_file:
-            log.critical(
-                f"fetch_rows(): ERROR: You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different."
-            )
-
-            return
-
-        try:
-            with open(match_from_file_input_file) as IN:
-                column_names = next(IN).rstrip("\n").split("\t")
-
-                if match_from_file_source_column_name not in column_names:
-                    log.critical(
-                        f"fetch_rows(): ERROR: TSV column '{match_from_file_source_column_name}' (specified in your 'match_from_file' parameter) does not exist. Columns in your specified input file ('{match_from_file_input_file}') are:\n\n    {column_names}\n"
-                    )
-
-                    return
-
-                else:
-                    for line in [next_line.rstrip("\n") for next_line in IN]:
-                        record = dict(zip(column_names, line.split("\t")))
-
-                        target_value = record[match_from_file_source_column_name]
-
-                        if target_value is None or target_value == "" or target_value == "<NA>":
-                            # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
-                            # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
-                            # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
-                            # anger and confusion.
-
-                            match_from_file_nulls_allowed = True
-
-                        else:
-                            match_from_file_target_values.add(target_value)
-
-        except Exception as error:
-            log.critical(
-                f"fetch_rows(): ERROR: Couldn't load requested column '{match_from_file_source_column_name}' from requested TSV file '{match_from_file_input_file}': got error of type '{type(error)}', with error message '{error}'."
-            )
-
-            return
+    
 
     #############################################################################################################################
     # Manage basic validation for the `data_source` parameter, which enumerates user-specified filters on upstream data
@@ -508,63 +411,17 @@ def fetch_rows(
     # of the ID field of the table from which we are to join any extra non-`table`
     # columns, so we can present well-formed output later in a consistent way.
 
-    join_table_id_field = None
 
-    if link_to_table != "" and len(add_columns) > 0:
-        log.critical(
-            "fetch_rows(): ERROR: if 'link_to_table' is specified, 'add_columns' cannot also be used. Please choose one of those."
-        )
+    
+    #############################################################################################################################
+    # Manage basic validation for `add_columns`, which enumerates user-specified non-`table` columns to be
+    # joined with the main `table` result rows, and `link_to_table`, which specifies an entire non-`table` table
+    # to be joined with the main `table` result rows.
 
-        return
+    # Eliminate undesirable characters and convert all values to lowercase.
 
-    elif provenance == True and (link_to_table != "" or len(add_columns) > 0):
-        log.critical(
-            "fetch_rows(): ERROR: if 'provenance' is set to True, neither 'link_to_table' nor 'add_columns' can be used. Please choose one."
-        )
+    add_columns = [re.sub(r"[^a-z0-9_]", r"", column_to_add).lower() for column_to_add in add_columns]
 
-        return
-
-    elif provenance == False:
-        #############################################################################################################################
-        # Manage basic validation for `add_columns`, which enumerates user-specified non-`table` columns to be
-        # joined with the main `table` result rows, and `link_to_table`, which specifies an entire non-`table` table
-        # to be joined with the main `table` result rows.
-
-        # First: `link_to_table` is just a macro to fetch all the rows from a particular table.
-        # Translate it to `add_columns` and process `add_columns` downstream as normal (we ensure
-        # above that `add_columns` is always empty whenever `link_to_table` is nonempty -- see
-        # the docstring entry for `link_to_table` for context).
-
-        if link_to_table != "":
-            add_columns = column_values.query(f'table == "{link_to_table}"')["column"].tolist()
-
-        # Eliminate undesirable characters and convert all values to lowercase.
-
-        add_columns = [re.sub(r"[^a-z0-9_]", r"", column_to_add).lower() for column_to_add in add_columns]
-
-        join_tables = set()
-
-        for column_to_add in add_columns:
-            columns_response = column_values.query(f'column == "{column_to_add}"')
-
-            if columns_response is None or len(columns_response) != 1:
-                # There should be exactly one columns() result for a well-defined column name. If there's not one result, fail.
-
-                log.critical(
-                    f"fetch_rows(): ERROR: values assigned to 'add_columns' parameter must all be searchable CDA column names: you included '{column_to_add}', which is not."
-                )
-
-                return
-
-            else:
-                # Log the table from which this column comes.
-
-                join_tables.add(columns_response["table"].iloc[0])
-
-            # Track the data type present in each column, so we can
-            # format things properly downstream.
-
-            result_column_data_types[column_to_add] = columns_response["data_type"].iloc[0]
 
     try:
         queries_for_match_all = cleanup_match_statement(column_values, match_all)
@@ -578,162 +435,17 @@ def fetch_rows(
         log.critical(e)
         return
 
-    #############################################################################################################################
-    # Parse `match_from_file` filter values: complain if
-    #
-    #     * filter values don't match the data types of the columns they're paired with
-    #     * wildcards appear anywhere
-    #
-    # ...and save parse results as a combined filter expression in a Query object (to be combined with others later).
-
-    # Identify the data type of the target column.
-
-    target_data_type = ""
-
-    if len(match_from_file_target_column) > 0:
-        file_match_query = column_values.query(f'column == "{match_from_file_target_column}"')
-
-        if file_match_query is not None:
-            target_data_type = file_match_query["data_type"].iloc[0]
-
-    processed_target_values = set()
-
-    for target_value in match_from_file_target_values:
-        # Validate value types and test for wildcards.
-
-        if target_data_type != "text":
-            # Ignore leading and trailing whitespace unless we're dealing with strings.
-
-            target_value = re.sub(r"^\s+", r"", target_value)
-            target_value = re.sub(r"\s+$", r"", target_value)
-
-        if target_data_type == "boolean":
-            # If we're supposed to be in a boolean column, make sure we've got a true/false value.
-
-            target_value = target_value.lower()
-
-            if target_value not in boolean_alias:
-                log.critical(
-                    f"fetch_rows(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither."
-                )
-
-                return
-
-            else:
-                target_value = boolean_alias[target_value]
-
-        elif target_data_type in ["bigint", "integer", "numeric"]:
-            # If we're supposed to be in a numeric column, make sure we've got a number.
-
-            if re.search(r"^[-+]?\d+(\.\d+)?$", target_value) is None:
-                log.critical(
-                    f"fetch_rows(): ERROR: match_from_file: requested column {match_from_file_target_column} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not."
-                )
-
-                return
-
-        elif target_data_type == "text":
-            # Check for wildcards: if found, vomit.
-
-            if re.search(r"\*", target_value) is not None:
-                log.critical(
-                    f"fetch_rows(): ERROR: match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); string '{target_value}' is noncompliant. Please fix."
-                )
-
-                return
-
-        else:
-            # Just to be safe. Types change.
-
-            log.critical(
-                f"fetch_rows(): ERROR: match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers."
-            )
-
-            return
-
-        processed_target_values.add(target_value)
-
-    # Build a Query object for the column data loaded according to `match_from_file`.
-
-    query_for_match_from_file = None
-
-    # if match_from_file_nulls_allowed == True:
-
-    #     query_for_match_from_file = Query()
-
-    #     query_for_match_from_file.node_type = 'OR'
-
-    #     match_from_file_null_match_subquery = Query()
-
-    #     match_from_file_null_match_subquery.node_type = 'IS'
-
-    #     match_from_file_null_match_subquery.l = Query()
-
-    #     match_from_file_null_match_subquery.l.node_type = 'column'
-
-    #     match_from_file_null_match_subquery.l.value = match_from_file_target_column
-
-    #     match_from_file_null_match_subquery.r = Query()
-
-    #     match_from_file_null_match_subquery.r.node_type = 'unquoted'
-
-    #     match_from_file_null_match_subquery.r.value = 'NULL'
-
-    #     query_for_match_from_file.l = match_from_file_null_match_subquery
-
-    #     match_from_file_allowed_values_subquery = Query()
-
-    #     match_from_file_allowed_values_subquery.node_type = 'IN'
-
-    #     match_from_file_allowed_values_subquery.l = Query()
-
-    #     match_from_file_allowed_values_subquery.l.node_type = 'column'
-
-    #     match_from_file_allowed_values_subquery.l.value = match_from_file_target_column
-
-    #     match_from_file_allowed_values_subquery.r = Query()
-
-    #     match_from_file_allowed_values_subquery.r.node_type = 'unquoted'
-
-    #     if target_data_type == 'text':
-
-    #         match_from_file_allowed_values_subquery.r.value = r'("' + r'","'.join( sorted( processed_target_values ) ) + r'")'
-
-    #     else:
-
-    #         match_from_file_allowed_values_subquery.r.value = r'(' + r','.join( sorted( processed_target_values ) ) + r')'
-
-    #     query_for_match_from_file.r = match_from_file_allowed_values_subquery
-
-    # elif len( processed_target_values ) > 0:
-
-    #     query_for_match_from_file = Query()
-
-    #     query_for_match_from_file.node_type = 'IN'
-
-    #     query_for_match_from_file.l = Query()
-
-    #     query_for_match_from_file.l.node_type = 'column'
-
-    #     query_for_match_from_file.l.value = match_from_file_target_column
-
-    #     query_for_match_from_file.r = Query()
-
-    #     query_for_match_from_file.r.node_type = 'unquoted'
-
-    #     if target_data_type == 'text':
-
-    #         query_for_match_from_file.r.value = r'("' + r'","'.join( sorted( processed_target_values ) ) + r'")'
-
-    #     else:
-
-    #         query_for_match_from_file.r.value = r'(' + r','.join( sorted( processed_target_values ) ) + r')'
+    if match_from_file['cda_column_to_match'] != '':
+        target_data_type = columns(column=match_from_file["cda_column_to_match"])["data_type"][0]
+        match_from_file_filter = build_match_from_file_filter(match_from_file, target_data_type, log)
+        #TODO should this be added to match_all always?
+        queries_for_match_all.append(match_from_file_filter)
 
     #############################################################################################################################
     # Parse `data_source` filter expressions: complain if any are nonconformant, and (for now) save parse results for each
     # filter expression as a separate Query object.
 
-    queries_for_data_source = []
+    # queries_for_data_source = []
 
     for ds in data_source:
         queries_for_match_all.append(f"{table}_data_at_{ds} = True")
@@ -744,33 +456,14 @@ def fetch_rows(
 
     columns_to_fetch = list()
 
-    # Always begin by including all `table` fields, to which any extra
-    # columns requested via `add_columns` will be added in each result row.
-    #
-    # If anyone wants, we can upgrade later to let users select specific
-    # `table` columns to withhold from returned results.
-
-    columns_to_fetch = source_table_columns_in_order.copy()
-
-    # Tracking variable: will our results just include the default
-    # column set from `table`?
-
-    use_only_default_columns = True
-
-    # If we're adding extra columns from some non-`table` table*, always
-    # include that table's ID field, whether or not it was requested.
-    if join_table_id_field is not None:
-        columns_to_fetch.append(join_table_id_field)
-
-        use_only_default_columns = False
-
     for column_to_add in add_columns:
         # Ignore requests for columns that are already present by default.
 
         if column_to_add not in columns_to_fetch:
-            use_only_default_columns = False
-
             columns_to_fetch.append(column_to_add)
+    
+    if link_to != []:
+        columns_to_fetch.extend(link_to)
 
     columns_to_remove = []
 
@@ -800,14 +493,6 @@ def fetch_rows(
 
     q_node.exclude_columns = columns_to_remove
 
-    
-    # try:
-    #     # Default Paged Endpoint
-    #     api_response = api_instance.subject_paged_endpoint_data_subject_post(q_node, limit=limit, offset=offset)
-    #     print("The response of DataApi->subject_paged_endpoint_data_subject_post:\n")
-    #     pprint(api_response)
-    # except ApiException as e:
-    #     print("Exception when calling DataApi->subject_paged_endpoint_data_subject_post: %s\n" % e)
 
     fetch_message = "fetching all results"
 
@@ -843,41 +528,20 @@ def fetch_rows(
     paged_response_data_object = query_selector[table].sync(
         client=query_api_instance, body=q_node, limit=rows_per_page, offset=starting_offset
     )
-    # print(type(paged_response_data_object))
 
-    # Report some metadata about the results we got back.
-    #
-    # print( f"Total row count in result: {paged_response_data_object.total_row_count}", file=sys.stderr )
-    #
-    # print( f"Query SQL: {paged_response_data_object.query_sql}", file=sys.stderr )
+    # Catch errors returned by the API
+    if isinstance(paged_response_data_object, ClientError) or isinstance(paged_response_data_object, InternalError):
+        msg = f'{paged_response_data_object.error_type}: {paged_response_data_object.message}'
+        log.error(msg)
+        return
 
-    """
-    # This is immensely verbose, sometimes.
-
-    if debug:
-        
-        print( '-' * 80, file=sys.stderr )
-
-        print( f"BEGIN DEBUG MESSAGE: fetch_rows(): First page of '{table}' endpoint response", file=sys.stderr )
-
-        print( '-' * 80, end='\n\n', file=sys.stderr )
-
-        print( json.dumps( paged_response_data_object.result, indent=4 ) )
-
-        print( '-' * 80, file=sys.stderr )
-
-        print( f"END DEBUG MESSAGE: fetch_rows(): First page of '{table}' endpoint response", file=sys.stderr )
-
-        print( '-' * 80, end='\n\n', file=sys.stderr )
-    """
 
     # Make a Pandas DataFrame out of the first batch of results.
     #
     # The API returns responses in JSON format: convert that JSON into a DataFrame
     # using pandas' json_normalize() function.
 
-    # TODO need to catch errors here. .to_dict() doesnt work when the API returns an error
-    # print(paged_response_data_object)
+    
     result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()["result"])
 
     # The data we've fetched so far might be just the first page (if the total number
@@ -892,9 +556,12 @@ def fetch_rows(
         # Show the `next_url` address returned to us by the API.
         #
         # print( paged_response_data_object['next_url'], file=sys.stderr )
+        log.debug(f'Pulling next paged result from api: {paged_response_data_object.to_dict()['next_url']}')
+
         paged_response_data_object = query_selector[table].sync(
             client=query_api_instance, body=q_node, offset=incremented_offset, limit=rows_per_page
         )
+        #TODO catch api exceptions
 
         next_result_batch = pd.json_normalize(paged_response_data_object.to_dict()["result"])
 
@@ -915,7 +582,7 @@ def fetch_rows(
     #############################################################################################################################
     # Postprocess API result data.
 
-    log.debug( "Organizing result data..." )
+    log.debug("Organizing result data...")
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
