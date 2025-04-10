@@ -148,7 +148,7 @@ def cleanup_match_statement(column_data, match_statement):
     #############################################################################################################################
     # Define the list of supported filter-string operators.
 
-    allowed_operators = {">", ">=", "<", "<=", "=", "!=", "like"}
+    allowed_operators = {">", ">=", "<", "<=", "=", "!=", "like", "is", "is not"}
 
     #############################################################################################################################
     # Enumerate restrictions on operator use to appropriate data types.
@@ -173,10 +173,10 @@ def cleanup_match_statement(column_data, match_statement):
 
         # Let's see if this thing exists.
 
-        filter_column_metadata = column_data.query(f'column == "{filter_column_name}"')
+        # filter_column_metadata = column_data.query(f'column == "{filter_column_name}"')
 
-        if filter_column_metadata is None or len(filter_column_metadata) != 1:
-            raise RuntimeError(f"ERROR: requested column '{filter_column_name}' is not a searchable CDA column.")
+        # if filter_column_metadata is None or len(filter_column_metadata) != 1:
+        #     raise RuntimeError(f"ERROR: requested column '{filter_column_name}' is not a searchable CDA column.")
 
         # See what the operator is.
 
@@ -190,16 +190,16 @@ def cleanup_match_statement(column_data, match_statement):
         elif filter_operator not in allowed_operators:
             raise RuntimeError(f"ERROR:  operator '{filter_operator}' is not supported.")
 
-        # Identify the data type in the column being filtered.
+        # # Identify the data type in the column being filtered.
 
-        target_data_type = filter_column_metadata["data_type"].iloc[0]
+        # target_data_type = filter_column_metadata["data_type"].iloc[0]
 
-        # Make sure the operator specified is allowed for the data type of the column being filtered.
+        # # Make sure the operator specified is allowed for the data type of the column being filtered.
 
-        if filter_operator not in operators_by_data_type[target_data_type]:
-            raise RuntimeError(
-                f"ERROR: operator '{filter_operator}' is not usable for values of type '{target_data_type}'."
-            )
+        # if filter_operator not in operators_by_data_type[target_data_type]:
+        #     raise RuntimeError(
+        #         f"ERROR: operator '{filter_operator}' is not usable for values of type '{target_data_type}'."
+        #     )
 
         # We said quotes weren't required for string values. Doesn't technically mean they can't be used. Remove them.
 
@@ -208,64 +208,64 @@ def cleanup_match_statement(column_data, match_statement):
         filter_value = re.sub(r"""^['"]+""", r"", filter_value)
         filter_value = re.sub(r"""['"]+$""", r"", filter_value)
 
-        # Validate VALUE types and process wildcards.
+        # # Validate VALUE types and process wildcards.
 
-        if target_data_type != "text":
-            # Ignore leading and trailing whitespace unless we're dealing with strings.
+        # if target_data_type != "text":
+        #     # Ignore leading and trailing whitespace unless we're dealing with strings.
 
-            filter_value = re.sub(r"^\s+", r"", filter_value)
-            filter_value = re.sub(r"\s+$", r"", filter_value)
+        #     filter_value = re.sub(r"^\s+", r"", filter_value)
+        #     filter_value = re.sub(r"\s+$", r"", filter_value)
 
-        if filter_value.lower() != "null":
-            if target_data_type == "boolean":
-                # If we're supposed to be in a boolean column, make sure we've got a true/false value.
+        # if filter_value.lower() != "null":
+        #     if target_data_type == "boolean":
+        #         # If we're supposed to be in a boolean column, make sure we've got a true/false value.
 
-                filter_value = filter_value.lower()
+        #         filter_value = filter_value.lower()
 
-                if filter_value not in boolean_alias:
-                    raise RuntimeError(
-                        f"ERROR: requested column {filter_column_name} has data type 'boolean', requiring a true/false value; you specified '{filter_value}', which is neither."
-                    )
+        #         if filter_value not in boolean_alias:
+        #             raise RuntimeError(
+        #                 f"ERROR: requested column {filter_column_name} has data type 'boolean', requiring a true/false value; you specified '{filter_value}', which is neither."
+        #             )
 
-                else:
-                    filter_value = boolean_alias[filter_value]
+        #         else:
+        #             filter_value = boolean_alias[filter_value]
 
-            elif target_data_type in ["bigint", "integer", "numeric"]:
-                # If we're supposed to be in a numeric column, make sure we've got a number.
+        #     elif target_data_type in ["bigint", "integer", "numeric"]:
+        #         # If we're supposed to be in a numeric column, make sure we've got a number.
 
-                if re.search(r"^[-+]?\d+(\.\d+)?$", filter_value) is None:
-                    raise RuntimeError(
-                        f"ERROR: requested column {filter_column_name} has data type '{target_data_type}', requiring a number value; you specified '{filter_value}', which is not."
-                    )
+        #         if re.search(r"^[-+]?\d+(\.\d+)?$", filter_value) is None:
+        #             raise RuntimeError(
+        #                 f"ERROR: requested column {filter_column_name} has data type '{target_data_type}', requiring a number value; you specified '{filter_value}', which is not."
+        #             )
 
-            elif target_data_type == "text":
-                # Check for wildcards: if found, adjust operator and
-                # wildcard syntax to match API expectations on incoming queries.
+        #     elif target_data_type == "text":
+        #         # Check for wildcards: if found, adjust operator and
+        #         # wildcard syntax to match API expectations on incoming queries.
 
-                original_filter_value = filter_value
+        #         original_filter_value = filter_value
 
-                if re.search(r"^\*", filter_value) is not None or re.search(r"\*$", filter_value) is not None:
-                    filter_value = re.sub(r"^\*+", r"%", filter_value)
+        #         if re.search(r"^\*", filter_value) is not None or re.search(r"\*$", filter_value) is not None:
+        #             filter_value = re.sub(r"^\*+", r"%", filter_value)
 
-                    filter_value = re.sub(r"\*+$", r"%", filter_value)
+        #             filter_value = re.sub(r"\*+$", r"%", filter_value)
 
-                    if filter_operator == "!=":
-                        filter_operator = "NOT LIKE"
+        #             if filter_operator == "!=":
+        #                 filter_operator = "NOT LIKE"
 
-                    else:
-                        filter_operator = "LIKE"
+        #             else:
+        #                 filter_operator = "LIKE"
 
-                if re.search(r"\*", filter_value) is not None:
-                    raise RuntimeError(
-                        f"ERROR: wildcards (*) are only allowed at the ends of string values; string '{original_filter_value}' is noncompliant (it has one in the middle). Please fix."
-                    )
+        #         if re.search(r"\*", filter_value) is not None:
+        #             raise RuntimeError(
+        #                 f"ERROR: wildcards (*) are only allowed at the ends of string values; string '{original_filter_value}' is noncompliant (it has one in the middle). Please fix."
+        #             )
 
-            else:
-                # Just to be safe. Types change.
+        #     else:
+        #         # Just to be safe. Types change.
 
-                raise RuntimeError(
-                    f"ERROR: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers."
-                )
+        #         raise RuntimeError(
+        #             f"ERROR: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers."
+        #         )
 
         filtered_match_statement = filter_column_name + " " + filter_operator + " " + filter_value
 
@@ -274,7 +274,7 @@ def cleanup_match_statement(column_data, match_statement):
     return queries_for_match_statement
 
 
-def cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source):
+def cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source, link_to):
     # Listify, so we don't have to care later about whether this was a string or a list of strings.
     if isinstance(match_all, str):
         match_all = [match_all]
@@ -286,8 +286,10 @@ def cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_sour
         exclude_columns = [exclude_columns]
     if isinstance(data_source, str):
         data_source = [data_source]
+    if isinstance(link_to, str):
+        link_to = [link_to]
 
-    return match_all, match_any, add_columns, exclude_columns, data_source
+    return match_all, match_any, add_columns, exclude_columns, data_source, link_to
 
 def verify_inputs(
         column_values,
@@ -298,7 +300,7 @@ def verify_inputs(
         data_source,
         table,
         match_from_file,
-        link_to_table,
+        link_to,
         provenance,
         return_data_as,
         output_file,
@@ -362,6 +364,37 @@ def verify_inputs(
             )
 
             return
+        
+    if match_from_file["cda_column_to_match"] == "":
+        if match_from_file["input_file"] != "" or match_from_file["input_column"] != "":
+            log.critical(
+                f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that."
+            )
+
+            return
+
+    elif match_from_file["input_file"] == "":
+        if match_from_file["cda_column_to_match"] != "" or match_from_file["input_column"] != "":
+            log.critical(
+                f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that."
+            )
+
+            return
+
+    elif match_from_file["input_column"] == "":
+        if match_from_file["cda_column_to_match"] != "" or match_from_file["input_file"] != "":
+            log.critical(
+                f"fetch_rows(): ERROR: if the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that."
+            )
+
+            return
+        
+    if match_from_file["input_file"] != '' and  match_from_file["input_file"] == output_file:
+            log.critical(
+                f"fetch_rows(): ERROR: You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different."
+            )
+
+            return
 
     # `data_source`
     if not isinstance(data_source, list):
@@ -388,23 +421,9 @@ def verify_inputs(
         return
 
     # `link_to_table`
-    if not isinstance(link_to_table, str):
+    if not isinstance(link_to, list):
         log.critical(
-            f"fetch_rows(): ERROR: parameter 'link_to_table' must be a string; you supplied '{link_to_table}', which is not."
-        )
-
-        return
-
-    elif link_to_table != "" and link_to_table not in table_results:
-        log.critical(
-            f"fetch_rows(): ERROR: parameter 'link_to_table' must be the name of a searchable CDA table; you provided '{link_to_table}', which is not. See tables() for a list of valid table names."
-        )
-
-        return
-
-    elif link_to_table != "" and link_to_table == table:
-        log.critical(
-            "fetch_rows(): ERROR: parameter 'link_to_table' can't specify the same table as the 'table' parameter. Please try again."
+            f"fetch_rows(): ERROR: parameter 'link_to_table' must be a string; you supplied '{link_to}', which is not."
         )
 
         return
@@ -439,5 +458,111 @@ def verify_inputs(
         )
 
         return
+    
 
+def build_match_from_file_filter(match_from_file, target_data_type, log):
+    match_from_file_input_file = match_from_file["input_file"]
 
+    match_from_file_source_column_name = match_from_file["input_column"]
+
+    match_from_file_target_values = set()
+
+    # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
+    # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
+    # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
+    # anger and confusion.
+
+    match_from_file_nulls_allowed = False
+
+    # Make sure the dictionary values are either all null or all not null.      
+
+    try:
+        with open(match_from_file_input_file) as IN:
+            column_names = next(IN).rstrip("\n").split("\t")
+
+            if match_from_file_source_column_name not in column_names:
+                log.critical(
+                    f"fetch_rows(): ERROR: TSV column '{match_from_file_source_column_name}' (specified in your 'match_from_file' parameter) does not exist. Columns in your specified input file ('{match_from_file_input_file}') are:\n\n    {column_names}\n"
+                )
+
+                return
+
+            else:
+                for line in [next_line.rstrip("\n") for next_line in IN]:
+                    record = dict(zip(column_names, line.split("\t")))
+
+                    target_value = record[match_from_file_source_column_name]
+
+                    if target_value is None or target_value == "" or target_value == "<NA>":
+                        # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
+                        # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
+                        # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
+                        # anger and confusion.
+
+                        match_from_file_nulls_allowed = True
+
+                    else:
+                        match_from_file_target_values.add(target_value)
+        
+
+    except Exception as error:
+        log.critical(
+            f"fetch_rows(): ERROR: Couldn't load requested column '{match_from_file_source_column_name}' from requested TSV file '{match_from_file_input_file}': got error of type '{type(error)}', with error message '{error}'."
+        )
+
+        return
+    
+    
+    boolean_alias = {"true": "true", "t": "true", "false": "false", "f": "false"}
+    processed_target_values = set()
+
+    for target_value in match_from_file_target_values:
+        # Validate value types and test for wildcards.
+
+        if target_data_type != "text":
+            # Ignore leading and trailing whitespace unless we're dealing with strings.
+
+            target_value = re.sub(r"^\s+", r"", target_value)
+            target_value = re.sub(r"\s+$", r"", target_value)
+
+        if target_data_type == "boolean":
+            # If we're supposed to be in a boolean column, make sure we've got a true/false value.
+
+            target_value = target_value.lower()
+
+            if target_value not in boolean_alias:
+                log.error(f"fetch_rows(): match_from_file: requested column {match_from_file["cda_column_to_match"]} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither.")
+
+                raise Exception
+
+            else:
+                target_value = boolean_alias[target_value]
+
+        elif target_data_type in ["bigint", "integer", "numeric"]:
+            # If we're supposed to be in a numeric column, make sure we've got a number.
+
+            if re.search(r"^[-+]?\d+(\.\d+)?$", target_value) is None:
+                log.error(f"fetch_rows(): match_from_file: requested column {match_from_file["cda_column_to_match"]} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not.",)
+
+                raise Exception
+
+        elif target_data_type == "text":
+            # Check for wildcards: if found, vomit.
+
+            if re.search(r"\*", target_value) is not None:
+                log.error(f"fetch_rows(): ERROR: match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); string '{target_value}' is noncompliant. Please fix.")
+
+                raise Exception
+
+        else:
+            # Just to be safe. Types change.
+
+            log.error(f"fetch_rows(): ERROR: match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers.",)
+
+            raise Exception
+
+        processed_target_values.add(target_value)
+
+    match_list = ",".join(sorted(processed_target_values))
+
+    return f'{match_from_file["cda_column_to_match"]} IN [{match_list}]'
