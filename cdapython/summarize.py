@@ -1632,7 +1632,7 @@ def summarize(
 
                         result_dict = {
                             
-                            result_name: list()
+                            result_name: list(),
                             '': list()
                         }
 
