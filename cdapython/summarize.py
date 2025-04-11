@@ -1521,7 +1521,7 @@ def summarize(
 
         for result_column in result_dataframe.columns:
             
-            if result_column not in skip_columns:
+            if result_column not in skip_rename:
                 
                 # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
 
