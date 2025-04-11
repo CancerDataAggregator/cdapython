@@ -150,17 +150,19 @@ def summarize_files(
         list of pandas DataFrames, with one DataFrame for each summarized column,
         enumerating counts (or statistically summarizing unbounded numeric values) over all
         of that column's data values appearing in any file rows that match the
-        user-specified filter critera (the 'result rows'). One DataFrame
-        in this list -- titled 'total_file_matches' -- will contain an integer
-        representing the total number of result file rows. All other DataFrames
-        in the list will each be titled with a CDA column name and contain counts
-        or statistical summaries for that column as filtered by the result row set.
+        user-specified filter critera (the 'result rows'). Two DataFrames
+        in this list -- 'total_file_matches' and 'total_related_subjects' -- will contain integers
+        representing the total number of result file rows and the total number of related
+        subjects, respectively. All other DataFrames in the list will each be titled with
+        a CDA column name and will contain value counts or statistical summaries for that column
+        as filtered by the result row set.
 
         OR Python dictionary enumerating counts of all data values for each summarized column
         (or a statistical summary of those data values, in the case of unbounded numeric data)
         across all file rows that match the user-specified filter criteria (the 'result rows').
-        One summary keys in this dictionary -- 'total_file_matches' -- will point to an integer
-        representing the total number of result file rows. All other keys in the dictionary will
+        Two summary keys in this dictionary -- 'total_file_matches' and 'total_related_subjects' --
+        will point to integers representing the total number of result file rows and the total number
+        of associated subject rows, respectively. All other keys in the dictionary will
         each contain a CDA column name; each corresponding value will itself be a dictionary
         either enumerating observed counts of all values appearing in that column as filtered by
         the result row set, or encoding a statistical summary of those values in the case
@@ -291,24 +293,23 @@ def summarize_subjects(
         list of pandas DataFrames, with one DataFrame for each summarized column,
         enumerating counts (or statistically summarizing unbounded numeric values) over all
         of that column's data values appearing in any subject rows that match the
-        user-specified filter critera (the 'result rows'). Two special DataFrames
-        in this list -- 'total_subject_matches' and 'total_related_files' -- will
-        each contain an integer representing the total number of result subject rows
-        and the total number of file rows related to those subjects, respectively.
-        All other DataFrames in the list will each be titled with a CDA column name
-        and contain counts or statistical summaries for that column as filtered
-        by the result row set.
+        user-specified filter critera (the 'result rows'). Two DataFrames
+        in this list -- 'total_subject_matches' and 'total_related_files' -- will contain integers
+        representing the total number of result subject rows and the total number of related
+        files, respectively. All other DataFrames in the list will each be titled with
+        a CDA column name and will contain value counts or statistical summaries for that column
+        as filtered by the result row set.
 
         OR Python dictionary enumerating counts of all data values for each summarized column
         (or a statistical summary of those data values, in the case of unbounded numeric data)
-        across all file rows that match the user-specified filter criteria (the 'result rows').
+        across all subject rows that match the user-specified filter criteria (the 'result rows').
         Two summary keys in this dictionary -- 'total_subject_matches' and 'total_related_files' --
-        will point to integers representing the total number of result subject rows and the
-        total number of file rows related to those subjects, respectively. All other keys
-        in the dictionary will each contain a CDA column name; each corresponding value will
-        itself be a dictionary either enumerating observed counts of all values appearing in
-        that column as filtered by the result row set, or encoding a statistical summary
-        of those values in the case of unbounded numeric data.
+        will point to integers representing the total number of result subject rows and the total number
+        of associated file rows, respectively. All other keys in the dictionary will
+        each contain a CDA column name; each corresponding value will itself be a dictionary
+        either enumerating observed counts of all values appearing in that column as filtered by
+        the result row set, or encoding a statistical summary of those values in the case
+        of unbounded numeric data.
 
         OR JSON-formatted text representing the same structure as the `return_data_as='dict'`
         option, written to `output_file`.
@@ -329,9 +330,10 @@ def summarize_subjects(
 
 #############################################################################################################################
 #
-# summarize(): For a set of rows in a user-specified table that all match a user-specified set of filters, get
-#                   a report showing counts of values present in that set of rows, profiled across a small set of
-#                   pre-selected columns.
+# summarize(): Get a report describing columns of interest in a user-specified CDA table, summarizing column values over
+#                    all rows matching user-supplied query filters. Optionally add columns from other tables, which are
+#                    summarized across all of their own rows that are directly related to rows from the main table that
+#                    match the given filters.
 #
 #############################################################################################################################
 
@@ -345,13 +347,12 @@ def summarize(
     match_from_file={"input_file": "", "input_column": "", "cda_column_to_match": ""},
     data_source=[],
     add_columns=[],
-    exclude_columns=[],
-    link_to_table=""
+    exclude_columns=[]
 ):
     """
     For a set of rows in a user-specified table that all match a user-specified set of
     filters -- "result rows" -- get a report showing counts of values present in that
-    set of rows, profiled across a small set of pre-selected columns.
+    set of rows, profiled across (user-modifiable) columns of interest.
 
     Arguments:
         table ( string; required ):
@@ -395,15 +396,9 @@ def summarize(
 
         add_columns ( string or list of strings; optional ):
             One or more columns from a second table to add to result data from `table`.
-            If multiple values from an added column are all associated with a single
-            `table` row, that row will be repeated once for each distinct value, with
-            the added data appended to each row.
 
         exclude_columns ( string or list of strings; optional ):
             One or more columns from a second table to remove from result data from `table`.
-            If multiple values from an added column are all associated with a single
-            `table` row, that row will be repeated once for each distinct value, with
-            the added data appended to each row.
 
     Filter strings:
         Filter strings are expressions of the form "COLUMN_NAME OP VALUE"
@@ -443,26 +438,31 @@ def summarize(
 
     Returns:
 
-        list of pandas DataFrames, with one DataFrame for each of a small set of
-        pre-selected columns, enumerating counts of all of that column's data values
-        appearing in any of the rows of the user-specified `table` that match the
-        user-specified filter critera (the 'result rows'). One or two DataFrames
-        in this list -- titled 'total_`table`_matches' and sometimes also
-        'total_related_files', where appropriate -- will contain integers representing
-        the number of result rows and the number of files related to those rows,
-        respectively. All other DataFrames in the list will each be titled with
-        a CDA column name and contain counts for all observed values from that
-        column in the result row set.
+        list of pandas DataFrames, with one DataFrame for each summarized column,
+        enumerating counts (or statistically summarizing unbounded numeric values) over all
+        of that column's data values appearing in any rows that match the
+        user-specified filter critera (the 'result rows'). Three special DataFrames
+        -- 'total_matches', 'total_related_files' and 'total_related_subjects' --
+        may appear in this list, containing integers representing the total number of
+        result rows, the total number of related file rows, and the total number of related
+        subject rows, respectively, as appropriate. Summaries for table='subject' will include
+        a count of all related files; summaries for table='file' will include a count of
+        all related subjects. All other DataFrames in the list will each be titled with
+        a CDA column name and will contain value counts or statistical summaries for that column
+        as filtered by the result row set.
 
-        OR Python dictionary enumerating counts of all data values (from a small set of pre-selected columns)
-        appearing in any of the rows of the user-specified `table` that match the user-specified filter criteria
-        (the 'result rows'). One or two summary keys in this dictionary -- 'total_`table`_matches', and
-        sometimes 'total_related_files', where appropriate -- will point to integers representing
-        the number of result rows and the number of files related to those rows, respectively. All other keys
-        in the dictionary will each contain a CDA column name; each corresponding value will itself be a
-        dictionary enumerating all the specific values appearing in the result rows for the CDA column
-        named in the key. Each value in that (sub-)dictionary will represent the total number of times
-        that its corresponding key appears in the result rows.
+        OR Python dictionary enumerating counts of all data values for each summarized column
+        (or a statistical summary of those data values, in the case of unbounded numeric data)
+        across all rows that match the user-specified filter criteria (the 'result rows').
+        Three special summary keys -- 'total_matches', 'total_related_subjects' and 'total_related_files'
+        -- may appear in this dictionary, pointing to integers representing the total number of
+        result rows, the total number of related file rows, and the total number of related
+        subject rows, respectively, as appropriate. Summaries for table='subject' will include
+        a count of all related files; summaries for table='file' will include a count of
+        all related subjects. All other keys in the dictionary will each contain a CDA column
+        name; each corresponding value will itself be a dictionary either enumerating observed
+        counts of all values appearing in that column as filtered by the result row set,
+        or encoding a statistical summary of those values in the case of unbounded numeric data.
 
         OR JSON-formatted text representing the same structure as the `return_data_as='dict'`
         option, written to `output_file`.
@@ -477,48 +477,27 @@ def summarize(
 
     log = get_logger()
 
-
-    table_results = pd.DataFrame()
-
     # Top-level type and sanity checking (i.e. not examining list contents yet): ensure nothing untoward got passed into our parameters.
 
     if col_values is None:
-        log.critical(
-            "summarize(): ERROR: Something went fatally wrong with columns(); can't complete tables(), aborting."
-        )
+        log.error( "FATAL: Something went wrong calling columns()." )
         return
-
-    else:
-        # We have a function tables() that does this already, but since we already have the columns data
-        # we use this one-liner to extract the tables.
-        table_results = sorted(col_values["table"].unique())
-
 
     #############################################################################################################################
     # Ensure our one required argument exists and is a valid table name.
 
     if not isinstance(table, str) or table == "":
-        log.critical(f"summarize(): ERROR: parameter 'table' is required and must be a nonempty string; you supplied '{table}', which is not.")
+        log.error( f"Parameter 'table' is required and must be a nonempty string; you supplied '{table}', which is not." )
         return
 
     valid_tables = tables()
 
     if table not in valid_tables:
-        log.critical(f"summarize(): ERROR: parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not.")
+        log.error( f"Parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not." )
         return
 
     #############################################################################################################################
-    # Process return-type directives `return_data_as` and `output_file`.
-
-    allowed_return_types = {"", "dataframe_list", "dict", "json"}
-
-    if not isinstance(return_data_as, str):
-        log.critical(f"summarize(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json' (or omit the 'return_data_as' parameter altogether).")
-        return
-
-    # Let's not be picky if someone wants to give us return_data_as='DataFrame_LIsT' or return_data_as='JSON'
-
-    return_data_as = return_data_as.lower()
+    # Process return-type directives `output_file` and `return_data_as`.
 
     # We can't do much validation on filenames. If `output_file` isn't
     # a locally writeable path, it'll fail when we try to open it for
@@ -526,19 +505,29 @@ def summarize(
     # file-access operation (later, below) in a try{} block.
 
     if not isinstance(output_file, str):
-        log.critical(f"summarize(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path.")
+        log.error( f"The `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path." )
         return
 
     output_file = output_file.strip()
 
+    if not isinstance(return_data_as, str):
+        log.error( f"Unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json' (or omit the 'return_data_as' parameter altogether)." )
+        return
+
+    # Let's not be picky if someone wants to give us return_data_as='DataFrame_LIsT' or return_data_as='JSON'
+
+    return_data_as = return_data_as.lower()
+
+    allowed_return_types = {"", "dataframe_list", "dict", "json" }
+
     if return_data_as not in allowed_return_types:
         # Complain if we receive an unexpected `return_data_as` value.
-        log.critical(f"summarize(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json' (or omit the 'return_data_as' parameter altogether).")
+        log.error( f"Unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe_list', 'dict' or 'json' (or omit the 'return_data_as' parameter altogether)." )
         return
 
     elif return_data_as == "json" and output_file == "":
         # If the user asks for JSON, they also have to give us a path for the output file. If they didn't, complain.
-        print("summarize(): ERROR: return type 'json' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/json/to'.",)
+        log.error( "Return type 'json' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/json/to'." )
         return
 
     elif return_data_as != "json" and output_file != "":
@@ -546,8 +535,8 @@ def summarize(
         # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
         # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
         # so we complain and ask them to clarify.
-        log.critical(f"summarize(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'json'. You requested return_data_as='{return_data_as}'.")
-        log.critical("(Note that if you don't specify any value for 'return_data_as', it defaults to printing tables to the standard output stream and not to an output file.).")
+        log.error( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'json'. You requested return_data_as='{return_data_as}'." )
+        log.error( "(Note that if you don't specify any value for 'return_data_as', it defaults to printing tables to the standard output stream and not to an output file.)." )
         return
 
     #############################################################################################################################
@@ -989,9 +978,6 @@ def summarize(
     # column set from `table`?
 
     use_only_default_columns = True
-    column_values = columns()
-    if link_to_table != "":
-        add_columns.extend(column_values.query(f'table == "{link_to_table}"')["column"].tolist())
 
     for column_to_add in add_columns:
         # Ignore requests for columns that are already present by default.
