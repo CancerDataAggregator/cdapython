@@ -1604,7 +1604,7 @@ def summarize(
 
                         colalign_list = [ "left" ]
 
-                    else:
+                    elif 'count_result' in result_list_df.columns.values:
                         
                         # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
 
