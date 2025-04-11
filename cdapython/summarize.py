@@ -1716,6 +1716,8 @@ def summarize(
 
                         result_dict[result_column] = dict()
 
+                        print(result_column)
+
                         for dict_pair in result_dataframe[result_column][0]:
                             
                             result_dict[result_column][dict_pair[result_column]] = dict_pair["count_result"]
