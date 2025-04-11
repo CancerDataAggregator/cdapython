@@ -1458,18 +1458,18 @@ def summarize(
 
     # This is immensely verbose, sometimes.
 
-    log.debug( f"First page of '{table}/counts' endpoint response: {json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
-    log.debug( f"First page of '{table}/counts' endpoint response: {json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
+    print paged_response_data_object.keys()
+
+    log.debug( f"/summary/{table} endpoint response: {json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
 
     # Make a Pandas DataFrame out of the first batch of results.
     #
     # The API returns responses in JSON format: convert that JSON into a DataFrame
     # using pandas' json_normalize() function.
 
-    return paged_response_data_object.to_dict()["result"]
+    ### REMOVE AFTER DEBUG: return paged_response_data_object.to_dict()["result"]
 
-    # TODO Fix what is supposed to happen after:
-    result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()["result"])
+    result_dataframe = pd.json_normalize( paged_response_data_object.to_dict()["result"] )
 
     #############################################################################################################################
     # Postprocess API result data.
