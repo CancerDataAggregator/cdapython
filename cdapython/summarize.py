@@ -1600,7 +1600,7 @@ def summarize(
                 
                 for result_list_df in result_list:
                     
-                    # Put the count values first in the display.
+                    print_df = result_list_df
 
                     max_col_width = 80
 
@@ -1608,29 +1608,51 @@ def summarize(
 
                     colalign_list = [ "right", "left" ]
 
-                    if len( result_list_df.columns ) == 1:
+                    if len( print_df.columns ) == 1:
                         
                         maxcolwidths_list = [ None ]
 
                         colalign_list = [ "left" ]
 
-                    elif 'count_result' in result_list_df.columns.values:
+                    elif 'count_result' in print_df.columns.values:
                         
                         # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
 
-                        result_list_df[result_list_df.columns[0]] = result_list_df[result_list_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and len( x ) > max_col_width ) else x )
+                        print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and len( x ) > max_col_width ) else x )
 
-                        new_column_ordering = list( reversed( result_list_df.columns.tolist() ) )
+                        # Put the count values first in the display.
 
-                        result_list_df = result_list_df[new_column_ordering]
+                        new_column_ordering = list( reversed( print_df.columns.tolist() ) )
+
+                        print_df = print_df[new_column_ordering]
+
+                    elif 'median' in print_df.columns.values:
+                        
+                        result_name = print_df[0][0]
+
+                        result_dict = {
+                            
+                            result_name: list()
+                            '': list()
+                        }
+
+                        # Hard-coding this is fragile, but safe for now and there's a lot to do.
+
+                        for key in [ 'min', 'lower_quartile', 'median', 'upper_quartile', 'max', 'mean' ]:
+                            
+                            result_dict[result_name].append( key )
+
+                            result_dict[''].append( print_df[key][0] )
+
+                        print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
 
                     # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
 
                     print(
                         tabulate.tabulate(
-                            result_list_df,
+                            print_df,
                             showindex=False,
-                            headers=result_list_df.columns,
+                            headers=print_df.columns,
                             tablefmt="double_outline",
                             colalign=colalign_list,
                             maxcolwidths=maxcolwidths_list,
