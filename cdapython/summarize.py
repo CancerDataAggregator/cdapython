@@ -1632,6 +1632,8 @@ def summarize(
 
                     elif 'median' in print_df.columns.values:
                         
+                        colalign_list = [ "right" ]
+
                         result_name = print_df['cda_column_name'][0]
 
                         result_dict = {
@@ -1643,7 +1645,7 @@ def summarize(
 
                         for key in [ 'min', 'lower_quartile', 'median', 'upper_quartile', 'max', 'mean' ]:
                             
-                            result_dict[result_name].append( f"{re.sub( r'_', r' ', key )}: {print_df[key][0]}" )
+                            result_dict[result_name].append( f"{re.sub( r'_', r' ', key )}: {print_df[key][0]:>20}" )
 
                         print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
 
