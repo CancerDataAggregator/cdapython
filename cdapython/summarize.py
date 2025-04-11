@@ -1521,7 +1521,7 @@ def summarize(
 
         for result_column in result_dataframe.columns:
             
-            if result_column in [ 'file_data_source_count_summary', 'subject_data_source_count_summary' ]:
+            if 'median' in result_dataframe[result_column[0]]:
                 
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
 
