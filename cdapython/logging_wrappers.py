@@ -100,6 +100,7 @@ def get_logger(  ) -> logging.Logger:
 
     if len( logger_configuration['loggers']['default']['handlers'] ) == 0:
         print( 'ERROR: get_logger(): console and file output both disabled; can\'t create logger.', file=sys.stderr )
+        return
 
     logging.config.dictConfig( logger_configuration )
 
