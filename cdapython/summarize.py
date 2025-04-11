@@ -1529,7 +1529,7 @@ def summarize(
 
                 for key in result_dataframe[result_column][0][0]:
                     
-                    result_column_dict[key] = result_dataframe[result_column][0][0][key]]
+                    result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
 
                 result_list.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
 
