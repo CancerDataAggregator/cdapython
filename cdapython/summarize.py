@@ -1350,7 +1350,7 @@ def summarize(
     q_node.exclude_columns = columns_to_remove
 
     # Dump JSON describing the full combined query structure.
-    log.debug( json.dumps(q_node.to_dict(), indent=4, cls=CdaApiQueryEncoder) )
+    log.debug( f"Query JSON transmitted:\n{json.dumps( q_node.to_dict(), indent=4, cls=CdaApiQueryEncoder )}" )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -1452,11 +1452,11 @@ def summarize(
 
     # Report some metadata about the results we got back.
 
-    log.debug( f"/summary/{table} endpoint query SQL: {paged_response_data_object.to_dict()['query_sql']}" )
+    log.debug( f"/summary/{table} endpoint query SQL:\n{paged_response_data_object.to_dict()['query_sql']}" )
 
     # This is immensely verbose, sometimes.
 
-    log.debug( f"/summary/{table} endpoint result: {json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
+    log.debug( f"/summary/{table} endpoint result:\n{json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
 
     # Make a Pandas DataFrame out of the first batch of results.
     #
@@ -1475,43 +1475,47 @@ def summarize(
     #############################################################################################################################
     # Postprocess API result data.
 
-    # This column duplicates `total_count` when querying somatic_mutation. Remove it.
-
-    if "mutation_id" in result_dataframe:
-        result_dataframe = result_dataframe.drop(columns=["mutation_id"])
-
     # For some reason, the highest-level summary counts come through as floats. Fix that
     # (and rename them while we're at it).
 
-    toplevel_columns_to_fix = {"total_count": f"total_{table}_matches", "file_id": "total_related_files"}
+    toplevel_columns_to_fix = {"total_count": f"total_matches", "file_count": "total_related_files", "subject_count": "total_related_subjects"}
 
     for result_column in toplevel_columns_to_fix:
+        
         if result_column in result_dataframe:
+            
             result_dataframe[result_column] = result_dataframe[result_column].round().astype(int)
 
-            result_dataframe = result_dataframe.rename(columns={result_column: toplevel_columns_to_fix[result_column]})
+            result_dataframe = result_dataframe.rename( columns={ result_column: toplevel_columns_to_fix[result_column] } )
 
     if return_data_as == "" or return_data_as == "dataframe_list":
+        
         # Right now, the default is to print one table to standard output
         # for each DataFrame that would be returned had they requested
         # `return_data_as='dataframe_list'`.
 
         result_list = list()
 
-        for toplevel_column in [f"total_{table}_matches", "total_related_files"]:
+        for toplevel_column in [ "total_matches", "total_related_files", "total_related_subjects" ]:
+            
             if toplevel_column in result_dataframe:
+                
                 # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
 
-                result_list.append(pd.DataFrame(result_dataframe[toplevel_column], columns=[toplevel_column]))
+                result_list.append( pd.DataFrame( result_dataframe[toplevel_column], columns=[toplevel_column] ) )
 
         for result_column in result_dataframe.columns:
-            if result_column not in [f"total_{table}_matches", "total_related_files"]:
+            
+            if result_column not in [ "total_matches", "total_related_files", "total_related_subjects" ]:
+                
                 # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
 
                 if result_dataframe[result_column].dtype == "int64":
-                    result_dataframe[result_column] = int(result_dataframe[result_column][0])
+                    
+                    result_dataframe[result_column] = int( result_dataframe[result_column][0] )
 
                 elif result_dataframe[result_column].dtype == "object":
+                    
                     source_pair_keyword = result_column
                     dest_pair_keyword = result_column
 
