@@ -1451,16 +1451,12 @@ def summarize(
             return
 
     # Report some metadata about the results we got back.
-    #
-    # print( f"Total row count in result: {paged_response_data_object.total_row_count}", file=sys.stderr )
-    #
-    # print( f"Query SQL: {paged_response_data_object.query_sql}", file=sys.stderr )
+
+    log.debug( f"/summary/{table} endpoint query SQL: {paged_response_data_object.to_dict()['query_sql']}" )
 
     # This is immensely verbose, sometimes.
 
-    print( paged_response_data_object.to_dict().keys() )
-
-    log.debug( f"/summary/{table} endpoint response: {json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
+    log.debug( f"/summary/{table} endpoint result: {json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
 
     # Make a Pandas DataFrame out of the first batch of results.
     #
