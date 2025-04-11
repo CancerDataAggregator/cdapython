@@ -1399,14 +1399,6 @@ def summarize(
 
     paged_response_data_object = query_selector[table].sync(client=query_api_instance, body=q_node)
 
-    ### TEMPORARY TRAP: Remove this when mutations/counts/ is fixed
-    ###                 and everything should just work; all the
-    ###                 downstream processing is already in place.
-
-    if table == "mutation":
-        log.critical("summarize(): ERROR_WITH_APOLOGIES: summary counts for somatic_mutation are not available at present. Please select any of our other fine tables.")
-        return
-
     # Gracefully fetch asynchronously-generated results once they're ready.
 
     if isinstance(paged_response_data_object, ApplyResult):
@@ -1487,6 +1479,26 @@ def summarize(
             result_dataframe[result_column] = result_dataframe[result_column].round().astype(int)
 
             result_dataframe = result_dataframe.rename( columns={ result_column: toplevel_columns_to_fix[result_column] } )
+
+    # Remove '_summary' from ordinary result column names before returning.
+
+    skip_rename = {
+        'file_data_source_count_summary',
+        'subject_data_source_count_summary',
+        'data_source'
+    }
+
+    result_column_names = result_dataframe.columns.values
+
+    for result_column in result_column_names:
+        
+        if result_column not in skip_rename:
+            
+            new_column_name = re.sub( r'_summary$', r'', result_column )
+
+            if new_column_name != result_column:
+                
+                result_dataframe = result_dataframe.rename( columns={ result_column: new_column_name } )
 
     if return_data_as == "" or return_data_as == "dataframe_list":
         
