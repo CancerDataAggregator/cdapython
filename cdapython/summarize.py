@@ -6,6 +6,7 @@ import tabulate
 
 from multiprocessing.pool import ApplyResult
 
+from cdapython.discover import columns, tables
 from cdapython.logging_wrappers import get_logger
 from cdapython.application_utilities import get_api_client, cleanup_match_statement
 
