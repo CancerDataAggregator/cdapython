@@ -1620,9 +1620,9 @@ def summarize(
 
                         result_list_df[result_list_df.columns[0]] = result_list_df[result_list_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and len( x ) > max_col_width ) else x )
 
-                    new_column_ordering = list( reversed( result_list_df.columns.tolist() ) )
+                        new_column_ordering = list( reversed( result_list_df.columns.tolist() ) )
 
-                    result_list_df = result_list_df[new_column_ordering]
+                        result_list_df = result_list_df[new_column_ordering]
 
                     # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
 
