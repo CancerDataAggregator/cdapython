@@ -1604,9 +1604,9 @@ def summarize(
 
                     max_col_width = 80
 
-                    maxcolwidths_list = [ None, max_col_width ]
+                    maxcolwidths_list = [ None ]
 
-                    colalign_list = [ "right", "left" ]
+                    colalign_list = [ "left" ]
 
                     if len( print_df.columns ) == 1:
                         
@@ -1616,6 +1616,10 @@ def summarize(
 
                     elif 'count_result' in print_df.columns.values:
                         
+                        maxcolwidths_list = [ None, max_col_width ]
+
+                        colalign_list = [ "right", "left" ]
+
                         # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
 
                         print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and len( x ) > max_col_width ) else x )
