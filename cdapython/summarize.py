@@ -1516,83 +1516,84 @@ def summarize(
 
                 elif result_dataframe[result_column].dtype == "object":
                     
-                    source_pair_keyword = result_column
-                    dest_pair_keyword = result_column
-
-                    if re.search(r"_identifier_system$", result_column) is not None:
-                        source_pair_keyword = "system"
-                        dest_pair_keyword = f"{table}_data_source"
-
-                    result_column_dict = {dest_pair_keyword: list(), "count": list()}
+                    result_column_dict = {
+                        result_column: list(),
+                        "count": list()
+                    }
 
                     if result_dataframe[result_column][0] is not None:
-                        # These should be arrays of Python dicts, with each dict containing two entries:
+                        
+                        # This cell should contain an array of Python dicts, with each dict containing two entries:
                         #
                         #    data column label and value:
-                        #       keyword: `result_column`, except for when `result_column` == 'X_identifier_system', in which case it's just 'system'
-                        #       value: one of { 'GDC', 'CDS', 'ICDC', ... }
+                        #       keyword: `result_column`, e.g. 'cause_of_death'
+                        #       value: one allowable value for `result_column`, e.g. 'Cancer-Related Death'
+                        # 
                         #    observed count of the given value:
-                        #       keyword: 'count'
+                        #       keyword: 'count_result'
                         #       value: (int) number of times the given data value (described in the previous dictionary entry) was observed in this set of result data
 
                         for dict_pair in result_dataframe[result_column][0]:
+                            
                             print_value = "<NA>"
 
-                            if dict_pair[source_pair_keyword] is not None and dict_pair[source_pair_keyword] != "":
-                                print_value = dict_pair[source_pair_keyword]
+                            actual_value = dict_pair[result_column]
 
-                            result_column_dict[dest_pair_keyword].append(print_value)
+                            if actual_value is not None and actual_value != "":
+                                
+                                print_value = actual_value
 
-                            result_column_dict["count"].append(dict_pair["count"])
+                            result_column_dict[result_column].append( print_value )
 
-                    result_list.append(
-                        pd.DataFrame.from_dict(result_column_dict)
-                        .sort_values(by=["count"], ascending=[False])
-                        .reset_index(drop=True)
-                    )
+                            result_column_dict["count_result"].append( dict_pair["count_result"] )
+
+                    result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ "count_result", result_column ], ascending=[ False, True ] ).reset_index( drop=True ) )
 
                 else:
-                    log.critical(f"summarize(): ERROR: unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event.")
+                    
+                    log.error( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
+
                     return
 
         if return_data_as == "":
+            
             log.debug( "Returning results in default form (printing list of tables to standard output)" )
 
-            with pd.option_context("display.max_rows", None, "display.max_columns", None, "display.max_colwidth", 65):
-                for dataframe in result_list:
+            with pd.option_context( "display.max_rows", None, "display.max_columns", None, "display.max_colwidth", 65 ):
+                
+                for result_list_df in result_list:
+                    
                     # Put the count values first in the display.
 
                     max_col_width = 80
 
-                    maxcolwidths_list = [None, max_col_width]
+                    maxcolwidths_list = [ None, max_col_width ]
 
-                    colalign_list = ["right", "left"]
+                    colalign_list = [ "right", "left" ]
 
-                    if len(dataframe.columns) == 1:
-                        maxcolwidths_list = [None]
+                    if len( result_list_df.columns ) == 1:
+                        
+                        maxcolwidths_list = [ None ]
 
-                        colalign_list = ["left"]
+                        colalign_list = [ "left" ]
 
                     else:
+                        
                         # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
 
-                        dataframe[dataframe.columns[0]] = dataframe[dataframe.columns[0]].apply(
-                            lambda x: re.sub(f"^(.{{{max_col_width-3}}}).*", r"\1...", x)
-                            if (x is not None and len(x) > max_col_width)
-                            else x
-                        )
+                        result_list_df[result_list_df.columns[0]] = result_list_df[result_list_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and len( x ) > max_col_width ) else x )
 
-                    new_column_ordering = list(reversed(dataframe.columns.tolist()))
+                    new_column_ordering = list( reversed( result_list_df.columns.tolist() ) )
 
-                    dataframe = dataframe[new_column_ordering]
+                    result_list_df = result_list_df[new_column_ordering]
 
                     # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
 
                     print(
                         tabulate.tabulate(
-                            dataframe,
+                            result_list_df,
                             showindex=False,
-                            headers=dataframe.columns,
+                            headers=result_list_df.columns,
                             tablefmt="double_outline",
                             colalign=colalign_list,
                             maxcolwidths=maxcolwidths_list,
@@ -1603,65 +1604,77 @@ def summarize(
             return
 
         elif return_data_as == "dataframe_list":
+            
             log.debug( "Returning results as a list of pandas.DataFrame objects" )
+
             return result_list
 
     elif return_data_as == "dict" or return_data_as == "json":
+        
         # Build a Python dictionary to shape returned results.
 
         result_dict = dict()
 
         for result_column in result_dataframe.columns:
+            
             if result_dataframe[result_column].dtype == "int64":
-                result_dict[result_column] = int(result_dataframe[result_column][0])
+                
+                result_dict[result_column] = int( result_dataframe[result_column][0] )
 
             elif result_dataframe[result_column].dtype == "object":
+                
                 result_dict[result_column] = None
 
                 if result_dataframe[result_column][0] is not None:
-                    # These should be arrays of Python dicts, with each dict containing two entries:
+                    
+                    # This cell should contain an array of Python dicts, with each dict containing two entries:
                     #
                     #    data column label and value:
-                    #       keyword: `result_column`, except for when `result_column` == 'X_identifier_system', in which case it's just 'system'
-                    #       value: one of { 'GDC', 'CDS', 'ICDC', ... }
+                    #       keyword: `result_column`, e.g. 'cause_of_death'
+                    #       value: one allowable value for `result_column`, e.g. 'Cancer-Related Death'
+                    # 
                     #    observed count of the given value:
-                    #       keyword: 'count'
+                    #       keyword: 'count_result'
                     #       value: (int) number of times the given data value (described in the previous dictionary entry) was observed in this set of result data
 
                     result_dict[result_column] = dict()
 
-                    pair_keyword = result_column
-
-                    if re.search(r"_identifier_system$", result_column) is not None:
-                        pair_keyword = "system"
-
                     for dict_pair in result_dataframe[result_column][0]:
-                        result_dict[result_column][dict_pair[pair_keyword]] = dict_pair["count"]
+                        
+                        result_dict[result_column][dict_pair[result_column]] = dict_pair["count_result"]
 
             else:
-                log.critical(f"summarize(): ERROR: unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event.")
+                
+                log.error( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
                 return
 
         if return_data_as == "dict":
+            
             log.debug( "Returning results as a Python dictionary" )
 
             return result_dict
 
         elif return_data_as == "json":
+            
             # Write the results to a user-specified JSON file.
+
             log.debug( f"Printing results to JSON file '{output_file}'" )
 
             try:
-                with open(output_file, "w") as OUT:
-                    json.dump(result_dict, OUT, indent=4, ensure_ascii=True)
+                
+                with open( output_file, "w" ) as OUT:
+                    
+                    json.dump( result_dict, OUT, indent=4, ensure_ascii=True )
 
                 return
 
             except Exception as error:
-                log.critical(f"summarize(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'.")
+                
+                log.error( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
+
                 return
 
-    log.critical("summarize(): ERROR: Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.")
+    log.error( "Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error." )
 
     return
 
