@@ -1684,21 +1684,13 @@ def summarize(
                 
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
 
-                result_column_dict = dict()
-
-                result_column_dict['cda_column_name'] = [result_column]
+                result_dict[result_column] = dict()
 
                 # Hard-coding this is fragile, but safe for now and there's a lot to do.
 
                 for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
                     
-                    result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
-
-                result_dict[result_column] = dict()
-
-                for key in result_column_dict:
-                    
-                    result_dict[result_column][key] = result_column_dict[key]
+                    result_dict[result_column][key] = result_dataframe[result_column][0][0][key]
 
             elif result_column not in skip_rename:
                 
