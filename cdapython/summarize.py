@@ -1632,17 +1632,14 @@ def summarize(
 
                         result_dict = {
                             
-                            result_name: list(),
-                            '': list()
+                            result_name: list()
                         }
 
                         # Hard-coding this is fragile, but safe for now and there's a lot to do.
 
                         for key in [ 'min', 'lower_quartile', 'median', 'upper_quartile', 'max', 'mean' ]:
                             
-                            result_dict[result_name].append( re.sub( r'_', r' ', key ) )
-
-                            result_dict[''].append( print_df[key][0] )
+                            result_dict[result_name].append( f"{re.sub( r'_', r' ', key )}: {print_df[key][0]}" )
 
                         print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
 
