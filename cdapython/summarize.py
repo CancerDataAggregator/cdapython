@@ -1692,7 +1692,7 @@ def summarize(
                     
                     result_dict[result_column][key] = result_dataframe[result_column][0][0][key]
 
-            elif result_column not in skip_rename:
+            else:
                 
                 if result_dataframe[result_column].dtype == "int64":
                     
