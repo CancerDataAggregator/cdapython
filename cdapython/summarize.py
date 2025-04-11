@@ -1483,9 +1483,12 @@ def summarize(
     # Remove '_summary' from ordinary result column names before returning.
 
     skip_rename = {
+        'data_source',
         'file_data_source_count_summary',
         'subject_data_source_count_summary',
-        'data_source'
+        'total_matches',
+        'total_related_files',
+        'total_related_subjects'
     }
 
     result_column_names = result_dataframe.columns.values
@@ -1518,7 +1521,7 @@ def summarize(
 
         for result_column in result_dataframe.columns:
             
-            if result_column not in [ "total_matches", "total_related_files", "total_related_subjects" ]:
+            if result_column not in skip_columns:
                 
                 # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
 
@@ -1530,7 +1533,7 @@ def summarize(
                     
                     result_column_dict = {
                         result_column: list(),
-                        "count": list()
+                        "count_result": list()
                     }
 
                     if result_dataframe[result_column][0] is not None:
