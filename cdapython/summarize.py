@@ -1531,7 +1531,7 @@ def summarize(
 
                 result_column_dict = dict()
 
-                result_column_dict[''] = [result_column]
+                result_column_dict['cda_column_name'] = [result_column]
 
                 # Hard-coding this is fragile, but safe for now and there's a lot to do.
 
@@ -1628,7 +1628,7 @@ def summarize(
 
                     elif 'median' in print_df.columns.values:
                         
-                        result_name = print_df.columns[0][0]
+                        result_name = print_df['cda_column_name'][0]
 
                         result_dict = {
                             
