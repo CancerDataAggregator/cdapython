@@ -1640,7 +1640,7 @@ def summarize(
 
                         for key in [ 'min', 'lower_quartile', 'median', 'upper_quartile', 'max', 'mean' ]:
                             
-                            result_dict[result_name].append( key )
+                            result_dict[result_name].append( re.sub( r'_', r' ', key ) )
 
                             result_dict[''].append( print_df[key][0] )
 
