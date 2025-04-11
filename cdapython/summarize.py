@@ -1465,7 +1465,9 @@ def summarize(
     # The API returns responses in JSON format: convert that JSON into a DataFrame
     # using pandas' json_normalize() function.
 
+    print("ding")
     return paged_response_data_object.to_dict()["result"]
+    print("dong")
     # TODO Fix what is supposed to happen after:
     result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()["result"])
 
