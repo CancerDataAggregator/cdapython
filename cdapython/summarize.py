@@ -1519,6 +1519,10 @@ def summarize(
 
                 result_list.append( pd.DataFrame( result_dataframe[toplevel_column], columns=[toplevel_column] ) )
 
+        # Put the numeric summaries at the end of the displayed block of results.
+
+        result_list_tail = list()
+
         for result_column in result_dataframe.columns:
             
             if result_dataframe[result_column].dtype == 'object' and isinstance( result_dataframe[result_column][0], list ) and isinstance( result_dataframe[result_column][0][0], dict ) and 'median' in result_dataframe[result_column][0][0]:
@@ -1533,9 +1537,9 @@ def summarize(
                     
                     result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
 
-                result_column_dict[result_column] = ['']
+                result_column_dict[''] = [result_column]
 
-                result_list.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
+                result_list_tail.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
 
             elif result_column not in skip_rename:
                 
@@ -1585,6 +1589,8 @@ def summarize(
                     log.error( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
 
                     return
+
+        result_list = result_list + result_list_tail
 
         if return_data_as == "":
             
