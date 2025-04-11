@@ -1525,6 +1525,8 @@ def summarize(
                 
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
 
+                result_column_dict = dict()
+
                 # Hard-coding this is fragile, but safe for now and there's a lot to do.
 
                 for key in [ 'mean', 'max', 'upper_quartile', 'median', 'lower_quartile', 'min' ]:
