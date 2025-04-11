@@ -1521,7 +1521,15 @@ def summarize(
 
         for result_column in result_dataframe.columns:
             
-            if result_column not in skip_rename:
+            if result_column in [ 'file_data_source_count_summary', 'subject_data_source_count_summary' ]:
+                
+                # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
+
+                result_column_dict = result_dataframe[result_column[0]]
+
+                result_list.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
+
+            elif result_column not in skip_rename:
                 
                 # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
 
