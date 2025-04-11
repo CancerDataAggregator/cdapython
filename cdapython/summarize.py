@@ -1458,7 +1458,7 @@ def summarize(
 
     # This is immensely verbose, sometimes.
 
-    print paged_response_data_object.keys()
+    print( paged_response_data_object.keys() )
 
     log.debug( f"/summary/{table} endpoint response: {json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
 
