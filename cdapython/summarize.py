@@ -1610,15 +1610,13 @@ def summarize(
 
                     if len( print_df.columns ) == 1:
                         
-                        maxcolwidths_list = [ None ]
-
                         colalign_list = [ "left" ]
 
                     elif 'count_result' in print_df.columns.values:
                         
                         maxcolwidths_list = [ None, max_col_width ]
 
-                        colalign_list = [ "right", "left" ]
+                        colalign_list = [ "right", "right" ]
 
                         # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
 
@@ -1638,14 +1636,17 @@ def summarize(
 
                         result_dict = {
                             
+                            '': list(),
                             result_name: list()
                         }
 
                         # Hard-coding this is fragile, but safe for now and there's a lot to do.
 
-                        for key in [ 'min', 'lower_quartile', 'median', 'upper_quartile', 'max', 'mean' ]:
+                        for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
                             
-                            result_dict[result_name].append( f"{re.sub( r'_', r' ', key )}: {print_df[key][0]:>15}" )
+                            result_dict[''].append( f"{re.sub( r'_', r' ', key )}" )
+
+                            result_dict[result_name].append( f"{print_df[key][0]:>15}" )
 
                         print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
 
