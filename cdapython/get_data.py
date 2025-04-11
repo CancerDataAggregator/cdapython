@@ -1,52 +1,38 @@
 import json
-import re
-
 import pandas as pd
-from pandas.api.types import is_numeric_dtype
+import re
 
 import cda_client
 
-# from cda_client.rest import ApiException
+from pandas.api.types import is_numeric_dtype
+
+from cdapython.logging_wrappers import get_logger
+from cdapython.discover import columns
+
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
 from cda_client.models.q_node import QNode
 from cdapython.application_utilities import get_api_client, cleanup_match_statement, cleanup_inputs, verify_inputs, build_match_from_file_filter
-from cdapython.logging_wrappers import get_logger
-from cdapython.explore import columns
 
 
+#############################################################################################################################
+#############################################################################################################################
 # Nomenclature notes:
 #
 # * try to standardize all potential user-facing synonyms for basic database data structures
 #   (field, entity, endpoint, cell, value, term, etc.) to "table", "column", "row" and "value".
-
-
-class CdaApiQueryEncoder(json.JSONEncoder):
-    def default(self, o):
-        if type(o) == "mappingproxy":
-            return None
-
-        tmp_dict = vars(o)
-
-        if "query" in tmp_dict:
-            return tmp_dict["query"]
-
-        if "_data_store" in tmp_dict:
-            return tmp_dict["_data_store"]
-
-        return None
-
-
+#############################################################################################################################
+#############################################################################################################################
 
 
 #############################################################################################################################
 #
-# fetch_rows( table=`table` ): Get CDA data records ('result rows') from `table` that match user-specified criteria.
+# get_data( table=`table` ): Get CDA data records ('result rows') from `table` that match user-specified criteria.
 #
 #############################################################################################################################
 
 
-def fetch_rows(
+def get_data(
     table=None,
     *,
     match_all=[],
@@ -115,7 +101,7 @@ def fetch_rows(
             If `link_to` is specified, `add_columns` cannot be used.
 
         provenance ( boolean; optional ):
-            If True, fetch_rows() will attach cross-reference information
+            If True, get_data() will attach cross-reference information
             to each row result describing the upstream data sources from
             which it was derived. Rows deriving from more than one upstream
             source will be repeated in the output, once per data source, as
@@ -125,23 +111,23 @@ def fetch_rows(
             cannot be used.
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
-            Specify how fetch_rows() should return results: as a pandas DataFrame,
+            Specify how get_data() should return results: as a pandas DataFrame,
             or as output written to a TSV file named by the user. If this
-            argument is omitted, fetch_rows() will default to returning
+            argument is omitted, get_data() will default to returning
             results as a DataFrame.
 
         output_file ( string; optional ):
             If return_data_as='tsv' is specified, `output_file` should contain a
-            resolvable path to a file into which fetch_rows() will write
+            resolvable path to a file into which get_data() will write
             tab-delimited results.
 
         count_only ( boolean; optional ):
-            If set to True, fetch_rows() will return two integers: the number of CDA
+            If set to True, get_data() will return two integers: the number of CDA
             `table` rows matching the specified filters, and the total number of rows
             that this function would return if `count_only` were not True. (These numbers
             will be identical if no data from outside `table` has been joined to result
             rows (for example by using `link_to` or `add_columns` or
-            `provenance`). If `count_only` is set to False (the default), fetch_rows() will
+            `provenance`). If `count_only` is set to False (the default), get_data() will
             return a pandas DataFrame containing all CDA `table` rows that match the
             given filters.
 
@@ -174,13 +160,13 @@ def fetch_rows(
         the filters specified just above in the `match_all` argument, when querying
         the `subject` table, we can write:
 
-            fetch_rows( table='subject', match_all=[ 'primary_disease_type = *duct*', 'sex = F*' ] )
+            get_data( table='subject', match_all=[ 'primary_disease_type = *duct*', 'sex = F*' ] )
 
         NULL is a special VALUE which can be used to match missing data. For
         example, to get `researchsubject` rows where the `primary_diagnosis_site` field
         is missing data, we can write:
 
-            fetch_rows( table='researchsubject', match_all=[ 'primary_diagnosis_site = NULL' ] )
+            get_data( table='researchsubject', match_all=[ 'primary_diagnosis_site = NULL' ] )
 
     Returns:
         (Default) A pandas.DataFrame containing CDA `table` rows matching the user-specified
@@ -201,7 +187,7 @@ def fetch_rows(
 
     #############################################################################################################################
 
-    # cache the columns call and tables info so we don't have to call it more than once during fetch_rows
+    # cache the columns call and tables info so we don't have to call it more than once during get_data
     log = get_logger()
     column_values = columns(debug=debug)
 
@@ -295,7 +281,7 @@ def fetch_rows(
         # Complain if we receive an unexpected `return_data_as` value.
 
         log.critical(
-            f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'."
+            f"get_data(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'."
         )
 
         return
@@ -304,7 +290,7 @@ def fetch_rows(
         # If the user asks for TSV, they also have to give us a path for the output file. If they didn't, complain.
 
         log.critical(
-            "fetch_rows(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'."
+            "get_data(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'."
         )
 
         return
@@ -316,7 +302,7 @@ def fetch_rows(
         # so we complain and ask them to clarify.
 
         log.critical(
-            f"fetch_rows(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'."
+            f"get_data(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'."
         )
         log.critical("(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.).")
 
@@ -334,7 +320,7 @@ def fetch_rows(
     for item in match_all:
         if not isinstance(item, str) or len(item) == 0:
             log.critical(
-                f"fetch_rows(): ERROR: value assigned to 'match_all' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_all}', which is neither."
+                f"get_data(): ERROR: value assigned to 'match_all' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_all}', which is neither."
             )
 
             return
@@ -343,7 +329,7 @@ def fetch_rows(
 
         if re.search(r"^\S+\s+\S+\s+\S.*$", item) is None:
             log.critical(
-                f"fetch_rows(): ERROR: match_all: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format."
+                f"get_data(): ERROR: match_all: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format."
             )
 
             return
@@ -355,7 +341,7 @@ def fetch_rows(
     for item in match_any:
         if not isinstance(item, str) or len(item) == 0:
             log.critical(
-                f"fetch_rows(): ERROR: value assigned to 'match_any' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_any}', which is neither."
+                f"get_data(): ERROR: value assigned to 'match_any' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_any}', which is neither."
             )
 
             return
@@ -364,7 +350,7 @@ def fetch_rows(
 
         if re.search(r"^\S+\s+\S+\s+\S.*$", item) is None:
             log.critical(
-                f"fetch_rows(): ERROR: match_any: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format."
+                f"get_data(): ERROR: match_any: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format."
             )
 
             return
@@ -378,7 +364,7 @@ def fetch_rows(
     for item in data_source:
         if not isinstance(item, str) or len(item) == 0:
             log.critical(
-                f"fetch_rows(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither."
+                f"get_data(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither."
             )
 
             return
@@ -399,7 +385,7 @@ def fetch_rows(
     for item in data_source:
         if item not in allowed_data_source_values:
             log.critical(
-                f"fetch_rows(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{item}', which is not."
+                f"get_data(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{item}', which is not."
             )
 
             return
@@ -688,7 +674,7 @@ def fetch_rows(
 
         #         # This isn't anticipated. Yell if we get something unexpected.
 
-        #         log.critical( f"fetch_rows(): ERROR: Unexpected data type `{result_column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
+        #         log.critical( f"get_data(): ERROR: Unexpected data type `{result_column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
 
         #         return
 
@@ -764,13 +750,13 @@ def fetch_rows(
 
         except Exception as error:
             log.critical(
-                f"fetch_rows(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'."
+                f"get_data(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'."
             )
 
             return
 
     log.critical(
-        "fetch_rows(): ERROR: Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error."
+        "get_data(): ERROR: Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error."
     )
 
     return
@@ -778,7 +764,7 @@ def fetch_rows(
 
 #############################################################################################################################
 #
-# END fetch_rows
+# END get_data
 #
 #############################################################################################################################
 
