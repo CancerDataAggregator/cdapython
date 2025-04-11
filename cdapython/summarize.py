@@ -1531,13 +1531,13 @@ def summarize(
 
                 result_column_dict = dict()
 
+                result_column_dict[''] = [result_column]
+
                 # Hard-coding this is fragile, but safe for now and there's a lot to do.
 
-                for key in [ 'mean', 'max', 'upper_quartile', 'median', 'lower_quartile', 'min' ]:
+                for key in [ 'min', 'lower_quartile', 'median', 'upper_quartile', 'max', 'mean' ]:
                     
                     result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
-
-                result_column_dict[''] = [result_column]
 
                 result_list_tail.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
 
