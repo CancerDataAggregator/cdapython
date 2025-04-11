@@ -1645,7 +1645,7 @@ def summarize(
 
                         for key in [ 'min', 'lower_quartile', 'median', 'upper_quartile', 'max', 'mean' ]:
                             
-                            result_dict[result_name].append( f"{re.sub( r'_', r' ', key )}: {print_df[key][0]:>20}" )
+                            result_dict[result_name].append( f"{re.sub( r'_', r' ', key )}: {print_df[key][0]:>15}" )
 
                         print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
 
