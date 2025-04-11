@@ -1535,7 +1535,7 @@ def summarize(
 
                 # Hard-coding this is fragile, but safe for now and there's a lot to do.
 
-                for key in [ 'min', 'lower_quartile', 'median', 'upper_quartile', 'max', 'mean' ]:
+                for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
                     
                     result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
 
@@ -1680,36 +1680,58 @@ def summarize(
 
         for result_column in result_dataframe.columns:
             
-            if result_dataframe[result_column].dtype == "int64":
+            if result_column not in skip_rename and result_dataframe[result_column].dtype == 'object' and isinstance( result_dataframe[result_column][0], list ) and isinstance( result_dataframe[result_column][0][0], dict ) and 'median' in result_dataframe[result_column][0][0]:
                 
-                result_dict[result_column] = int( result_dataframe[result_column][0] )
+                # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
 
-            elif result_dataframe[result_column].dtype == "object":
-                
-                result_dict[result_column] = None
+                result_column_dict = dict()
 
-                if result_dataframe[result_column][0] is not None:
+                result_column_dict['cda_column_name'] = [result_column]
+
+                # Hard-coding this is fragile, but safe for now and there's a lot to do.
+
+                for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
                     
-                    # This cell should contain an array of Python dicts, with each dict containing two entries:
-                    #
-                    #    data column label and value:
-                    #       keyword: `result_column`, e.g. 'cause_of_death'
-                    #       value: one allowable value for `result_column`, e.g. 'Cancer-Related Death'
-                    # 
-                    #    observed count of the given value:
-                    #       keyword: 'count_result'
-                    #       value: (int) number of times the given data value (described in the previous dictionary entry) was observed in this set of result data
+                    result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
 
-                    result_dict[result_column] = dict()
+                result_dict[result_column] = dict()
 
-                    for dict_pair in result_dataframe[result_column][0]:
-                        
-                        result_dict[result_column][dict_pair[result_column]] = dict_pair["count_result"]
+                for key in result_column_dict:
+                    
+                    result_dict[result_column][key] = result_column_dict[key]
 
-            else:
+            elif result_column not in skip_rename:
                 
-                log.error( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
-                return
+                if result_dataframe[result_column].dtype == "int64":
+                    
+                    result_dict[result_column] = int( result_dataframe[result_column][0] )
+
+                elif result_dataframe[result_column].dtype == "object":
+                    
+                    result_dict[result_column] = None
+
+                    if result_dataframe[result_column][0] is not None:
+                        
+                        # This cell should contain an array of Python dicts, with each dict containing two entries:
+                        #
+                        #    data column label and value:
+                        #       keyword: `result_column`, e.g. 'cause_of_death'
+                        #       value: one allowable value for `result_column`, e.g. 'Cancer-Related Death'
+                        # 
+                        #    observed count of the given value:
+                        #       keyword: 'count_result'
+                        #       value: (int) number of times the given data value (described in the previous dictionary entry) was observed in this set of result data
+
+                        result_dict[result_column] = dict()
+
+                        for dict_pair in result_dataframe[result_column][0]:
+                            
+                            result_dict[result_column][dict_pair[result_column]] = dict_pair["count_result"]
+
+                else:
+                    
+                    log.error( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
+                    return
 
         if return_data_as == "dict":
             
