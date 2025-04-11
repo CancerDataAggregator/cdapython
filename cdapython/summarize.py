@@ -1628,7 +1628,7 @@ def summarize(
 
                     elif 'median' in print_df.columns.values:
                         
-                        result_name = print_df[0][0]
+                        result_name = print_df.columns[0][0]
 
                         result_dict = {
                             
