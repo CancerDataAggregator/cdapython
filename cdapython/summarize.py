@@ -1521,11 +1521,11 @@ def summarize(
 
         for result_column in result_dataframe.columns:
             
-            if result_dataframe[result_column].dtype == 'object' and isinstance( result_dataframe[result_column][0], dict ) and 'median' in result_dataframe[result_column][0]:
+            if result_dataframe[result_column].dtype == 'object' and isinstance( result_dataframe[result_column][0], list ) and isinstance( result_dataframe[result_column][0][0], dict ) and 'median' in result_dataframe[result_column][0][0]:
                 
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
 
-                result_column_dict = result_dataframe[result_column[0]]
+                result_column_dict = result_dataframe[result_column][0][0]
 
                 result_list.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
 
