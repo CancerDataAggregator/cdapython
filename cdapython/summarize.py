@@ -1523,6 +1523,8 @@ def summarize(
 
         result_list_tail = list()
 
+        print( "ding" )
+
         for result_column in result_dataframe.columns:
             
             if result_column not in skip_rename and result_dataframe[result_column].dtype == 'object' and isinstance( result_dataframe[result_column][0], list ) and isinstance( result_dataframe[result_column][0][0], dict ) and 'median' in result_dataframe[result_column][0][0]:
