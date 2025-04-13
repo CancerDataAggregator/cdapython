@@ -150,23 +150,23 @@ def summarize_files(
         list of pandas DataFrames, with one DataFrame for each summarized column,
         enumerating counts (or statistically summarizing unbounded numeric values) over all
         of that column's data values appearing in any file rows that match the
-        user-specified filter critera (the 'result rows'). Two DataFrames
-        in this list -- 'total_file_matches' and 'total_related_subjects' -- will contain integers
-        representing the total number of result file rows and the total number of related
-        subjects, respectively. All other DataFrames in the list will each be titled with
-        a CDA column name and will contain value counts or statistical summaries for that column
-        as filtered by the result row set.
+        user-specified filter critera (the 'result rows'). Two DataFrames in this list --
+        'number_of_matching_files' and 'number_of_subjects_related_to_matching_files' --
+        will contain integers representing the total number of result file rows and the
+        total number of related subjects, respectively. Every other DataFrame in the list
+        will be titled with a CDA column name and will contain value counts or statistical
+        summaries for that column as filtered by the result row set.
 
         OR Python dictionary enumerating counts of all data values for each summarized column
         (or a statistical summary of those data values, in the case of unbounded numeric data)
         across all file rows that match the user-specified filter criteria (the 'result rows').
-        Two summary keys in this dictionary -- 'total_file_matches' and 'total_related_subjects' --
-        will point to integers representing the total number of result file rows and the total number
-        of associated subject rows, respectively. All other keys in the dictionary will
-        each contain a CDA column name; each corresponding value will itself be a dictionary
-        either enumerating observed counts of all values appearing in that column as filtered by
-        the result row set, or encoding a statistical summary of those values in the case
-        of unbounded numeric data.
+        Two summary keys in this dictionary -- 'number_of_matching_files' and
+        'number_of_subjects_related_to_matching_files' -- will point to integers representing
+        the total number of result file rows and the total number of associated subject rows,
+        respectively. Every other key in the dictionary will contain a CDA column name; every
+        dictionary value will itself be a dictionary either enumerating observed counts of all
+        values appearing in that column as filtered by the result row set, or encoding a
+        statistical summary of those values in the case of unbounded numeric data.
 
         OR JSON-formatted text representing the same structure as the `return_data_as='dict'`
         option, written to `output_file`.
@@ -293,23 +293,23 @@ def summarize_subjects(
         list of pandas DataFrames, with one DataFrame for each summarized column,
         enumerating counts (or statistically summarizing unbounded numeric values) over all
         of that column's data values appearing in any subject rows that match the
-        user-specified filter critera (the 'result rows'). Two DataFrames
-        in this list -- 'total_subject_matches' and 'total_related_files' -- will contain integers
-        representing the total number of result subject rows and the total number of related
-        files, respectively. All other DataFrames in the list will each be titled with
-        a CDA column name and will contain value counts or statistical summaries for that column
-        as filtered by the result row set.
+        user-specified filter critera (the 'result rows'). Two DataFrames in this list --
+        'number_of_matching_subjects' and 'number_of_files_related_to_matching_subjects' --
+        will contain integers representing the total number of result subject rows and the
+        total number of related files, respectively. Every other DataFrame in the list
+        will be titled with a CDA column name and will contain value counts or statistical
+        summaries for that column as filtered by the result row set.
 
         OR Python dictionary enumerating counts of all data values for each summarized column
         (or a statistical summary of those data values, in the case of unbounded numeric data)
         across all subject rows that match the user-specified filter criteria (the 'result rows').
-        Two summary keys in this dictionary -- 'total_subject_matches' and 'total_related_files' --
-        will point to integers representing the total number of result subject rows and the total number
-        of associated file rows, respectively. All other keys in the dictionary will
-        each contain a CDA column name; each corresponding value will itself be a dictionary
-        either enumerating observed counts of all values appearing in that column as filtered by
-        the result row set, or encoding a statistical summary of those values in the case
-        of unbounded numeric data.
+        Two summary keys in this dictionary -- 'number_of_matching_subjects' and
+        'number_of_files_related_to_matching_subjects' -- will point to integers representing
+        the total number of result subject rows and the total number of associated file rows,
+        respectively. Every other key in the dictionary will contain a CDA column name; every
+        dictionary value will itself be a dictionary either enumerating observed counts of all
+        values appearing in that column as filtered by the result row set, or encoding a
+        statistical summary of those values in the case of unbounded numeric data.
 
         OR JSON-formatted text representing the same structure as the `return_data_as='dict'`
         option, written to `output_file`.
@@ -355,9 +355,8 @@ def summarize(
     set of rows, profiled across (user-modifiable) columns of interest.
 
     Arguments:
-        table ( string; required ):
-            The table whose rows are to be filtered and counted. (Run the tables()
-            function to get a list.)
+        table ( string; required: 'file' or 'subject' ):
+            The CDA table to be queried and summarized.
 
         return_data_as ( string; optional: 'dataframe_list' or 'dict' or 'json' ):
             Specify how summarize() should return results: as a list
@@ -441,28 +440,29 @@ def summarize(
         list of pandas DataFrames, with one DataFrame for each summarized column,
         enumerating counts (or statistically summarizing unbounded numeric values) over all
         of that column's data values appearing in any rows that match the
-        user-specified filter critera (the 'result rows'). Three special DataFrames
-        -- 'total_matches', 'total_related_files' and 'total_related_subjects' --
-        may appear in this list, containing integers representing the total number of
-        result rows, the total number of related file rows, and the total number of related
-        subject rows, respectively, as appropriate. Summaries for table='subject' will include
-        a count of all related files; summaries for table='file' will include a count of
-        all related subjects. All other DataFrames in the list will each be titled with
-        a CDA column name and will contain value counts or statistical summaries for that column
-        as filtered by the result row set.
+        user-specified filter critera (the 'result rows'). Two of four possible special
+        DataFrames in this list ('number_of_matching_files', 'number_of_matching_subjects',
+        'number_of_subjects_related_to_matching_files', 'number_of_files_related_to_matching_subjects')
+        will contain integers representing the total number of result rows and the
+        total number of result-related rows in another table, as appropriate. Summaries for
+        table='subject' will include a count of all related files; summaries for table='file'
+        will include a count of all related subjects. Every other DataFrame in the list
+        will be titled with a CDA column name and will contain value counts or statistical
+        summaries for that column as filtered by the result row set.
 
         OR Python dictionary enumerating counts of all data values for each summarized column
         (or a statistical summary of those data values, in the case of unbounded numeric data)
         across all rows that match the user-specified filter criteria (the 'result rows').
-        Three special summary keys -- 'total_matches', 'total_related_subjects' and 'total_related_files'
-        -- may appear in this dictionary, pointing to integers representing the total number of
-        result rows, the total number of related file rows, and the total number of related
-        subject rows, respectively, as appropriate. Summaries for table='subject' will include
-        a count of all related files; summaries for table='file' will include a count of
-        all related subjects. All other keys in the dictionary will each contain a CDA column
-        name; each corresponding value will itself be a dictionary either enumerating observed
-        counts of all values appearing in that column as filtered by the result row set,
-        or encoding a statistical summary of those values in the case of unbounded numeric data.
+        Two of four possible special summary keys in this dictionary ('number_of_matching_files',
+        'number_of_matching_subjects', 'number_of_subjects_related_to_matching_files',
+        'number_of_files_related_to_matching_subjects') will point to integers representing
+        the total number of result rows and the total number of result-related rows in another
+        table, as appropriate. Summaries for table='subject' will include a count of all related
+        files; summaries for table='file' will include a count of all related subjects. Every
+        other key in the dictionary will contain a CDA column name; every dictionary value will
+        itself be a dictionary either enumerating observed counts of all values appearing in
+        that column as filtered by the result row set, or encoding a statistical summary of
+        those values in the case of unbounded numeric data.
 
         OR JSON-formatted text representing the same structure as the `return_data_as='dict'`
         option, written to `output_file`.
@@ -1470,7 +1470,12 @@ def summarize(
     # For some reason, the highest-level summary counts come through as floats. Fix that
     # (and rename them while we're at it).
 
-    toplevel_columns_to_fix = {"total_count": f"total_matches", "file_count": "total_related_files", "subject_count": "total_related_subjects"}
+    toplevel_columns_to_fix = {
+        
+        'total_count': 'number_of_matching_files' if table == 'file' else 'number_of_matching_subjects' if table == 'subject' else 'number_of_matching_rows',
+        'file_count': 'number_of_files_related_to_matching_subjects',
+        'subject_count': 'number_of_subjects_related_to_matching_files'
+    }
 
     for result_column in toplevel_columns_to_fix:
         
@@ -1486,9 +1491,11 @@ def summarize(
         'data_source',
         'file_data_source_count_summary',
         'subject_data_source_count_summary',
-        'total_matches',
-        'total_related_files',
-        'total_related_subjects'
+        'number_of_matching_files',
+        'number_of_matching_subjects',
+        'number_of_matching_rows',
+        'number_of_files_related_to_matching_subjects',
+        'number_of_files_related_to_matching_subjects'
     }
 
     result_column_names = result_dataframe.columns.values
@@ -1511,7 +1518,7 @@ def summarize(
 
         result_list = list()
 
-        for toplevel_column in [ "total_matches", "total_related_files", "total_related_subjects" ]:
+        for toplevel_column in [ 'number_of_matching_files', 'number_of_matching_subjects', 'number_of_matching_rows', 'number_of_files_related_to_matching_subjects', 'number_of_files_related_to_matching_subjects' ]:
             
             if toplevel_column in result_dataframe:
                 
@@ -1522,8 +1529,6 @@ def summarize(
         # Put the numeric summaries at the end of the displayed block of results.
 
         result_list_tail = list()
-
-        print( "ding" )
 
         for result_column in result_dataframe.columns:
             
