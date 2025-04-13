@@ -1495,7 +1495,7 @@ def summarize(
         'number_of_matching_subjects',
         'number_of_matching_rows',
         'number_of_files_related_to_matching_subjects',
-        'number_of_files_related_to_matching_subjects'
+        'number_of_subjects_related_to_matching_files'
     }
 
     result_column_names = result_dataframe.columns.values
@@ -1518,7 +1518,7 @@ def summarize(
 
         result_list = list()
 
-        for toplevel_column in [ 'number_of_matching_files', 'number_of_matching_subjects', 'number_of_matching_rows', 'number_of_files_related_to_matching_subjects', 'number_of_files_related_to_matching_subjects' ]:
+        for toplevel_column in [ 'number_of_matching_files', 'number_of_matching_subjects', 'number_of_matching_rows', 'number_of_files_related_to_matching_subjects', 'number_of_subjects_related_to_matching_files' ]:
             
             if toplevel_column in result_dataframe:
                 
