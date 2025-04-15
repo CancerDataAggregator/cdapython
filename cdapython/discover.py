@@ -73,7 +73,13 @@ def tables():
 #############################################################################################################################
 
 
-def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **filter_arguments):
+def columns(
+    *,
+    return_data_as='',
+    output_file='',
+    sort_by='',
+    **filter_arguments
+):
     """
     Get structured metadata describing searchable CDA columns.
 
@@ -415,10 +421,6 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
 
     result_dataframe = pd.DataFrame.from_records( columns_response_data_object.to_dict()['result'], columns=[ 'table', 'column', 'data_type', 'nullable', 'description' ] )
 
-    ### TO DO: REPLACE { `table`_data_at_X } with [ 'GDC', 'PDC', 'CDS' ]
-
-    # here
-
     # Remove `table`_data_source_count and *_alias columns from output.
 
     banned_column_name_patterns = {
@@ -680,7 +682,14 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
 
 
 def column_values(
-    column='', *, return_data_as='', output_file='', sort_by='', filters=None, data_source='', force=False, debug = False
+    column='',
+    *,
+    return_data_as='',
+    output_file='',
+    sort_by='',
+    filters=None,
+    data_source='',
+    force=False
 ):
     """
     Show all distinct values present in `column`, along with a count
@@ -730,7 +739,7 @@ def column_values(
 
         data_source ( string; optional ):
             Restrict returned values to the given upstream data source. Current
-            valid values are 'GDC', 'IDC', 'PDC', 'CDS' and 'ICDC'.
+            valid values are 'GDC', 'PDC', 'IDC', 'CDS' and 'ICDC'.
             Defaults to '' (no filter).
 
         force( boolean; optional ):
@@ -744,74 +753,92 @@ def column_values(
         pandas.DataFrame OR list OR returns nothing, but writes retrieved
         data to a user-specified TSV file
     """
+
     log = get_logger()
 
-
     #############################################################################################################################
-    # Check for our one required parameter.
+    # Check for our one required parameter: column.
 
-    if (not isinstance(column, str)) or column == '':
+    if ( not isinstance( column, str ) ) or column == '':
         log.critical( 'column_values(): ERROR: parameter \'column\' cannot be omitted. Please specify a column from which to fetch a list of distinct values.')
-
         return
 
-    # If there's whitespace in our column name, remove it before it does any damage.
+    # Let's not care about case, and if there's whitespace in our column name, remove it before it does any damage.
+    column = re.sub( r'\s+', r'', column ).lower()
 
-    column = re.sub(r'\s+', r'', column)
+    # See if columns() agrees that the requested column exists. Note: cdapython.columns() and
+    # the API's /columns endpoint give different sets of columns, by design. Here we want our output
+    # to match the former, because we postprocess some of the columns offered by the API instead of
+    # exposing them directly.
 
-    # Let's not care about case.
+    if len( columns( column=column, return_data_as='list' ) ) == 0:
+        log.critical( f"column_values(): ERROR: parameter 'column' must be a searchable CDA column name. You supplied '{column}', which is not." )
+        return
 
-    column = column.lower()
-
-    # # See if columns() agrees that the requested column exists.
-    # if len(columns(column=column, return_data_as='list')) == 0:
-    #     log.critical(
-    #         f"column_values(): ERROR: parameter 'column' must be a searchable CDA column name. You supplied '{column}', which is not."
-    #     )
-
-    #     return
     #############################################################################################################################
-    # Manage basic validation for the `data_source` parameter, which describes user-specified filtration on upstream data
-    # sources.
+    # Check the data_source parameter.
 
-    if not isinstance(data_source, str):
-        log.critical(
-            f"column_values(): ERROR: value assigned to 'data_source' parameter must be a string (e.g. 'GDC'); you specified '{data_source}', which is not."
-        )
-
+    if not isinstance( data_source, str ):
+        log.critical( f"column_values(): ERROR: value assigned to 'data_source' parameter must be a string (e.g. 'GDC'); you specified '{data_source}', which is not." )
         return
+
+    # Let's not care about case, and remove any whitespace before it can do any damage.
+    data_source = re.sub( r'\s+', r'', data_source ).upper()
 
     # TEMPORARY: enumerate valid `data_source` values and warn the user if they supplied something else.
-    # At time of writing this is too expensive to retrieve dynamically from the API,
-    # so the valid value list is hard-coded here and in the docstring for this function.
     #
-    # This should be replaced ASAP with a fetch from a 'release metadata' table or something
-    # similar.
+    # This should be replaced ASAP with a fetch from the /release_metadata endpoint.
 
-    allowed_data_source_values = {'GDC', 'PDC', 'IDC', 'CDS', 'ICDC'}
+    allowed_data_source_values = {
+        'GDC',
+        'PDC',
+        'IDC',
+        'CDS',
+        'ICDC'
+    }
 
-    if data_source != '':
-        # Let us not care about case, and remove any whitespace before it can do any damage.
-
-        data_source = re.sub(r'\s+', r'', data_source).upper()
-
-        if data_source not in allowed_data_source_values:
-            log.critical(
-                f"column_values(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{data_source}', which is not."
-            )
-
-            return
+    if data_source != '' and data_source not in allowed_data_source_values:
+        log.critical( f"column_values(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{data_source}', which is not." )
+        return
 
     #############################################################################################################################
     # Check in advance for columns flagged as high-overhead.
 
-    expensive_columns = {'file_id', 'byte_size', 'checksum', 'drs_uri', 'file_integer_id_alias', 'label'}
+    expensive_columns = {
+        'file_id',
+        'file_crdc_id',
+        'description',
+        'drs_uri',
+        'file_crdc_id',
+        'file_name',
+        'size',
+        'case_id',
+        'hgnc_id',
+        'transcript_id',
+        'aliquot_barcode_normal',
+        'aliquot_barcode_tumor',
+        'case_barcode',
+        'dbsnp_rs',
+        'entrez_gene_id',
+        'gene',
+        'hugo_symbol',
+        'matched_norm_aliquot_uuid',
+        'normal_submitter_uuid',
+        'reference_allele',
+        'sample_barcode_normal',
+        'sample_barcode_tumor',
+        'tumor_aliquot_uuid',
+        'tumor_seq_allele1',
+        'tumor_seq_allele2',
+        'tumor_submitter_uuid',
+        'subject_id',
+        'subject_crdc_id'
+    }
+
+    # Warn the user if an override hasn't been requested.
 
     if not force and column in expensive_columns:
-        log.critical(
-            f"column_values(): WARNING: '{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' )."
-        )
-
+        log.critical( f"column_values(): WARNING: '{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' )." )
         return
 
     #############################################################################################################################
@@ -819,24 +846,24 @@ def column_values(
 
     if filters is None:
         filters = list()
-
-    elif isinstance(filters, str):
-        filters = [filters]
+    elif isinstance( filters, str ):
+        filters = [ filters ]
 
     #############################################################################################################################
-    # Process return-type directives.
+    # Process return_data_as and output_file directives.
 
-    allowed_return_types = {'', 'dataframe', 'tsv', 'list'}
+    allowed_return_types = {
+        '',
+        'dataframe',
+        'tsv',
+        'list'
+    }
 
-    if not isinstance(return_data_as, str):
-        log.critical(
-            f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'."
-        )
-
+    if not isinstance( return_data_as, str ):
+        log.critical( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
         return
 
     # Let's not be picky if someone wants to give us return_data_as='DataFrame' or return_data_as='TSV'
-
     return_data_as = return_data_as.lower()
 
     # We can't do much validation on filenames. If `output_file` isn't
@@ -844,35 +871,30 @@ def column_values(
     # writing. Strip trailing whitespace from both ends and wrap the
     # file-access operation (later, below) in a try{} block.
 
-    if not isinstance(output_file, str):
-        log.critical(
-            f"column_values(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path."
-        )
-
+    if not isinstance( output_file, str ):
+        log.critical( f"column_values(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path." )
         return
 
     output_file = output_file.strip()
 
     if return_data_as not in allowed_return_types:
-        log.critical(
-            f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'."
-        )
-
+        
+        log.critical( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
         return
 
     elif return_data_as == 'tsv' and output_file == '':
+        
         log.critical( 'column_values(): ERROR: return type \'tsv\' requested, but \'output_file\' not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to\'.')
-
         return
 
     elif return_data_as != 'tsv' and output_file != '':
+        
         # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
         # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
         # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
         # so we complain and ask them to clarify.
 
-        log.critical( f"column_values(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
-
+        log.error( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
         return
 
     #############################################################################################################################
@@ -881,52 +903,52 @@ def column_values(
     # Enumerate all allowed values that a user can specify using the `sort_by` parameter. ( 'X:asc' will be aliased immediately to just 'X'. )
 
     allowed_sort_by_options = {
-        'list': {'', 'value', 'value:desc'},
-        'dataframe_or_tsv': {'', 'count', 'count:desc', 'value', 'value:desc'},
+        'list': {
+            '',
+            'value',
+            'value:desc'
+        },
+        'dataframe_or_tsv': {
+            '',
+            'count',
+            'count:desc',
+            'value',
+            'value:desc'
+        }
     }
 
-    if not isinstance(sort_by, str):
+    if not isinstance( sort_by, str ):
+        
         # Complain if we receive any unexpected data types instead of string directives.
 
-        log.critical(f"column_values(): ERROR: 'sort_by' must be a string; you used '{sort_by}', which is not.")
-
+        log.critical( f"column_values(): ERROR: 'sort_by' must be a string; you used '{sort_by}', which is not." )
         return
 
-    # Let's not care about case.
-
-    sort_by = sort_by.lower()
-
-    # ':asc' is redundant. Remove it (politely).
-
-    sort_by = re.sub(r':asc$', r'', sort_by)
+    # Let's not care about case. Also, ':asc' is redundant: remove it (politely).
+    sort_by = re.sub( r':asc$', r'', sort_by ).lower()
 
     if return_data_as == 'list':
+        
         # Restrict sorting options for lists.
 
         if sort_by == '':
             sort_by = 'value'
-
         elif sort_by not in allowed_sort_by_options['list']:
-            log.critical(
-                f"column_values(): ERROR: return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again."
-            )
-
+            log.critical( f"column_values(): ERROR: return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again." )
             return
 
     else:
+        
         # For TSV output files and DataFrames, we support more user-configurable options (defaulting to sort_by='count:desc'):
 
         if sort_by == '':
             sort_by = 'count:desc'
-
         elif sort_by not in allowed_sort_by_options['dataframe_or_tsv']:
-            log.critical(
-                f"column_values(): ERROR: unrecognized sort_by '{sort_by}'. Please use one of 'count', 'value', 'count:desc', 'value:desc', 'count:asc' or 'value:asc' (or omit the sort_by parameter altogether)."
-            )
-
+            log.critical( f"column_values(): ERROR: unrecognized sort_by '{sort_by}'. Please use one of 'count', 'value', 'count:desc', 'value:desc', 'count:asc' or 'value:asc' (or omit the sort_by parameter altogether)." )
             return
 
-    # Report details of the final parsed sort logic.
+    #############################################################################################################################
+    # Report details of the final parsed parameters.
 
     parameter_dict = {
         'column': column,
@@ -944,32 +966,25 @@ def column_values(
     # Fetch data from the API.
 
     query_api_instance = get_api_client()
-    columnname = column  # str |
-    system = data_source  # str |  (optional) (default to '')
-    count = True  # bool |  (optional) (default to False)
-    total_count = True  # bool |  (optional) (default to False)
-    records_per_page = 500000  # int |  (optional)
-    starting_offset = 0  # int |  (optional)
+    
+    records_per_page = 500000
+    starting_offset = 0
 
-    # try:
-    # Unique Values Endpoint
-    with query_api_instance as client:
-        paged_response_data_object = (
-            cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post.sync(
-                client=client,
-                columnname=columnname,
-                system=system,
-                count=count,
-                total_count=total_count,
-                limit=records_per_page,
-                offset=starting_offset,
-            )
+    paged_response_data_object = (
+        
+        cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post.sync(
+            
+            client=query_api_instance,
+            columnname=column,
+            system=data_source,
+            count=True,
+            total_count=True,
+            limit=records_per_page,
+            offset=starting_offset,
         )
+    )
 
-    # except Exception as e:
-    #    print("Exception when calling UniqueValuesApi->unique_values_endpoint_unique_values_columnname_post: %s\n" % e)
-
-    log.debug( 'Querying CDA API \'unique_values\' endpoint' )
+    log.debug( 'Querying CDA API \'unique_values\' endpoint: columnname={column}; system={data_source}; count=True; total_count=True; limit={records_per_page}; offset={starting_offset}' )
 
     # Report some metadata about the results we got back.
 
@@ -980,9 +995,29 @@ def column_values(
     # Make a Pandas DataFrame out of the first batch of results.
     #
     # The API returns responses in JSON format: convert that JSON into a DataFrame
-    # using pandas' json_normalize() function.
+    # using pandas' json_normalize() function. Example JSON response:
+    #
+    # {
+    #     "result": [
+    #             {
+    #                 "sex": "female",
+    #                 "value_count": 31215
+    #             },
+    #             {
+    #                 "sex": "male",
+    #                 "value_count": 28571
+    #             },
+    #             {
+    #                 "sex": null,
+    #                 "value_count": 64240
+    #             }
+    #     ],
+    #     "query_sql": "SELECT row_to_json(column_json) AS row_to_json_1 FROM (SELECT observation.sex AS sex, count(*) AS value_count FROM observation WHERE observation.data_at_gdc IS true GROUP BY observation.sex ORDER BY observation.sex) AS column_json",
+    #     "total_row_count": 3,
+    #     "next_url": null
+    # }
 
-    result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()['result'])
+    result_dataframe = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
 
     # The data we've fetched so far might be just the first page (if the total number
     # of results is greater than `records_per_page`).
@@ -993,109 +1028,38 @@ def column_values(
     incremented_offset = starting_offset + records_per_page
 
     more_than_one_result_page = False
+
     if paged_response_data_object.next_url is not None:
         log.debug( 'Fetching remaining results in pages...' )
-
         more_than_one_result_page = True
 
-    while paged_response_data_object.next_url is not None and len(paged_response_data_object.next_url) > 0:
+    while paged_response_data_object.next_url is not None and len( paged_response_data_object.next_url ) > 0:
+        
         log.debug( f"   ...fetching {paged_response_data_object.next_url}..." )
 
-        # Note that the API doesn't preserve all the query parameters we included
-        # in our original request, e.g.:
-        #
-        # (original request)
-        #     http://localhost:8080/api/v1/unique-values?count=true&includeCount=true&offset=0&limit=100
-        #
-        # vs
-        #
-        # (the `next_url` value in the response to the above)
-        #     http://localhost:8080/api/v1/unique-values?offset=100&limit=100
-        #
-        # ...so we have to put the lost parameters back, in the form of arguments to
-        # the `unique_values` endpoint call just below. Note that we're not actually using
-        # the `next_url` value in the following call, because it's incomplete. We're just
-        # checking to see if it exists (in the while-loop condition governing this block),
-        # so we can determine whether or not to continue fetching more pages:
-
-        # paged_response_data_object = query_api_instance.unique_values(
-        #     body=column,
-        #     system=data_source,
-        #     count=True,
-        #     async_req=True,
-        #     offset=incremented_offset,
-        #     limit=records_per_page,
-        #     include_count=True
-        # )
-
-        paged_response_data_object = query_api_instance.unique_values_endpoint_unique_values_columnname_post(
-            columnname,
-            system=system,
-            count=count,
-            total_count=total_count,
-            limit=records_per_page,
-            offset=incremented_offset,
+        paged_response_data_object = (
+            
+            cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post.sync(
+                
+                client=query_api_instance,
+                columnname=column,
+                system=data_source,
+                count=True,
+                total_count=True,
+                limit=records_per_page,
+                offset=incremented_offset,
+            )
         )
 
-        # if isinstance( paged_response_data_object, UniqueValueResponseObj ):
-
-        #     while paged_response_data_object.ready() is False:
-
-        #         paged_response_data_object.wait( 5 )
-
-        #     try:
-
-        #         paged_response_data_object = paged_response_data_object.get()
-
-        #     except ApiException as e:
-
-        #         try:
-
-        #             # Ordinarily, this exception represents a structured complaint
-        #             # from the API service that something went wrong. In this case,
-        #             # the `body` property of the ApiException object will contain
-        #             # a JSON-encoded message generated by the API describing the
-        #             # unfortunate circumstance.
-
-        #             error_message = json.loads( e.body )['message']
-
-        #         except:
-
-        #             # Unfortunately, if something goes wrong at the level of the
-        #             # HTTP service on which the API relies -- that is, when we
-        #             # can't actually communicate with the API as such because
-        #             # something's gone wrong with our ability to talk to the web
-        #             # server -- the ApiException class is overloaded to encode
-        #             # that HTTP protocol error (and not throw any further exceptions),
-        #             # instead of handling such events somewhere more appropriate
-        #             # (like via a different exception class altogether).
-
-        #             error_message = str( e )
-
-        #         print( f"column_values(): ERROR: error message from API: '{error_message}'.", file=sys.stderr )
-
-        #         return
-
-        #     except BaseException as e:
-
-        #         if re.search( 'urllib3.exceptions.MaxRetryError', str( type(e) ) ) is not None:
-
-        #             print( 'column_values(): ERROR: Can\'t connect to the CDA API service.', file=sys.stderr )
-
-        #         else:
-
-        #             print( f"column_values(): ERROR: Something ({type(e)}) went wrong when trying to connect to the API. Please check settings (rerunning the last call with debug=True will give more information).", file=sys.stderr )
-
-        #         return
-
-        next_result_batch = pd.json_normalize(paged_response_data_object.to_dict()['result'])
+        next_result_batch = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
 
         if not result_dataframe.empty and not next_result_batch.empty:
+            
             # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
 
-            next_result_batch = next_result_batch.astype(result_dataframe.dtypes)
+            next_result_batch = next_result_batch.astype( result_dataframe.dtypes )
 
-            result_dataframe = pd.concat([result_dataframe, next_result_batch])
+            result_dataframe = pd.concat( [result_dataframe, next_result_batch] )
 
         incremented_offset = incremented_offset + records_per_page
 
@@ -1105,25 +1069,27 @@ def column_values(
     #############################################################################################################################
     # Postprocess API result data, if there is any.
 
-    if len(result_dataframe) == 0:
+    if len( result_dataframe ) == 0:
         return result_dataframe
 
     log.debug( 'Postprocessing results' )
 
     log.debug( 'Casting counts to integers and fixing symmetry for returned column labels...' )
 
-    # Term-count values come in as floats. Make them not that.
+    # Sanity check on expected result column 'value_count':
 
     if 'value_count' not in result_dataframe.columns:
-        log.critical('Expected column \'value_count\' not present in API response.')
+        log.error( 'Expected column \'value_count\' not present in API response.' )
         return
 
-    result_dataframe['value_count'] = result_dataframe['value_count'].astype(int)
+    # Term-count values come in as floats. Make them not that.
+
+    result_dataframe['value_count'] = result_dataframe['value_count'].astype( int )
 
     # `X_id` columns come back labeled just as `id`. Fix.
 
-    if re.search(r'_id$', column) is not None:
-        result_dataframe = result_dataframe.rename(columns={'id': column})
+#    if re.search(r'_id$', column) is not None:
+#        result_dataframe = result_dataframe.rename(columns={'id': column})
 
     # `X_integer_id_alias` columns come back labeled just as `integer_id_alias`. Fix.
 
