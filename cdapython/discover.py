@@ -435,6 +435,7 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
             
             if re.search( banned_pattern, column_name ) is not None:
                 
+                print(f"Banning {column_name}")
                 banned_columns.add( column_name )
 
     for banned_column in banned_columns:
