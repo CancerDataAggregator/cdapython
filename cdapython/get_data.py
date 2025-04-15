@@ -36,7 +36,6 @@ def get_subject_data():
 #
 #############################################################################################################################
 
-
 def get_data(
     table=None,
     *,
@@ -46,9 +45,7 @@ def get_data(
     data_source=[],
     add_columns=[],
     exclude_columns=[],
-    link_to=[],
     provenance=False,
-    count_only=False,
     return_data_as="dataframe",
     output_file="",
     debug=False
@@ -57,9 +54,8 @@ def get_data(
     Get CDA data records ('result rows') from `table` that match user-specified criteria.
 
     Arguments:
-        table ( string; required ):
-            The table whose rows are to be filtered and retrieved. (Run the tables()
-            function to get a list.)
+        table ( string; required: 'file' or 'subject' ):
+            The CDA table whose rows are to be filtered and retrieved.
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -74,7 +70,7 @@ def get_data(
                 1. 'input_file': The name of a (local) TSV file (with column names in its first row)
                 2. 'input_column': The name of a column in that TSV
                 3. 'cda_column_to_match': The name of a CDA column
-            Restrict results to those where the value of the given CDA
+            Restrict result rows to those where the value of the given CDA
             column matches at least one value from the given column
             in the given TSV file.
 
@@ -85,35 +81,14 @@ def get_data(
 
         add_columns ( string or list of strings; optional ):
             One or more columns from a second table to add to result data from `table`.
-            If multiple values from an added column are all associated with a single
-            `table` row, that row will be repeated once for each distinct value, with
-            the added data appended to each row.
 
         exclude_columns ( string or list of strings; optional ):
-            One or more columns from a second table to remove from result data from `table`.
-            If multiple values from an added column are all associated with a single
-            `table` row, that row will be repeated once for each distinct value, with
-            the added data appended to each row.
-
-
-        link_to ( string or list of strings; optional ):
-            Other tables from which to fetch entire rows related to the row results
-            from `table` that this function produces. `link_to` results
-            will be appended to `table` rows to which they're related:
-            any `table` row related to more than one `link_to` row will
-            be repeated in the returned data, with one distinct `link_to` row
-            appended to each repeated copy of its related `table` row.
-            If `link_to` is specified, `add_columns` cannot be used.
+            One or more columns to remove from result data.
 
         provenance ( boolean; optional ):
             If True, get_data() will attach cross-reference information
-            to each row result describing the upstream data sources from
-            which it was derived. Rows deriving from more than one upstream
-            source will be repeated in the output, once per data source, as
-            with `link_to` and `add_columns` (except with provenance
-            metadata attached, instead of information from other CDA tables).
-            If `provenance` is set to True, `link_to` and `add_columns`
-            cannot be used.
+            to each result row describing the upstream data sources from
+            which it was derived.
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
             Specify how get_data() should return results: as a pandas DataFrame,
@@ -125,16 +100,6 @@ def get_data(
             If return_data_as='tsv' is specified, `output_file` should contain a
             resolvable path to a file into which get_data() will write
             tab-delimited results.
-
-        count_only ( boolean; optional ):
-            If set to True, get_data() will return two integers: the number of CDA
-            `table` rows matching the specified filters, and the total number of rows
-            that this function would return if `count_only` were not True. (These numbers
-            will be identical if no data from outside `table` has been joined to result
-            rows (for example by using `link_to` or `add_columns` or
-            `provenance`). If `count_only` is set to False (the default), get_data() will
-            return a pandas DataFrame containing all CDA `table` rows that match the
-            given filters.
 
     Filter strings:
         Filter strings are expressions of the form "COLUMN_NAME OP VALUE"
@@ -158,35 +123,29 @@ def get_data(
         Users can require partial matches to string VALUEs by adding * to either or
         both ends. For example:
 
-            primary_disease_type = *duct*
+            diagnosis = *duct*
             sex = F*
 
         String VALUEs need not be quoted inside of filter strings. For example, to include
         the filters specified just above in the `match_all` argument, when querying
         the `subject` table, we can write:
 
-            get_data( table='subject', match_all=[ 'primary_disease_type = *duct*', 'sex = F*' ] )
+            get_data( table='subject', match_all=[ 'diagnosis = *duct*', 'sex = F*' ] )
 
         NULL is a special VALUE which can be used to match missing data. For
-        example, to get `researchsubject` rows where the `primary_diagnosis_site` field
+        example, to get `subject` rows where the `cause_of_death` field
         is missing data, we can write:
 
-            get_data( table='researchsubject', match_all=[ 'primary_diagnosis_site = NULL' ] )
+            get_data( table='subject', match_all=[ 'cause_of_death = NULL' ] )
 
     Returns:
         (Default) A pandas.DataFrame containing CDA `table` rows matching the user-specified
-            filter criteria. The DataFrame's named columns will match columns in `table`,
-            and each row in the DataFrame will contain one CDA `table` row (possibly
-            with related data from a second table appended to it, according to user
-            directives).
+            filter criteria. The DataFrame's named columns will match columns in `table` plus
+            any optional user-added columns from other tables, and each row in the DataFrame
+            will represent one CDA `table` row (possibly with related data from a second table
+            appended to it, according to user directives).
 
-        OR two integers representing the total number of CDA `table` rows matching the given
-            filters and the total number of result rows. These two counts will generally
-            differ if extra data from non-`table` sources is joined to result rows using
-            `link_to` or `add_columns`, because `table` rows will be repeated for any
-            one-to-many associations that are returned; otherwise they will be the same.
-
-        OR returns nothing, but writes results to a user-specified TSV file
+        OR returns nothing, but writes results to a user-specified TSV file.
 
     """
 
@@ -197,7 +156,7 @@ def get_data(
     column_values = columns(debug=debug)
 
     # Make sure inputs are clean
-    match_all, match_any, add_columns, exclude_columns, data_source, link_to = cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source, link_to)
+    match_all, match_any, add_columns, exclude_columns, data_source = cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source)
 
     # Make sure the inputs are what they should be
     verify_inputs(
@@ -209,11 +168,9 @@ def get_data(
         data_source,
         table,
         match_from_file,
-        link_to,
         provenance,
         return_data_as,
         output_file,
-        count_only,
         log
         )
 
@@ -396,7 +353,7 @@ def get_data(
             return
 
     #############################################################################################################################
-    # Enforce mutual exclusivity across different join directives: `add_columns`, `link_to_table` and `provenance`.
+    # UPDATE? :: Enforce mutual exclusivity across different join directives: `add_columns` and `provenance`.
 
     # If it exists, save the name (and, in the following code block, the data type)
     # of the ID field of the table from which we are to join any extra non-`table`
@@ -406,8 +363,7 @@ def get_data(
     
     #############################################################################################################################
     # Manage basic validation for `add_columns`, which enumerates user-specified non-`table` columns to be
-    # joined with the main `table` result rows, and `link_to_table`, which specifies an entire non-`table` table
-    # to be joined with the main `table` result rows.
+    # joined with the main `table` result rows.
 
     # Eliminate undesirable characters and convert all values to lowercase.
 
@@ -453,9 +409,6 @@ def get_data(
         if column_to_add not in columns_to_fetch:
             columns_to_fetch.append(column_to_add)
     
-    if link_to != []:
-        columns_to_fetch.extend(link_to)
-
     columns_to_remove = []
 
     for col in exclude_columns:
@@ -487,20 +440,14 @@ def get_data(
 
     fetch_message = "fetching all results"
 
-    if count_only:
-        fetch_message = "counting results only: not a comprehensive fetch"
-
     log.debug( f"Querying CDA API '{table}' endpoint ({fetch_message})" )
 
     query_selector = {
         "file": cda_client.api.data.file_fetch_rows_endpoint_data_file_post,
         "subject": cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post,
     }
-    # Unless we've been asked just to count the anticipated result set, we return all results
-    # to users at once. Paging occurs internally, but is made transparent to the user.
-    # By default (unless overridden by a `count_only` directive from the user), the
-    # following two variables are coded according to CDA performance needs. They
-
+    # We return all results to users at once. Paging occurs internally, but is made transparent to the user.
+    # The following two variables are coded according to CDA performance needs. They
     # should ultimately be moved to a central system-parameter store for easier
     # access: right now, they're replicated everywhere a fetch is performed, which
     # is error-prone when it comes to long-term maintenance.
@@ -509,16 +456,12 @@ def get_data(
 
     rows_per_page = 500000
 
-    distinct_row_count = None
-
     # Use the QueryApi instance object's `{table}_query` endpoint-accessor
     # function to get data from the REST API.
 
     log.debug( f"Sending qnode: {q_node}" )
     
-    paged_response_data_object = query_selector[table].sync(
-        client=query_api_instance, body=q_node, limit=rows_per_page, offset=starting_offset
-    )
+    paged_response_data_object = query_selector[table].sync( client=query_api_instance, body=q_node, limit=rows_per_page, offset=starting_offset )
 
     # Catch errors returned by the API
     if isinstance(paged_response_data_object, ClientError) or isinstance(paged_response_data_object, InternalError):

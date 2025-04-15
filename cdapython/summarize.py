@@ -103,7 +103,7 @@ def summarize_files(
             'CDS' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
-            One or more columns from a second table to add to summary output.
+            One or more columns from a second table to add to summary output for `table`.
 
         exclude_columns ( string or list of strings; optional ):
             One or more columns to remove from summary output.
@@ -246,7 +246,7 @@ def summarize_subjects(
             'CDS' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
-            One or more columns from a second table to add to summary output.
+            One or more columns from a second table to add to summary output for `table`.
 
         exclude_columns ( string or list of strings; optional ):
             One or more columns to remove from summary output.
@@ -394,10 +394,10 @@ def summarize(
             'CDS' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
-            One or more columns from a second table to add to result data from `table`.
+            One or more columns from a second table to add to summary output for `table`.
 
         exclude_columns ( string or list of strings; optional ):
-            One or more columns from a second table to remove from result data from `table`.
+            One or more columns to remove from summary output.
 
     Filter strings:
         Filter strings are expressions of the form "COLUMN_NAME OP VALUE"
