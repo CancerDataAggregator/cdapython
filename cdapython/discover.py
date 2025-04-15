@@ -604,13 +604,13 @@ def columns(
                 
                 # Retain all rows where the value of `target_field` (in this case, the value of `table`) does _not_ match any of the given filter patterns.
 
-                result_dataframe = result_dataframe.loc[ ~(result_dataframe[target_field].str.contains(match_pattern_string, case=False)) ]
+                result_dataframe = result_dataframe.loc[ ~( result_dataframe[target_field].str.contains( match_pattern_string, case=False ) ) ]
 
             else:
                 
                 # Retain all rows where the value of `target_field` matches any of the given filter patterns.
 
-                result_dataframe = result_dataframe.loc[ result_dataframe[target_field].str.contains(match_pattern_string, case=False) ]
+                result_dataframe = result_dataframe.loc[ result_dataframe[target_field].str.contains( match_pattern_string, case=False ) ]
 
     log.debug( 'Applied value-filtration directives' )
 
@@ -1086,47 +1086,21 @@ def column_values(
 
     result_dataframe['value_count'] = result_dataframe['value_count'].astype( int )
 
-    # `X_id` columns come back labeled just as `id`. Fix.
-
-    if re.search(r'_id$', column) is not None:
-        print( result_dataframe.columns )
-        # result_dataframe = result_dataframe.rename(columns={'id': column})
-
-    # `X_integer_id_alias` columns come back labeled just as `integer_id_alias`. Fix.
-
-    elif re.search(r'_integer_id_alias$', column) is not None:
-        print( result_dataframe.columns )
-        # result_dataframe = result_dataframe.rename(columns={'integer_id_alias': column})
-
-    # `X_associated_project` columns come back labeled just as `associated_project`. Fix.
-
-    elif re.search(r'_associated_project$', column) is not None:
-        print( result_dataframe.columns )
-        # result_dataframe = result_dataframe.rename(columns={'associated_project': column})
-
-    # `X_identifier_Y` columns come back labeled just as `Y`. Fix.
-
-    elif re.search(r'^(.*_identifier_)(.+)$', column) is not None:
-        print( result_dataframe.columns )
-        # suffix = re.sub(r'^.*_identifier_(.+)$', r'\1', column)
-        # 
-        # # Adjust the header the API sent us for the values column.
-        # 
-        # result_dataframe = result_dataframe.rename(columns={suffix: column})
-
     log.debug( 'Handling missing values...' )
 
     # CDA has no float values. If the API gives us some, cast them to integers.
     
     if result_dataframe[column].dtype == 'float64':
+        
         # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
         # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
         # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
         # storage of missing values. These will print as '<NA>'.
 
-        result_dataframe[column] = result_dataframe[column].round().astype('Int64')
+        result_dataframe[column] = result_dataframe[column].round().astype( 'Int64' )
 
     elif result_dataframe[column].dtype == 'object':
+        
         # String data comes through as a column with dtype 'object', based on something involving
         # the variability inherent in string lengths.
         #
@@ -1134,18 +1108,17 @@ def column_values(
 
         # Replace term values that are None (== null) with empty strings.
 
-        result_dataframe = result_dataframe.fillna('')
+        result_dataframe = result_dataframe.fillna( '' )
 
     elif result_dataframe[column].dtype == 'bool':
-        result_dataframe = result_dataframe.fillna('')
+        
+        result_dataframe = result_dataframe.fillna( '' )
 
     else:
+        
         # This isn't anticipated. Yell if we get something unexpected.
 
-        log.critical(
-            f"column_values(): ERROR: Unexpected data type `{result_dataframe[column].dtype}` received; aborting. Please report this event to the CDA development team."
-        )
-
+        log.critical( f"column_values(): ERROR: Unexpected data type `{result_dataframe[column].dtype}` received; aborting. Please report this event to the CDA development team." )
         return
 
     #############################################################################################################################
@@ -1165,60 +1138,65 @@ def column_values(
     include_null_count = False
 
     for filter_pattern in filters:
+        
         if filter_pattern == '':
+            
             include_null_count = True
 
         else:
+            
             # Process wildcard characters.
 
-            if re.search(r'^\*', filter_pattern) is not None:
+            if re.search( r'^\*', filter_pattern ) is not None:
+                
                 # Any prefix will do, now.
                 #
                 # Strip leading '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
 
-                filter_pattern = re.sub(r'^\*+', r'', filter_pattern)
+                filter_pattern = re.sub( r'^\*+', r'', filter_pattern )
 
             else:
+                
                 # No wildcard at the beginning of `filter_pattern` --> require all successful matches to _begin_ with `filter_pattern` by prepending a ^ character to `filter_pattern`:
                 #
                 # ...I know this looks weird, but it's just tacking a '^' character onto the beginning of `filter_pattern`.
 
-                filter_pattern = re.sub(r'^', r'^', filter_pattern)
+                filter_pattern = re.sub( r'^', r'^', filter_pattern )
 
-            if re.search(r'\*$', filter_pattern) is not None:
+            if re.search( r'\*$', filter_pattern ) is not None:
+                
                 # Any suffix will do, now.
                 #
                 # Strip trailing '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
 
-                filter_pattern = re.sub(r'\*+$', r'', filter_pattern)
+                filter_pattern = re.sub( r'\*+$', r'', filter_pattern )
 
             else:
+                
                 # No wildcard at the end of `filter_pattern` --> require all successful matches to _end_ with `filter_pattern` by appending a '$' character to `filter_pattern`:
                 #
                 # ...I know this looks weird, but it's just tacking a '$' character onto the end of `filter_pattern`.
 
-                filter_pattern = re.sub(r'$', r'$', filter_pattern)
+                filter_pattern = re.sub( r'$', r'$', filter_pattern )
 
             # Build the overall match pattern as we go, one (processed) `filter_pattern` at a time.
 
             match_pattern_string = match_pattern_string + filter_pattern + '|'
 
-    # Strip the trailing '|' character from the end of the last `filter_pattern`.
+    # Strip the final trailing '|' character from the end of the last `filter_pattern`.
 
-    match_pattern_string = re.sub(r'\|$', r'', match_pattern_string)
+    match_pattern_string = re.sub( r'\|$', r'', match_pattern_string )
 
     print_regex = match_pattern_string
 
     if include_null_count:
         if print_regex == '':
             print_regex = '(missing values)'
-
         else:
             print_regex = print_regex + '|(missing values)'
 
     if print_regex == '':
         print_regex = '(none)'
-
     else:
         print_regex = f"/{print_regex}/"
 
@@ -1227,52 +1205,51 @@ def column_values(
     # Filter results to match the full aggregated regular expression in `match_pattern_string`.
 
     if include_null_count and match_pattern_string != '':
+        
         result_dataframe = result_dataframe.loc[
-            result_dataframe[column].astype(str).str.contains(match_pattern_string, case=False)
-            | result_dataframe[column].astype(str).str.contains(r'^$')
+            result_dataframe[column].astype( str ).str.contains( match_pattern_string, case=False )
+            | result_dataframe[column].astype( str ).str.contains( r'^$' )
             | result_dataframe[column].isna()
         ]
 
     elif include_null_count:
-        result_dataframe = result_dataframe.loc[
-            result_dataframe[column].astype(str).str.contains(r'^$') | result_dataframe[column].isna()
-        ]
+        
+        result_dataframe = result_dataframe.loc[ result_dataframe[column].astype( str ).str.contains( r'^$' ) | result_dataframe[column].isna() ]
 
     else:
+        
         # This will return unfiltered results if `match_pattern_string` is empty (i.e. if the user asked for no filters to be applied),
         # and will filter results according to `match_pattern_string` if not.
 
-        result_dataframe = result_dataframe.loc[
-            result_dataframe[column].astype(str).str.contains(match_pattern_string, case=False)
-        ]
+        result_dataframe = result_dataframe.loc[ result_dataframe[column].astype( str ).str.contains( match_pattern_string, case=False ) ]
 
     # Sort results. Default (note that the final value of `sort_by` is determined earlier in this function) is to sort by term count, descending.
 
     log.debug( f"Applying sort directive '{sort_by}'..." )
 
     if sort_by == 'count':
-        # Sort by count; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
 
-        result_dataframe = result_dataframe.sort_values(by=['value_count', column], ascending=[True, True])
+        # Sort by count; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
+        result_dataframe = result_dataframe.sort_values( by=['value_count', column], ascending=[True, True] )
 
     elif sort_by == 'count:desc':
+        
         # Sort by count, descending; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
-
-        result_dataframe = result_dataframe.sort_values(by=['value_count', column], ascending=[False, True])
+        result_dataframe = result_dataframe.sort_values( by=['value_count', column], ascending=[False, True] )
 
     elif sort_by == 'value':
+        
         # No need for a sub-sort, here, since values aren't repeated.
-
-        result_dataframe = result_dataframe.sort_values(by=column, ascending=True)
+        result_dataframe = result_dataframe.sort_values( by=column, ascending=True )
 
     elif sort_by == 'value:desc':
+        
         # No need for a sub-sort, here, since values aren't repeated.
-
-        result_dataframe = result_dataframe.sort_values(by=column, ascending=False)
+        result_dataframe = result_dataframe.sort_values( by=column, ascending=False )
 
     else:
-        log.error('column_values(): ERROR: something has gone horribly wrong; we should never get here.')
-
+        
+        log.error( 'Something has gone horribly wrong; we should never get here.' )
         return
 
     #############################################################################################################################
