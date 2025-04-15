@@ -430,15 +430,11 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
     banned_columns = set()
 
     for column_name in result_dataframe['column'].unique():
-        
         for banned_pattern in banned_column_name_patterns:
-            
             if re.search( banned_pattern, column_name ) is not None:
-                
                 banned_columns.add( column_name )
 
     for banned_column in banned_columns:
-        print( f"Removing {banned_column}" )
         result_dataframe = result_dataframe.loc[ result_dataframe['column'] != banned_column ]
 
     log.debug( 'Created result DataFrame' )
@@ -455,7 +451,7 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
         # Temporarily prepend a '.' to `table`_id column names, so they float to the top of each
         # table's list of columns when we sort.
 
-        ##result_dataframe = result_dataframe.replace( to_replace=r'^([^_]+_id)$', value=r'.\1', regex=True )
+        result_dataframe = result_dataframe.replace( to_replace=r'^([^_]+_id)$', value=r'.\1', regex=True )
 
         # Sort all column records, first on table and then on column name.
 
@@ -465,7 +461,7 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
         # to force the sorting algorithm to place all such columns first within each
         # table's group of column records.
 
-        ##result_dataframe = result_dataframe.replace( to_replace=r'^\.(.*)$', value=r'\1', regex=True)
+        result_dataframe = result_dataframe.replace( to_replace=r'^\.(.*)$', value=r'\1', regex=True)
 
     else:
         
