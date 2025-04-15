@@ -50,7 +50,7 @@ def disable_file_logging():
 #
 #############################################################################################################################
 
-def get_logger(  ) -> logging.Logger:
+def get_logger() -> logging.Logger:
     """
     Returns logger instance that uses config file settings to initialize.
 
