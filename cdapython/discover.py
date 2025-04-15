@@ -427,8 +427,18 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
         r'_alias$'
     }
 
-    for banned_pattern in banned_column_name_patterns:
-        result_dataframe = result_dataframe.loc[ re.search( banned_pattern, result_dataframe['column'] ) is not None ]
+    banned_columns = set()
+
+    for column_name in result_dataframe['column'].unique():
+        
+        for banned_pattern in banned_column_name_patterns:
+            
+            if re.search( banned_pattern, column_name ) is not None:
+                
+                banned_columns.add( column_name )
+
+    for banned_column in banned_columns:
+        result_dataframe = result_dataframe.loc[ result_dataframe['column'] != banned_column ]
 
     log.debug( 'Created result DataFrame' )
 
