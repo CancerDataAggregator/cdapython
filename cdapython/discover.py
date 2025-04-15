@@ -438,8 +438,8 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
                 print(f"Banning {column_name}")
                 banned_columns.add( column_name )
 
-    for banned_column in banned_columns:
-        result_dataframe = result_dataframe.loc[ result_dataframe['column'] != banned_column ]
+#    for banned_column in banned_columns:
+#        result_dataframe = result_dataframe.loc[ result_dataframe['column'] != banned_column ]
 
     log.debug( 'Created result DataFrame' )
 
