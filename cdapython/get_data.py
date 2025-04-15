@@ -47,8 +47,7 @@ def get_data(
     exclude_columns=[],
     provenance=False,
     return_data_as="dataframe",
-    output_file="",
-    debug=False
+    output_file=""
 ):
     """
     Get CDA data records ('result rows') from `table` that match user-specified criteria.
@@ -153,7 +152,7 @@ def get_data(
 
     # cache the columns call and tables info so we don't have to call it more than once during get_data
     log = get_logger()
-    column_values = columns(debug=debug)
+    column_values = columns()
 
     # Make sure inputs are clean
     match_all, match_any, add_columns, exclude_columns, data_source = cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source)

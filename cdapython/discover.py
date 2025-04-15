@@ -13,7 +13,7 @@ from cdapython.application_utilities import get_api_client
 # Nomenclature notes:
 #
 # * try to standardize all potential user-facing synonyms for basic database data structures
-#   (field, entity, endpoint, cell, value, term, etc.) to "table", "column", "row" and "value".
+#   (field, entity, endpoint, cell, value, term, etc.) to 'table', 'column', 'row' and 'value'.
 #############################################################################################################################
 #############################################################################################################################
 
@@ -33,27 +33,24 @@ def tables():
         list of strings: names of searchable CDA tables.
     """
 
-    # Wrap columns(), scrape out the relevant results, and return as a sorted list.
-    #
-    # We are aware that this is inefficient. At time of writing we're trying very hard not to perturb
-    # the existing API logic wherever possible: getting a more streamlined list of table names from
-    # the database via the API would involve altering existing endpoints or creating a new one, and columns()
-    # isn't experience-damagingly expensive to run. Hence the current compromise.
+    log = get_logger()
 
     # Call columns(), extract unique values from the `table` column of the
     # resulting DataFrame, and return those values to the user as a list.
-    log = get_logger()
 
-    log.debug( "Calling columns()" )
+    log.debug( 'Calling columns()' )
 
-    columns_result_df = columns(return_data_as="dataframe")
+    columns_result_df = columns( return_data_as='dataframe' )
 
     if columns_result_df is None:
-        log.error("Something went fatally wrong with columns().")
+        
+        log.error( 'Something went fatally wrong with columns( return_data_as="dataframe" ): got a null DataFrame back.' )
+
         return
 
     else:
-        return sorted(columns_result_df["table"].unique())
+        
+        return sorted( columns_result_df['table'].unique() )
 
 
 #############################################################################################################################
@@ -76,7 +73,7 @@ def tables():
 #############################################################################################################################
 
 
-def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **filter_arguments):
+def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **filter_arguments):
     """
     Get structured metadata describing searchable CDA columns.
 
@@ -168,12 +165,12 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
     # nothing direct at all for `diagnosis` or `treatment`; and whatever ISB-CGC populates the `somatic_mutation`
     # `project_short_name` field with.
 
-    banned_columns = ["file_associated_project", "subject_associated_project"]
+    banned_columns = ['file_associated_project', 'subject_associated_project']
 
     #############################################################################################################################
     # Process return-type directives `return_data_as` and `output_file`.
 
-    allowed_return_types = {"", "dataframe", "tsv", "list"}
+    allowed_return_types = {'', 'dataframe', 'tsv', 'list'}
 
     if not isinstance(return_data_as, str):
         log.error( f"Unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
@@ -199,30 +196,24 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
     if return_data_as not in allowed_return_types:
         # Complain if we receive an unexpected `return_data_as` value.
 
-        log.critical(
-            f"columns(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'."
-        )
+        log.critical( f"columns(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.")
 
         return
 
-    elif return_data_as == "tsv" and output_file == "":
+    elif return_data_as == 'tsv' and output_file == '':
         # If the user asks for a TSV, they also have to give us a path for that TSV. If they didn't, complain.
 
-        log.critical(
-            "columns(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'."
-        )
+        log.critical( 'columns(): ERROR: return type \'tsv\' requested, but \'output_file\' not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to\'.')
 
         return
 
-    elif return_data_as != "tsv" and output_file != "":
+    elif return_data_as != 'tsv' and output_file != '':
         # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
         # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
         # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
         # so we complain and ask them to clarify.
 
-        msg = f"columns(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n"
-        msg += "(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)."
-        log.critical(msg)
+        log.critical( f"columns(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
 
         return
 
@@ -233,7 +224,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
         # Make `sort_by` a list, if it's not, so we don't have to split the way we
         # process this information into parallel distinct branches.
 
-        if sort_by == "":
+        if sort_by == '':
             sort_by = []
 
         else:
@@ -251,14 +242,14 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
     # Enumerate all allowed values that a user can specify using the `sort_by` parameter. ( 'X:asc' will be aliased immediately to just 'X'. )
 
     allowed_sort_by_arguments = [
-        "table",
-        "table:desc",
-        "column",
-        "column:desc",
-        "data_type",
-        "data_type:desc",
-        "nullable",
-        "nullable:desc",
+        'table',
+        'table:desc',
+        'column',
+        'column:desc',
+        'data_type',
+        'data_type:desc',
+        'nullable',
+        'nullable:desc',
     ]
 
     # Build two lists to pass to `DataFrame.sort_values()` to direct the sorting of our result data
@@ -291,7 +282,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
         # ':asc' is redundant. Remove it (politely).
 
-        field_code = re.sub(r":asc$", r"", field_code)
+        field_code = re.sub(r':asc$', r'', field_code)
 
         if field_code not in allowed_sort_by_arguments:
             # Complain if we receive any unexpected sort_by directives.
@@ -306,8 +297,8 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
         code_basename = field_code
 
-        if re.search(r":desc$", field_code) is not None:
-            code_basename = re.sub(r":desc$", "", field_code)
+        if re.search(r':desc$', field_code) is not None:
+            code_basename = re.sub(r':desc$', '', field_code)
 
         if code_basename not in seen_so_far:
             seen_so_far[code_basename] = field_code
@@ -321,7 +312,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
             return
 
-        if re.search(r":desc$", field_code) is not None:
+        if re.search(r':desc$', field_code) is not None:
             by_list.append(code_basename)
 
             ascending_list.append(False)
@@ -333,7 +324,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
     # Report details of the final parsed sort logic.
 
-    sort_dataframe = pd.DataFrame({"sort_by": by_list, "ascending?": ascending_list})
+    sort_dataframe = pd.DataFrame({'sort_by': by_list, 'ascending?': ascending_list})
 
     if not sort_dataframe.empty:
         
@@ -348,7 +339,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
     # Enumerate all allowed filters that a user can specify with named parameters.
 
-    allowed_filter_arguments = ["table", "column", "data_type", "nullable", "description", "exclude_table"]
+    allowed_filter_arguments = ['table', 'column', 'data_type', 'nullable', 'description', 'exclude_table']
 
     for filter_argument_name in filter_arguments:
         if filter_argument_name not in allowed_filter_arguments:
@@ -358,7 +349,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
             return
 
-        elif filter_argument_name == "nullable":
+        elif filter_argument_name == 'nullable':
             if not isinstance(filter_arguments[filter_argument_name], bool):
                 # Complain if we got a parameter value of the wrong data type.
 
@@ -458,14 +449,14 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
     # column ordering for the resulting DataFrame using the `columns=[]` parameter.
 
     # result_dataframe = pd.DataFrame.from_records(data = [{'table': 'subject', 'column':'sex', 'data_type':'text', 'nullable': False, 'description':'boringdesc'}])
-    result_dataframe = pd.DataFrame.from_records(columns_response_data_object.to_dict()["result"])
+    result_dataframe = pd.DataFrame.from_records(columns_response_data_object.to_dict()['result'])
 
     # Filter banned columns.
 
     for banned_column in banned_columns:
-        result_dataframe = result_dataframe.loc[result_dataframe["column"] != banned_column]
+        result_dataframe = result_dataframe.loc[result_dataframe['column'] != banned_column]
 
-    log.debug( "Created result DataFrame" )
+    log.debug( 'Created result DataFrame' )
 
     #############################################################################################################################
     # Execute sorting directives, if we got any; otherwise perform the default sort on the result DataFrame.
@@ -478,24 +469,24 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
         # Temporarily prepend a '.' to all *_id column names, so they float to the top of each
         # table's list of columns when we sort.
 
-        result_dataframe = result_dataframe.replace(to_replace=r"(.*_id)$", value=r".\1", regex=True)
+        result_dataframe = result_dataframe.replace(to_replace=r'(.*_id)$', value=r'.\1', regex=True)
 
         # Sort all column records, first on table and then on column name.
 
-        result_dataframe = result_dataframe.sort_values(by=["table", "column"], ascending=[True, True])
+        result_dataframe = result_dataframe.sort_values(by=['table', 'column'], ascending=[True, True])
 
         # Remove the '.' characters we temporarily prepended to *_id column names
         # to force the sorting algorithm to place all such columns first within each
         # table's group of column records.
 
-        result_dataframe = result_dataframe.replace(to_replace=r"^\.(.*_id)$", value=r"\1", regex=True)
+        result_dataframe = result_dataframe.replace(to_replace=r'^\.(.*_id)$', value=r'\1', regex=True)
 
     else:
         # Sort all column records according to the user-specified directives we've processed.
 
         result_dataframe = result_dataframe.sort_values(by=by_list, ascending=ascending_list)
 
-    log.debug( "Applied sort_by directives" )
+    log.debug( 'Applied sort_by directives' )
 
     #############################################################################################################################
     # Iterate through whatever filters the user passed us and
@@ -527,7 +518,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
         # EXCEPTION THREE: In the case of `exclude_table`, all result values must
         # _not_ match any of the specified filters.
 
-        if filter_name == "nullable":
+        if filter_name == 'nullable':
             return_if_nullable = filter_arguments[filter_name]
 
             if not isinstance(return_if_nullable, bool):
@@ -537,7 +528,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
                 return
 
-            result_dataframe = result_dataframe.loc[result_dataframe["nullable"] == return_if_nullable]
+            result_dataframe = result_dataframe.loc[result_dataframe['nullable'] == return_if_nullable]
 
         else:
             filters = filter_arguments[filter_name]
@@ -547,7 +538,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
             # If the filter list wasn't a list at all but a (nonempty) string, we just have
             # one filter. Listify it (so we don't have to care downstream about how many there are).
 
-            if isinstance(filters, str) and filters != "":
+            if isinstance(filters, str) and filters != '':
                 filter_patterns = [filters]
 
             # Otherwise, just start with the list they sent us.
@@ -560,7 +551,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
             target_field = filter_name
 
-            if filter_name == "description":
+            if filter_name == 'description':
                 updated_pattern_list = list()
 
                 for original_filter_pattern in filter_patterns:
@@ -570,53 +561,53 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
                 filter_patterns = updated_pattern_list
 
-                target_field = "description"
+                target_field = 'description'
 
-            elif filter_name == "exclude_table":
-                target_field = "table"
+            elif filter_name == 'exclude_table':
+                target_field = 'table'
 
-            match_pattern_string = ""
+            match_pattern_string = ''
 
             for filter_pattern in filter_patterns:
                 # Process wildcard characters.
 
-                if re.search(r"^\*", filter_pattern) is not None:
+                if re.search(r'^\*', filter_pattern) is not None:
                     # Any prefix will do, now.
                     #
                     # Strip leading '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
 
-                    filter_pattern = re.sub(r"^\*+", r"", filter_pattern)
+                    filter_pattern = re.sub(r'^\*+', r'', filter_pattern)
 
                 else:
                     # No wildcard at the beginning of `filter_pattern` --> require all successful matches to _begin_ with `filter_pattern` by prepending a ^ character to `filter_pattern`:
                     #
                     # ...I know this looks weird, but it's just tacking a '^' character onto the beginning of `filter_pattern`.
 
-                    filter_pattern = re.sub(r"^", r"^", filter_pattern)
+                    filter_pattern = re.sub(r'^', r'^', filter_pattern)
 
-                if re.search(r"\*$", filter_pattern) is not None:
+                if re.search(r'\*$', filter_pattern) is not None:
                     # Any suffix will do, now.
                     #
                     # Strip trailing '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
 
-                    filter_pattern = re.sub(r"\*+$", r"", filter_pattern)
+                    filter_pattern = re.sub(r'\*+$', r'', filter_pattern)
 
                 else:
                     # No wildcard at the end of `filter_pattern` --> require all successful matches to _end_ with `filter_pattern` by appending a '$' character to `filter_pattern`:
                     #
                     # ...I know this looks weird, but it's just tacking a '$' character onto the end of `filter_pattern`.
 
-                    filter_pattern = re.sub(r"$", r"$", filter_pattern)
+                    filter_pattern = re.sub(r'$', r'$', filter_pattern)
 
                 # Build the overall match pattern as we go, one (processed) `filter_pattern` at a time.
 
-                match_pattern_string = match_pattern_string + filter_pattern + "|"
+                match_pattern_string = match_pattern_string + filter_pattern + '|'
 
             # Strip trailing |.
 
-            match_pattern_string = re.sub(r"\|$", r"", match_pattern_string)
+            match_pattern_string = re.sub(r'\|$', r'', match_pattern_string)
 
-            if filter_name == "exclude_table":
+            if filter_name == 'exclude_table':
                 # Retain all rows where the value of `target_field` (in this case, the value of `table`) does _not_ match any of the given filter patterns.
 
                 result_dataframe = result_dataframe.loc[
@@ -629,7 +620,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
                     result_dataframe[target_field].str.contains(match_pattern_string, case=False)
                 ]
 
-    log.debug( "Applied value-filtration directives" )
+    log.debug( 'Applied value-filtration directives' )
 
     #############################################################################################################################
     # Send the results back to the user.
@@ -638,7 +629,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
     result_dataframe = result_dataframe.reset_index(drop=True)
 
-    if return_data_as == "":
+    if return_data_as == '':
         # Right now, the default is the same as if the user had
         # specified return_data_as='dataframe'.
 
@@ -646,23 +637,23 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
         #
         # print( result_dataframe.to_string( index=False, justify='right', max_rows=25, max_colwidth=50 ), file=sys.stdout )
 
-        log.debug( "Returning results in default form (pandas.DataFrame)" )
+        log.debug( 'Returning results in default form (pandas.DataFrame)' )
 
         return result_dataframe
 
-    elif return_data_as == "dataframe":
+    elif return_data_as == 'dataframe':
         # Give the user back the results DataFrame.
 
-        log.debug( "Returning results as pandas.DataFrame" )
+        log.debug( 'Returning results as pandas.DataFrame' )
 
         return result_dataframe
 
-    elif return_data_as == "list":
+    elif return_data_as == 'list':
         # Give the user back a list of column names.
 
-        log.debug( "Returning results as list of column names" )
+        log.debug( 'Returning results as list of column names' )
 
-        return result_dataframe["column"].to_list()
+        return result_dataframe['column'].to_list()
 
     else:
         # Write the results DataFrame to a user-specified TSV file.
@@ -670,7 +661,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
         log.debug( f"Printing results to TSV file '{output_file}'" )
 
         try:
-            result_dataframe.to_csv(output_file, sep="\t", index=False)
+            result_dataframe.to_csv(output_file, sep='\t', index=False)
 
             return
 
@@ -695,7 +686,7 @@ def columns(*, return_data_as="", output_file="", sort_by="", debug = False, **f
 
 
 def column_values(
-    column="", *, return_data_as="", output_file="", sort_by="", filters=None, data_source="", force=False, debug = False
+    column='', *, return_data_as='', output_file='', sort_by='', filters=None, data_source='', force=False, debug = False
 ):
     """
     Show all distinct values present in `column`, along with a count
@@ -765,23 +756,21 @@ def column_values(
     #############################################################################################################################
     # Check for our one required parameter.
 
-    if (not isinstance(column, str)) or column == "":
-        log.critical(
-            "column_values(): ERROR: parameter 'column' cannot be omitted. Please specify a column from which to fetch a list of distinct values."
-        )
+    if (not isinstance(column, str)) or column == '':
+        log.critical( 'column_values(): ERROR: parameter \'column\' cannot be omitted. Please specify a column from which to fetch a list of distinct values.')
 
         return
 
     # If there's whitespace in our column name, remove it before it does any damage.
 
-    column = re.sub(r"\s+", r"", column)
+    column = re.sub(r'\s+', r'', column)
 
     # Let's not care about case.
 
     column = column.lower()
 
     # # See if columns() agrees that the requested column exists.
-    # if len(columns(column=column, return_data_as="list")) == 0:
+    # if len(columns(column=column, return_data_as='list')) == 0:
     #     log.critical(
     #         f"column_values(): ERROR: parameter 'column' must be a searchable CDA column name. You supplied '{column}', which is not."
     #     )
@@ -805,12 +794,12 @@ def column_values(
     # This should be replaced ASAP with a fetch from a 'release metadata' table or something
     # similar.
 
-    allowed_data_source_values = {"GDC", "PDC", "IDC", "CDS", "ICDC"}
+    allowed_data_source_values = {'GDC', 'PDC', 'IDC', 'CDS', 'ICDC'}
 
-    if data_source != "":
+    if data_source != '':
         # Let us not care about case, and remove any whitespace before it can do any damage.
 
-        data_source = re.sub(r"\s+", r"", data_source).upper()
+        data_source = re.sub(r'\s+', r'', data_source).upper()
 
         if data_source not in allowed_data_source_values:
             log.critical(
@@ -822,7 +811,7 @@ def column_values(
     #############################################################################################################################
     # Check in advance for columns flagged as high-overhead.
 
-    expensive_columns = {"file_id", "byte_size", "checksum", "drs_uri", "file_integer_id_alias", "label"}
+    expensive_columns = {'file_id', 'byte_size', 'checksum', 'drs_uri', 'file_integer_id_alias', 'label'}
 
     if not force and column in expensive_columns:
         log.critical(
@@ -843,7 +832,7 @@ def column_values(
     #############################################################################################################################
     # Process return-type directives.
 
-    allowed_return_types = {"", "dataframe", "tsv", "list"}
+    allowed_return_types = {'', 'dataframe', 'tsv', 'list'}
 
     if not isinstance(return_data_as, str):
         log.critical(
@@ -877,23 +866,18 @@ def column_values(
 
         return
 
-    elif return_data_as == "tsv" and output_file == "":
-        log.critical(
-            "column_values(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'."
-        )
+    elif return_data_as == 'tsv' and output_file == '':
+        log.critical( 'column_values(): ERROR: return type \'tsv\' requested, but \'output_file\' not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to\'.')
 
         return
 
-    elif return_data_as != "tsv" and output_file != "":
+    elif return_data_as != 'tsv' and output_file != '':
         # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
         # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
         # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
         # so we complain and ask them to clarify.
 
-        log.critical(
-            f"column_values(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'."
-        )
-        log.critical("(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.).")
+        log.critical( f"column_values(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
 
         return
 
@@ -903,8 +887,8 @@ def column_values(
     # Enumerate all allowed values that a user can specify using the `sort_by` parameter. ( 'X:asc' will be aliased immediately to just 'X'. )
 
     allowed_sort_by_options = {
-        "list": {"", "value", "value:desc"},
-        "dataframe_or_tsv": {"", "count", "count:desc", "value", "value:desc"},
+        'list': {'', 'value', 'value:desc'},
+        'dataframe_or_tsv': {'', 'count', 'count:desc', 'value', 'value:desc'},
     }
 
     if not isinstance(sort_by, str):
@@ -920,15 +904,15 @@ def column_values(
 
     # ':asc' is redundant. Remove it (politely).
 
-    sort_by = re.sub(r":asc$", r"", sort_by)
+    sort_by = re.sub(r':asc$', r'', sort_by)
 
-    if return_data_as == "list":
+    if return_data_as == 'list':
         # Restrict sorting options for lists.
 
-        if sort_by == "":
-            sort_by = "value"
+        if sort_by == '':
+            sort_by = 'value'
 
-        elif sort_by not in allowed_sort_by_options["list"]:
+        elif sort_by not in allowed_sort_by_options['list']:
             log.critical(
                 f"column_values(): ERROR: return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again."
             )
@@ -938,10 +922,10 @@ def column_values(
     else:
         # For TSV output files and DataFrames, we support more user-configurable options (defaulting to sort_by='count:desc'):
 
-        if sort_by == "":
-            sort_by = "count:desc"
+        if sort_by == '':
+            sort_by = 'count:desc'
 
-        elif sort_by not in allowed_sort_by_options["dataframe_or_tsv"]:
+        elif sort_by not in allowed_sort_by_options['dataframe_or_tsv']:
             log.critical(
                 f"column_values(): ERROR: unrecognized sort_by '{sort_by}'. Please use one of 'count', 'value', 'count:desc', 'value:desc', 'count:asc' or 'value:asc' (or omit the sort_by parameter altogether)."
             )
@@ -951,13 +935,13 @@ def column_values(
     # Report details of the final parsed sort logic.
 
     parameter_dict = {
-        "column": column,
-        "return_data_as": return_data_as,
-        "output_file": output_file,
-        "sort_by": sort_by,
-        "filters": filters,
-        "data_source": data_source,
-        "force": force,
+        'column': column,
+        'return_data_as': return_data_as,
+        'output_file': output_file,
+        'sort_by': sort_by,
+        'filters': filters,
+        'data_source': data_source,
+        'force': force,
     }
 
     log.debug( f"Processed all parameter directives. Calling API to fetch data for '{parameter_dict}'." )
@@ -991,7 +975,7 @@ def column_values(
     # except Exception as e:
     #    print("Exception when calling UniqueValuesApi->unique_values_endpoint_unique_values_columnname_post: %s\n" % e)
 
-    log.debug( "Querying CDA API 'unique_values' endpoint" )
+    log.debug( 'Querying CDA API \'unique_values\' endpoint' )
 
     # Report some metadata about the results we got back.
 
@@ -1004,7 +988,7 @@ def column_values(
     # The API returns responses in JSON format: convert that JSON into a DataFrame
     # using pandas' json_normalize() function.
 
-    result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()["result"])
+    result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()['result'])
 
     # The data we've fetched so far might be just the first page (if the total number
     # of results is greater than `records_per_page`).
@@ -1016,7 +1000,7 @@ def column_values(
 
     more_than_one_result_page = False
     if paged_response_data_object.next_url is not None:
-        log.debug( "Fetching remaining results in pages..." )
+        log.debug( 'Fetching remaining results in pages...' )
 
         more_than_one_result_page = True
 
@@ -1102,7 +1086,7 @@ def column_values(
 
         #         if re.search( 'urllib3.exceptions.MaxRetryError', str( type(e) ) ) is not None:
 
-        #             print( "column_values(): ERROR: Can't connect to the CDA API service.", file=sys.stderr )
+        #             print( 'column_values(): ERROR: Can\'t connect to the CDA API service.', file=sys.stderr )
 
         #         else:
 
@@ -1110,7 +1094,7 @@ def column_values(
 
         #         return
 
-        next_result_batch = pd.json_normalize(paged_response_data_object.to_dict()["result"])
+        next_result_batch = pd.json_normalize(paged_response_data_object.to_dict()['result'])
 
         if not result_dataframe.empty and not next_result_batch.empty:
             # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
@@ -1122,7 +1106,7 @@ def column_values(
         incremented_offset = incremented_offset + records_per_page
 
     if more_than_one_result_page:
-        log.debug( "...done." )
+        log.debug( '...done.' )
 
     #############################################################################################################################
     # Postprocess API result data, if there is any.
@@ -1130,55 +1114,55 @@ def column_values(
     if len(result_dataframe) == 0:
         return result_dataframe
 
-    log.debug( "Postprocessing results" )
+    log.debug( 'Postprocessing results' )
 
-    log.debug( "Casting counts to integers and fixing symmetry for returned column labels..." )
+    log.debug( 'Casting counts to integers and fixing symmetry for returned column labels...' )
 
     # Term-count values come in as floats. Make them not that.
 
-    if "value_count" not in result_dataframe.columns:
-        log.critical("Expected column 'value_count' not present in API response.")
+    if 'value_count' not in result_dataframe.columns:
+        log.critical('Expected column \'value_count\' not present in API response.')
         return
 
-    result_dataframe["value_count"] = result_dataframe["value_count"].astype(int)
+    result_dataframe['value_count'] = result_dataframe['value_count'].astype(int)
 
     # `X_id` columns come back labeled just as `id`. Fix.
 
-    if re.search(r"_id$", column) is not None:
-        result_dataframe = result_dataframe.rename(columns={"id": column})
+    if re.search(r'_id$', column) is not None:
+        result_dataframe = result_dataframe.rename(columns={'id': column})
 
     # `X_integer_id_alias` columns come back labeled just as `integer_id_alias`. Fix.
 
-    elif re.search(r"_integer_id_alias$", column) is not None:
-        result_dataframe = result_dataframe.rename(columns={"integer_id_alias": column})
+    elif re.search(r'_integer_id_alias$', column) is not None:
+        result_dataframe = result_dataframe.rename(columns={'integer_id_alias': column})
 
     # `X_associated_project` columns come back labeled just as `associated_project`. Fix.
 
-    elif re.search(r"_associated_project$", column) is not None:
-        result_dataframe = result_dataframe.rename(columns={"associated_project": column})
+    elif re.search(r'_associated_project$', column) is not None:
+        result_dataframe = result_dataframe.rename(columns={'associated_project': column})
 
     # `X_identifier_Y` columns come back labeled just as `Y`. Fix.
 
-    elif re.search(r"^(.*_identifier_)(.+)$", column) is not None:
-        suffix = re.sub(r"^.*_identifier_(.+)$", r"\1", column)
+    elif re.search(r'^(.*_identifier_)(.+)$', column) is not None:
+        suffix = re.sub(r'^.*_identifier_(.+)$', r'\1', column)
 
         # Adjust the header the API sent us for the values column.
 
         result_dataframe = result_dataframe.rename(columns={suffix: column})
 
-    log.debug( "Handling missing values..." )
+    log.debug( 'Handling missing values...' )
 
     # CDA has no float values. If the API gives us some, cast them to integers.
     
-    if result_dataframe[column].dtype == "float64":
+    if result_dataframe[column].dtype == 'float64':
         # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
         # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
         # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
         # storage of missing values. These will print as '<NA>'.
 
-        result_dataframe[column] = result_dataframe[column].round().astype("Int64")
+        result_dataframe[column] = result_dataframe[column].round().astype('Int64')
 
-    elif result_dataframe[column].dtype == "object":
+    elif result_dataframe[column].dtype == 'object':
         # String data comes through as a column with dtype 'object', based on something involving
         # the variability inherent in string lengths.
         #
@@ -1186,10 +1170,10 @@ def column_values(
 
         # Replace term values that are None (== null) with empty strings.
 
-        result_dataframe = result_dataframe.fillna("")
+        result_dataframe = result_dataframe.fillna('')
 
-    elif result_dataframe[column].dtype == "bool":
-        result_dataframe = result_dataframe.fillna("")
+    elif result_dataframe[column].dtype == 'bool':
+        result_dataframe = result_dataframe.fillna('')
 
     else:
         # This isn't anticipated. Yell if we get something unexpected.
@@ -1209,7 +1193,7 @@ def column_values(
     # specifies wildcards on one or both ends of a filter, we'll remove one or both
     # restrictions as instructed for that filter.
 
-    match_pattern_string = ""
+    match_pattern_string = ''
 
     # If the user includes an empty string in the filters list, make sure we return
     # a count for empty (null) values in addition to any values matching other filters.
@@ -1217,59 +1201,59 @@ def column_values(
     include_null_count = False
 
     for filter_pattern in filters:
-        if filter_pattern == "":
+        if filter_pattern == '':
             include_null_count = True
 
         else:
             # Process wildcard characters.
 
-            if re.search(r"^\*", filter_pattern) is not None:
+            if re.search(r'^\*', filter_pattern) is not None:
                 # Any prefix will do, now.
                 #
                 # Strip leading '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
 
-                filter_pattern = re.sub(r"^\*+", r"", filter_pattern)
+                filter_pattern = re.sub(r'^\*+', r'', filter_pattern)
 
             else:
                 # No wildcard at the beginning of `filter_pattern` --> require all successful matches to _begin_ with `filter_pattern` by prepending a ^ character to `filter_pattern`:
                 #
                 # ...I know this looks weird, but it's just tacking a '^' character onto the beginning of `filter_pattern`.
 
-                filter_pattern = re.sub(r"^", r"^", filter_pattern)
+                filter_pattern = re.sub(r'^', r'^', filter_pattern)
 
-            if re.search(r"\*$", filter_pattern) is not None:
+            if re.search(r'\*$', filter_pattern) is not None:
                 # Any suffix will do, now.
                 #
                 # Strip trailing '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
 
-                filter_pattern = re.sub(r"\*+$", r"", filter_pattern)
+                filter_pattern = re.sub(r'\*+$', r'', filter_pattern)
 
             else:
                 # No wildcard at the end of `filter_pattern` --> require all successful matches to _end_ with `filter_pattern` by appending a '$' character to `filter_pattern`:
                 #
                 # ...I know this looks weird, but it's just tacking a '$' character onto the end of `filter_pattern`.
 
-                filter_pattern = re.sub(r"$", r"$", filter_pattern)
+                filter_pattern = re.sub(r'$', r'$', filter_pattern)
 
             # Build the overall match pattern as we go, one (processed) `filter_pattern` at a time.
 
-            match_pattern_string = match_pattern_string + filter_pattern + "|"
+            match_pattern_string = match_pattern_string + filter_pattern + '|'
 
     # Strip the trailing '|' character from the end of the last `filter_pattern`.
 
-    match_pattern_string = re.sub(r"\|$", r"", match_pattern_string)
+    match_pattern_string = re.sub(r'\|$', r'', match_pattern_string)
 
     print_regex = match_pattern_string
 
     if include_null_count:
-        if print_regex == "":
-            print_regex = "(missing values)"
+        if print_regex == '':
+            print_regex = '(missing values)'
 
         else:
-            print_regex = print_regex + "|(missing values)"
+            print_regex = print_regex + '|(missing values)'
 
-    if print_regex == "":
-        print_regex = "(none)"
+    if print_regex == '':
+        print_regex = '(none)'
 
     else:
         print_regex = f"/{print_regex}/"
@@ -1278,16 +1262,16 @@ def column_values(
 
     # Filter results to match the full aggregated regular expression in `match_pattern_string`.
 
-    if include_null_count and match_pattern_string != "":
+    if include_null_count and match_pattern_string != '':
         result_dataframe = result_dataframe.loc[
             result_dataframe[column].astype(str).str.contains(match_pattern_string, case=False)
-            | result_dataframe[column].astype(str).str.contains(r"^$")
+            | result_dataframe[column].astype(str).str.contains(r'^$')
             | result_dataframe[column].isna()
         ]
 
     elif include_null_count:
         result_dataframe = result_dataframe.loc[
-            result_dataframe[column].astype(str).str.contains(r"^$") | result_dataframe[column].isna()
+            result_dataframe[column].astype(str).str.contains(r'^$') | result_dataframe[column].isna()
         ]
 
     else:
@@ -1302,28 +1286,28 @@ def column_values(
 
     log.debug( f"Applying sort directive '{sort_by}'..." )
 
-    if sort_by == "count":
+    if sort_by == 'count':
         # Sort by count; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
 
-        result_dataframe = result_dataframe.sort_values(by=["value_count", column], ascending=[True, True])
+        result_dataframe = result_dataframe.sort_values(by=['value_count', column], ascending=[True, True])
 
-    elif sort_by == "count:desc":
+    elif sort_by == 'count:desc':
         # Sort by count, descending; break ties among groups of values with identical counts by sub-sorting each such group alphabetically by value.
 
-        result_dataframe = result_dataframe.sort_values(by=["value_count", column], ascending=[False, True])
+        result_dataframe = result_dataframe.sort_values(by=['value_count', column], ascending=[False, True])
 
-    elif sort_by == "value":
+    elif sort_by == 'value':
         # No need for a sub-sort, here, since values aren't repeated.
 
         result_dataframe = result_dataframe.sort_values(by=column, ascending=True)
 
-    elif sort_by == "value:desc":
+    elif sort_by == 'value:desc':
         # No need for a sub-sort, here, since values aren't repeated.
 
         result_dataframe = result_dataframe.sort_values(by=column, ascending=False)
 
     else:
-        log.error("column_values(): ERROR: something has gone horribly wrong; we should never get here.")
+        log.error('column_values(): ERROR: something has gone horribly wrong; we should never get here.')
 
         return
 
@@ -1336,7 +1320,7 @@ def column_values(
 
     # Pretty-print missing values.
 
-    if result_dataframe[column].dtype == "object":
+    if result_dataframe[column].dtype == 'object':
         # String data comes through as a column with dtype 'object', based on something involving
         # the variability inherent in string lengths.
         #
@@ -1344,12 +1328,12 @@ def column_values(
 
         # Replace term values that are None (== null) with empty strings.
 
-        result_dataframe = result_dataframe.replace(r"^$", r"<NA>", regex=True)
+        result_dataframe = result_dataframe.replace(r'^$', r'<NA>', regex=True)
 
-    elif result_dataframe[column].dtype == "bool":
-        result_dataframe = result_dataframe.replace(r"^$", r"<NA>", regex=True)
+    elif result_dataframe[column].dtype == 'bool':
+        result_dataframe = result_dataframe.replace(r'^$', r'<NA>', regex=True)
 
-    if return_data_as == "":
+    if return_data_as == '':
         # Right now, the default is the same as if the user had
         # specified return_data_as='dataframe'.
 
@@ -1357,21 +1341,21 @@ def column_values(
         #
         # print( result_dataframe.to_string( index=False, justify='right', max_rows=25, max_colwidth=50 ), file=sys.stdout )
 
-        log.debug( "Returning results in default form (pandas.DataFrame)" )
+        log.debug( 'Returning results in default form (pandas.DataFrame)' )
 
         return result_dataframe
 
-    elif return_data_as == "dataframe":
+    elif return_data_as == 'dataframe':
         # Give the user back the results DataFrame.
 
-        log.debug( "Returning results as pandas.DataFrame" )
+        log.debug( 'Returning results as pandas.DataFrame' )
 
         return result_dataframe
 
-    elif return_data_as == "list":
+    elif return_data_as == 'list':
         # Strip the term-values column out of the results DataFrame and give them to the user as a Python list.
 
-        log.debug( "Returning results as list of column values" )
+        log.debug( 'Returning results as list of column values' )
 
         return result_dataframe[column].to_list()
 
@@ -1381,7 +1365,7 @@ def column_values(
         log.debug( f"Printing results to TSV file '{output_file}'" )
 
         try:
-            result_dataframe.to_csv(output_file, sep="\t", index=False)
+            result_dataframe.to_csv(output_file, sep='\t', index=False)
 
             return
 
