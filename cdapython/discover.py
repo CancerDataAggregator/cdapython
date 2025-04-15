@@ -422,7 +422,7 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
     # Remove `table`_data_source_count and *_alias columns from output.
 
     banned_column_name_patterns = {
-        r'i^[^_]+_data_source_count$',
+        r'^[^_]+_data_source_count$',
         r'^[^_]+_data_at_[^_]+$',
         r'_alias$'
     }
@@ -455,7 +455,7 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
         # Temporarily prepend a '.' to `table`_id column names, so they float to the top of each
         # table's list of columns when we sort.
 
-        result_dataframe = result_dataframe.replace( to_replace=r'^([^_]+_id)$', value=r'.\1', regex=True )
+        ##result_dataframe = result_dataframe.replace( to_replace=r'^([^_]+_id)$', value=r'.\1', regex=True )
 
         # Sort all column records, first on table and then on column name.
 
@@ -465,7 +465,7 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
         # to force the sorting algorithm to place all such columns first within each
         # table's group of column records.
 
-        result_dataframe = result_dataframe.replace( to_replace=r'^\.(.*)$', value=r'\1', regex=True)
+        ##result_dataframe = result_dataframe.replace( to_replace=r'^\.(.*)$', value=r'\1', regex=True)
 
     else:
         
