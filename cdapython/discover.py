@@ -387,23 +387,9 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
 
     query_api_instance = get_api_client()
 
-    # try:
-    # Columns Endpoint
-    #with query_api_instance as client:
-    #    columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync(client=client)
-    columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync(client=query_api_instance)
+    # Ask the columns endpoint for information. (It has no parameters.)
 
-    # except openapi_client.ApiException as e:
-    #    print("Exception when calling ColumnsApi->columns_endpoint_columns_post: %s\n" % e)
-
-    # query_api_instance = QueryApi( api_client_instance )
-
-    # Use the QueryApi instance object's `columns` endpoint-accessor
-    # function to get data from the REST API.
-
-    # columns_response_data_object = query_api_instance.columns( async_req=True )
-
-    # Gracefully fetch asynchronously-generated results once they're ready.
+    columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync( client=query_api_instance )
 
     #############################################################################################################################
     # Postprocess API result data.
@@ -411,20 +397,15 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
     # columns_response_data_object['result'] is an array of dicts, with
     # each dict containing a few named fields of metadata describing one column.
     #
-    # API terminology translation (API property name -> local convention):
-    #
-    #     fieldName -> column name
-    #     endpoint  -> table
-    #
     # Example:
     #
     #   "result": [
     #       {
-    #           "fieldName": "days_to_treatment_start",
-    #           "endpoint": "treatment",
-    #           "description": "The timepoint at which the treatment started.",
-    #           "type": "integer",
-    #           "isNullable": true
+    #           "table": "file",
+    #           "column": "file_id",
+    #           "data_type": "text",
+    #           "nullable": false,
+    #           "description": "A unique identifier for this file minted by CDA. May change release-to-release. Contains no semantically reliable content with one exception: in the case of a DICOM series from IDC, this field will contain the crdc_series_uuid assigned by IDC to that DICOM series. Note that this crdc_series_uuid may change from one IDC release version to the next, according to IDC's data processing and identification rules."
     #       },
     #       ...
     #   ]
@@ -432,43 +413,54 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
     # Make a DataFrame from this array of dicts using DataFrame.from_records(), and explicitly specify the
     # column ordering for the resulting DataFrame using the `columns=[]` parameter.
 
-    # result_dataframe = pd.DataFrame.from_records(data = [{'table': 'subject', 'column':'sex', 'data_type':'text', 'nullable': False, 'description':'boringdesc'}])
-    result_dataframe = pd.DataFrame.from_records(columns_response_data_object.to_dict()['result'])
+    result_dataframe = pd.DataFrame.from_records( columns_response_data_object.to_dict()['result'], columns=[ 'table', 'column', 'data_type', 'nullable', 'description' ] )
 
-    # Filter banned columns.
+    ### TO DO: REPLACE { `table`_data_at_X } with [ 'GDC', 'PDC', 'CDS' ]
 
-    #for banned_column in banned_columns:
-    #    result_dataframe = result_dataframe.loc[result_dataframe['column'] != banned_column]
+    # here
+
+    # Remove `table`_data_source_count and *_alias columns from output.
+
+    banned_column_name_patterns = {
+        r'i^[^_]+_data_source_count$',
+        r'^[^_]+_data_at_[^_]+$',
+        r'_alias$'
+    }
+
+    for banned_pattern in banned_column_name_patterns:
+        result_dataframe = result_dataframe.loc[ re.search( banned_pattern, result_dataframe['column'] ) is not None ]
 
     log.debug( 'Created result DataFrame' )
 
     #############################################################################################################################
     # Execute sorting directives, if we got any; otherwise perform the default sort on the result DataFrame.
 
-    if len(sort_by) == 0:
+    if len( sort_by ) == 0:
+        
         # By default, we sort column records by column name, gathered into groups by table,
         # to facilitate predictable output patterns. For easy access, we'd also like each
-        # ID column to show up first in its table's group.
+        # table's ID column to show up first in its table's group.
         #
-        # Temporarily prepend a '.' to all *_id column names, so they float to the top of each
+        # Temporarily prepend a '.' to `table`_id column names, so they float to the top of each
         # table's list of columns when we sort.
 
-        result_dataframe = result_dataframe.replace(to_replace=r'(.*_id)$', value=r'.\1', regex=True)
+        result_dataframe = result_dataframe.replace( to_replace=r'^([^_]+_id)$', value=r'.\1', regex=True )
 
         # Sort all column records, first on table and then on column name.
 
-        result_dataframe = result_dataframe.sort_values(by=['table', 'column'], ascending=[True, True])
+        result_dataframe = result_dataframe.sort_values( by=['table', 'column'], ascending=[True, True] )
 
-        # Remove the '.' characters we temporarily prepended to *_id column names
+        # Remove the '.' characters we temporarily prepended to `table`_id column names
         # to force the sorting algorithm to place all such columns first within each
         # table's group of column records.
 
-        result_dataframe = result_dataframe.replace(to_replace=r'^\.(.*_id)$', value=r'\1', regex=True)
+        result_dataframe = result_dataframe.replace( to_replace=r'^\.(.*)$', value=r'\1', regex=True)
 
     else:
+        
         # Sort all column records according to the user-specified directives we've processed.
 
-        result_dataframe = result_dataframe.sort_values(by=by_list, ascending=ascending_list)
+        result_dataframe = result_dataframe.sort_values( by=by_list, ascending=ascending_list )
 
     log.debug( 'Applied sort_by directives' )
 
