@@ -838,7 +838,7 @@ def column_values(
     # Warn the user if an override hasn't been requested.
 
     if not force and column in expensive_columns:
-        log.critical( f"column_values(): WARNING: '{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' )." )
+        log.warning( f"'{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' )." )
         return
 
     #############################################################################################################################
@@ -1257,24 +1257,28 @@ def column_values(
 
     # Reindex DataFrame rows to match their final sort order.
 
-    result_dataframe = result_dataframe.reset_index(drop=True)
+    result_dataframe = result_dataframe.reset_index( drop=True )
 
     # Pretty-print missing values.
 
     if result_dataframe[column].dtype == 'object':
+        
         # String data comes through as a column with dtype 'object', based on something involving
         # the variability inherent in string lengths.
         #
         # See https://stackoverflow.com/questions/33957720/how-to-convert-column-with-dtype-as-object-to-string-in-pandas-dataframe
 
-        # Replace term values that are None (== null) with empty strings.
+        # Replace null string values with <NA> to match what we['re forced to] use for numeric data.
 
-        result_dataframe = result_dataframe.replace(r'^$', r'<NA>', regex=True)
+        result_dataframe = result_dataframe.replace( r'^$', r'<NA>', regex=True )
 
     elif result_dataframe[column].dtype == 'bool':
+        
+        # Replace null boolean values with <NA> to match what we['re forced to] use for numeric data.
         result_dataframe = result_dataframe.replace(r'^$', r'<NA>', regex=True)
 
     if return_data_as == '':
+        
         # Right now, the default is the same as if the user had
         # specified return_data_as='dataframe'.
 
@@ -1287,36 +1291,33 @@ def column_values(
         return result_dataframe
 
     elif return_data_as == 'dataframe':
+        
         # Give the user back the results DataFrame.
 
         log.debug( 'Returning results as pandas.DataFrame' )
-
         return result_dataframe
 
     elif return_data_as == 'list':
+        
         # Strip the term-values column out of the results DataFrame and give them to the user as a Python list.
 
         log.debug( 'Returning results as list of column values' )
-
         return result_dataframe[column].to_list()
 
     else:
+        
         # Write the results DataFrame to a user-specified TSV file.
 
         log.debug( f"Printing results to TSV file '{output_file}'" )
 
         try:
-            result_dataframe.to_csv(output_file, sep='\t', index=False)
-
+            result_dataframe.to_csv( output_file, sep='\t', index=False )
             return
 
         except Exception as error:
-            log.critical(
-                f"column_values(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'."
-            )
-
+            
+            log.critical( f"column_values(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
             return
-
 
 #############################################################################################################################
 #
