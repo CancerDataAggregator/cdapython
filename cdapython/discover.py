@@ -1088,27 +1088,31 @@ def column_values(
 
     # `X_id` columns come back labeled just as `id`. Fix.
 
-#    if re.search(r'_id$', column) is not None:
-#        result_dataframe = result_dataframe.rename(columns={'id': column})
+    if re.search(r'_id$', column) is not None:
+        print( result_dataframe.columns )
+        # result_dataframe = result_dataframe.rename(columns={'id': column})
 
     # `X_integer_id_alias` columns come back labeled just as `integer_id_alias`. Fix.
 
     elif re.search(r'_integer_id_alias$', column) is not None:
-        result_dataframe = result_dataframe.rename(columns={'integer_id_alias': column})
+        print( result_dataframe.columns )
+        # result_dataframe = result_dataframe.rename(columns={'integer_id_alias': column})
 
     # `X_associated_project` columns come back labeled just as `associated_project`. Fix.
 
     elif re.search(r'_associated_project$', column) is not None:
-        result_dataframe = result_dataframe.rename(columns={'associated_project': column})
+        print( result_dataframe.columns )
+        # result_dataframe = result_dataframe.rename(columns={'associated_project': column})
 
     # `X_identifier_Y` columns come back labeled just as `Y`. Fix.
 
     elif re.search(r'^(.*_identifier_)(.+)$', column) is not None:
-        suffix = re.sub(r'^.*_identifier_(.+)$', r'\1', column)
-
-        # Adjust the header the API sent us for the values column.
-
-        result_dataframe = result_dataframe.rename(columns={suffix: column})
+        print( result_dataframe.columns )
+        # suffix = re.sub(r'^.*_identifier_(.+)$', r'\1', column)
+        # 
+        # # Adjust the header the API sent us for the values column.
+        # 
+        # result_dataframe = result_dataframe.rename(columns={suffix: column})
 
     log.debug( 'Handling missing values...' )
 
