@@ -274,7 +274,7 @@ def cleanup_match_statement(column_data, match_statement):
     return queries_for_match_statement
 
 
-def cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source, link_to):
+def cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source):
     # Listify, so we don't have to care later about whether this was a string or a list of strings.
     if isinstance(match_all, str):
         match_all = [match_all]
@@ -286,10 +286,8 @@ def cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_sour
         exclude_columns = [exclude_columns]
     if isinstance(data_source, str):
         data_source = [data_source]
-    if isinstance(link_to, str):
-        link_to = [link_to]
 
-    return match_all, match_any, add_columns, exclude_columns, data_source, link_to
+    return match_all, match_any, add_columns, exclude_columns, data_source
 
 def verify_inputs(
         column_values,
@@ -300,7 +298,6 @@ def verify_inputs(
         data_source,
         table,
         match_from_file,
-        link_to,
         provenance,
         return_data_as,
         output_file,
@@ -416,14 +413,6 @@ def verify_inputs(
     if not isinstance(exclude_columns, list):
         log.critical(
             f"fetch_rows(): ERROR: value assigned to 'exclude_columns' parameter must be a string (e.g. 'primary_diagnosis_site') or a list of strings (e.g. [ 'specimen_type', 'primary_diagnosis_condition' ]); you specified '{exclude_columns}', which is neither."
-        )
-
-        return
-
-    # `link_to_table`
-    if not isinstance(link_to, list):
-        log.critical(
-            f"fetch_rows(): ERROR: parameter 'link_to_table' must be a string; you supplied '{link_to}', which is not."
         )
 
         return
