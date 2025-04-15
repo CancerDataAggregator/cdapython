@@ -480,6 +480,7 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
     # 'description' or 'exclude_table'.
 
     for filter_name in filter_arguments:
+        
         # Grab the filters the user sent us.
 
         # Default behavior: all result values must be exact matches to at least one
@@ -499,109 +500,115 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
         # case-insensitive at all times.)
         #
         # EXCEPTION THREE: In the case of `exclude_table`, all result values must
-        # _not_ match any of the specified filters.
+        # _not_ match _any_ of the specified filters.
 
         if filter_name == 'nullable':
+            
             return_if_nullable = filter_arguments[filter_name]
 
-            if not isinstance(return_if_nullable, bool):
-                log.critical(
-                    f"columns(): ERROR: Please specify either nullable=True or nullable=False, not (what you sent) nullable='{return_if_nullable}'."
-                )
-
+            if not isinstance( return_if_nullable, bool ):
+                log.critical( f"columns(): ERROR: Please specify either nullable=True or nullable=False, not (what you sent) nullable='{return_if_nullable}'." )
                 return
 
-            result_dataframe = result_dataframe.loc[result_dataframe['nullable'] == return_if_nullable]
+            result_dataframe = result_dataframe.loc[ result_dataframe['nullable'] == return_if_nullable ]
 
         else:
+            
             filters = filter_arguments[filter_name]
 
             filter_patterns = list()
 
             # If the filter list wasn't a list at all but a (nonempty) string, we just have
             # one filter. Listify it (so we don't have to care downstream about how many there are).
-
-            if isinstance(filters, str) and filters != '':
-                filter_patterns = [filters]
-
             # Otherwise, just start with the list they sent us.
 
-            elif isinstance(filters, list):
+            if isinstance( filters, str ) and filters != '':
+                filter_patterns = [filters]
+            elif isinstance( filters, list ):
                 filter_patterns = filters
 
             # (If neither of the above conditions was met, `filter_patterns` will remain an
             # empty list, and the rest of this filter-processing section will (by design) have no effect.
 
+            # Parse filter_name to establish which columns() field is being targeted
+            # for filtration and adjust default filtration logic as necessary according to the result.
+
             target_field = filter_name
 
             if filter_name == 'description':
+                
+                # Never match end-to-end for query strings applied to description text (see discussion above).
+
                 updated_pattern_list = list()
 
                 for original_filter_pattern in filter_patterns:
+                    
                     updated_filter_pattern = f"*{original_filter_pattern}*"
-
-                    updated_pattern_list.append(updated_filter_pattern)
+                    updated_pattern_list.append( updated_filter_pattern )
 
                 filter_patterns = updated_pattern_list
 
-                target_field = 'description'
-
             elif filter_name == 'exclude_table':
+                
                 target_field = 'table'
 
             match_pattern_string = ''
 
             for filter_pattern in filter_patterns:
+                
                 # Process wildcard characters.
 
-                if re.search(r'^\*', filter_pattern) is not None:
+                if re.search( r'^\*', filter_pattern ) is not None:
+                    
                     # Any prefix will do, now.
                     #
                     # Strip leading '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
 
-                    filter_pattern = re.sub(r'^\*+', r'', filter_pattern)
+                    filter_pattern = re.sub( r'^\*+', r'', filter_pattern )
 
                 else:
+                    
                     # No wildcard at the beginning of `filter_pattern` --> require all successful matches to _begin_ with `filter_pattern` by prepending a ^ character to `filter_pattern`:
                     #
                     # ...I know this looks weird, but it's just tacking a '^' character onto the beginning of `filter_pattern`.
 
-                    filter_pattern = re.sub(r'^', r'^', filter_pattern)
+                    filter_pattern = re.sub( r'^', r'^', filter_pattern )
 
-                if re.search(r'\*$', filter_pattern) is not None:
+                if re.search( r'\*$', filter_pattern ) is not None:
+                    
                     # Any suffix will do, now.
                     #
                     # Strip trailing '*' characters off of `filter_pattern` so we don't confuse the downstream matching function.
 
-                    filter_pattern = re.sub(r'\*+$', r'', filter_pattern)
+                    filter_pattern = re.sub( r'\*+$', r'', filter_pattern )
 
                 else:
+                    
                     # No wildcard at the end of `filter_pattern` --> require all successful matches to _end_ with `filter_pattern` by appending a '$' character to `filter_pattern`:
                     #
                     # ...I know this looks weird, but it's just tacking a '$' character onto the end of `filter_pattern`.
 
-                    filter_pattern = re.sub(r'$', r'$', filter_pattern)
+                    filter_pattern = re.sub( r'$', r'$', filter_pattern )
 
                 # Build the overall match pattern as we go, one (processed) `filter_pattern` at a time.
 
                 match_pattern_string = match_pattern_string + filter_pattern + '|'
 
-            # Strip trailing |.
+            # Strip final trailing |.
 
-            match_pattern_string = re.sub(r'\|$', r'', match_pattern_string)
+            match_pattern_string = re.sub( r'\|$', r'', match_pattern_string )
 
             if filter_name == 'exclude_table':
+                
                 # Retain all rows where the value of `target_field` (in this case, the value of `table`) does _not_ match any of the given filter patterns.
 
-                result_dataframe = result_dataframe.loc[
-                    ~(result_dataframe[target_field].str.contains(match_pattern_string, case=False))
-                ]
+                result_dataframe = result_dataframe.loc[ ~(result_dataframe[target_field].str.contains(match_pattern_string, case=False)) ]
 
             else:
+                
                 # Retain all rows where the value of `target_field` matches any of the given filter patterns.
-                result_dataframe = result_dataframe.loc[
-                    result_dataframe[target_field].str.contains(match_pattern_string, case=False)
-                ]
+
+                result_dataframe = result_dataframe.loc[ result_dataframe[target_field].str.contains(match_pattern_string, case=False) ]
 
     log.debug( 'Applied value-filtration directives' )
 
@@ -610,9 +617,10 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
 
     # Reindex DataFrame rows to match their final sort order.
 
-    result_dataframe = result_dataframe.reset_index(drop=True)
+    result_dataframe = result_dataframe.reset_index( drop=True )
 
     if return_data_as == '':
+        
         # Right now, the default is the same as if the user had
         # specified return_data_as='dataframe'.
 
@@ -625,6 +633,7 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
         return result_dataframe
 
     elif return_data_as == 'dataframe':
+        
         # Give the user back the results DataFrame.
 
         log.debug( 'Returning results as pandas.DataFrame' )
@@ -632,6 +641,7 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
         return result_dataframe
 
     elif return_data_as == 'list':
+        
         # Give the user back a list of column names.
 
         log.debug( 'Returning results as list of column names' )
@@ -639,18 +649,19 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
         return result_dataframe['column'].to_list()
 
     else:
+        
         # Write the results DataFrame to a user-specified TSV file.
 
         log.debug( f"Printing results to TSV file '{output_file}'" )
 
         try:
-            result_dataframe.to_csv(output_file, sep='\t', index=False)
-
+            
+            result_dataframe.to_csv( output_file, sep='\t', index=False )
             return
 
         except Exception as error:
+            
             log.error( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
-
             return
 
 
