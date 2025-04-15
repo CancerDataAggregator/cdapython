@@ -151,30 +151,15 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
 
         OR returns nothing, but writes results to a user-specified TSV file
     """
+
     log = get_logger()
-
-    #############################################################################################################################
-    # TEMPORARY ban list: filtering on these columns is problematic at the API level, and we don't have a consistent modeling
-    # structure for them either way. Disabling any mention of them until (a) we update to the CRDC Common Model, with its
-    # dedicated `project` entity, or (b) we decide to fix the API issues [specifically that it won't correctly apply
-    # filters on these columns unless requested from their home endpoints, i.e. a `subjects` query will correctly filter
-    # results on `subject_associated_project`, but no other endpoints will filter their own results properly using
-    # `subject_associated_project`]. Drawback to doing (b) before (a) is that users would have to deal with
-    # chaotically inconsistent project-name modeling (associative auxiliary tables for `file` and `subject`,
-    # an atomic in-table field for `researchsubject`, a semicolon-separated list in a text field for `specimen`;
-    # nothing direct at all for `diagnosis` or `treatment`; and whatever ISB-CGC populates the `somatic_mutation`
-    # `project_short_name` field with.
-
-    banned_columns = ['file_associated_project', 'subject_associated_project']
 
     #############################################################################################################################
     # Process return-type directives `return_data_as` and `output_file`.
 
-    allowed_return_types = {'', 'dataframe', 'tsv', 'list'}
-
     if not isinstance(return_data_as, str):
+        
         log.error( f"Unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
-
         return
 
     # Let's not be picky if someone wants to give us return_data_as='DataFrame' or return_data_as='TSV'
@@ -186,57 +171,57 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
     # writing. Strip trailing whitespace from both ends and wrap the
     # file-access operation (later, below) in a try{} block.
 
-    if not isinstance(output_file, str):
+    if not isinstance( output_file, str ):
+        
         log.error( f"The `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path." )
-
         return
 
     output_file = output_file.strip()
 
+    allowed_return_types = { '', 'dataframe', 'tsv', 'list' }
+
     if return_data_as not in allowed_return_types:
+        
         # Complain if we receive an unexpected `return_data_as` value.
 
         log.critical( f"columns(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.")
-
         return
 
     elif return_data_as == 'tsv' and output_file == '':
+        
         # If the user asks for a TSV, they also have to give us a path for that TSV. If they didn't, complain.
 
         log.critical( 'columns(): ERROR: return type \'tsv\' requested, but \'output_file\' not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to\'.')
-
         return
 
     elif return_data_as != 'tsv' and output_file != '':
+        
         # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
         # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
         # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
         # so we complain and ask them to clarify.
 
         log.critical( f"columns(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
-
         return
 
     #############################################################################################################################
     # Process `sort_by` directives.
 
     if isinstance(sort_by, str):
+        
         # Make `sort_by` a list, if it's not, so we don't have to split the way we
         # process this information into parallel distinct branches.
 
         if sort_by == '':
             sort_by = []
-
         else:
-            sort_by = [sort_by]
+            sort_by = [ sort_by ]
 
     elif not isinstance(sort_by, list):
+        
         # Also detect any disallowed incoming data types and complain if we find any.
 
-        log.error(
-            f"columns(): ERROR: 'sort_by' must be a string or a list of strings; you used '{sort_by}', which is neither."
-        )
-
+        log.error( f"columns(): ERROR: 'sort_by' must be a string or a list of strings; you used '{sort_by}', which is neither." )
         return
 
     # Enumerate all allowed values that a user can specify using the `sort_by` parameter. ( 'X:asc' will be aliased immediately to just 'X'. )
@@ -268,12 +253,12 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
     seen_so_far = dict()
 
     for field_code in sort_by:
+        
         if not isinstance(field_code, str):
+            
             # Complain if we receive any unexpected data types instead of string directives.
 
-            log.critical(
-                f"columns(): ERROR: 'sort_by' must be a string or a list of strings; you used '{sort_by}', which is neither."
-            )
+            log.critical( f"columns(): ERROR: 'sort_by' must be a string or a list of strings; you used '{sort_by}', which is neither." )
             return
 
         # Let's not care about case.
@@ -282,56 +267,52 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
 
         # ':asc' is redundant. Remove it (politely).
 
-        field_code = re.sub(r':asc$', r'', field_code)
+        field_code = re.sub( r':asc$', r'', field_code )
 
         if field_code not in allowed_sort_by_arguments:
+            
             # Complain if we receive any unexpected sort_by directives.
 
-            log.critical(
-                f"columns(): ERROR: '{field_code}' is not a valid directive for the 'sort_by' parameter. Please use one of [ '"
-                + "', '".join(allowed_sort_by_arguments)
-                + "' ] instead."
-            )
-
+            log.critical( f"columns(): ERROR: '{field_code}' is not a valid directive for the 'sort_by' parameter. Please use one of [ '"
+                            + "', '".join(allowed_sort_by_arguments)
+                            + "' ] instead." )
             return
 
         code_basename = field_code
 
-        if re.search(r':desc$', field_code) is not None:
-            code_basename = re.sub(r':desc$', '', field_code)
+        if re.search( r':desc$', field_code ) is not None:
+            code_basename = re.sub( r':desc$', '', field_code )
 
         if code_basename not in seen_so_far:
+            
             seen_so_far[code_basename] = field_code
 
         else:
+            
             # Complain if we receive multiple sort_by directives for the same output column.
 
-            log.critical(
-                f"columns(): ERROR: Multiple sort_by directives received for the same output column, including '{seen_so_far[code_basename]}' and '{field_code}': please specify only one directive per output column."
-            )
-
+            log.critical( f"columns(): ERROR: Multiple sort_by directives received for the same output column, including '{seen_so_far[code_basename]}' and '{field_code}': please specify only one directive per output column." )
             return
 
-        if re.search(r':desc$', field_code) is not None:
-            by_list.append(code_basename)
+        by_list.append( code_basename )
 
-            ascending_list.append(False)
+        if re.search( r':desc$', field_code ) is not None:
+            
+            # Reverse the sort on this column.
+            ascending_list.append( False )
 
         else:
-            by_list.append(field_code)
-
-            ascending_list.append(True)
+            
+            # Sort this column normally.
+            ascending_list.append( True )
 
     # Report details of the final parsed sort logic.
 
-    sort_dataframe = pd.DataFrame({'sort_by': by_list, 'ascending?': ascending_list})
+    sort_dataframe = pd.DataFrame( { 'sort_by': by_list, 'ascending?': ascending_list } )
 
     if not sort_dataframe.empty:
-        
         log.debug( f"Processed sort directives: {sort_dataframe}" )
-
     else:
-        
         log.debug( f"Processed sort directives: <default>" )
 
     #############################################################################################################################
@@ -339,50 +320,52 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
 
     # Enumerate all allowed filters that a user can specify with named parameters.
 
-    allowed_filter_arguments = ['table', 'column', 'data_type', 'nullable', 'description', 'exclude_table']
+    allowed_filter_arguments = [
+        'table',
+        'column',
+        'data_type',
+        'nullable',
+        'description',
+        'exclude_table'
+    ]
+
+    # Validate filter argument content.
 
     for filter_argument_name in filter_arguments:
+        
         if filter_argument_name not in allowed_filter_arguments:
+            
             # Complain if we receive any unexpected filter arguments.
 
-            log.critical(f"columns(): ERROR: Received unexpected argument {filter_argument_name}; aborting.")
-
+            log.critical( f"columns(): ERROR: Received unexpected argument {filter_argument_name}; aborting." )
             return
 
         elif filter_argument_name == 'nullable':
-            if not isinstance(filter_arguments[filter_argument_name], bool):
+            
+            if not isinstance( filter_arguments[filter_argument_name], bool ):
+                
                 # Complain if we got a parameter value of the wrong data type.
 
-                log.critical(
-                    f"columns(): ERROR: 'nullable' must be a Boolean value (True or False); you used '{filter_arguments[filter_argument_name]}', which is not."
-                )
-
+                log.critical( f"columns(): ERROR: 'nullable' must be a Boolean value (True or False); you used '{filter_arguments[filter_argument_name]}', which is not." )
                 return
 
-        elif not (
-            isinstance(filter_arguments[filter_argument_name], str)
-            or isinstance(filter_arguments[filter_argument_name], list)
-        ):
+        elif not ( isinstance( filter_arguments[filter_argument_name], str ) or isinstance( filter_arguments[filter_argument_name], list ) ):
+            
             # Complain if we got a parameter value of the wrong data type.
 
-            log.critical(
-                f"columns(): ERROR: '{filter_argument_name}' must be a string or a list of strings; you used '{filter_arguments[filter_argument_name]}', which is neither."
-            )
-
+            log.critical( f"columns(): ERROR: '{filter_argument_name}' must be a string or a list of strings; you used '{filter_arguments[filter_argument_name]}', which is neither." )
             return
 
-        elif isinstance(filter_arguments[filter_argument_name], list):
+        elif isinstance( filter_arguments[filter_argument_name], list ):
+            
             for pattern in filter_arguments[filter_argument_name]:
-                if not isinstance(pattern, str):
+                
+                if not isinstance( pattern, str ):
+                    
                     # Complain if we receive any unexpected data types inside a filter list (i.e. anything but strings).
 
-                    log.critical(
-                        f"columns(): ERROR: '{filter_argument_name}' must be a string or a list of strings; you used '{filter_arguments[filter_argument_name]}', which is neither."
-                    )
-
+                    log.critical( f"columns(): ERROR: '{filter_argument_name}' must be a string or a list of strings; you used '{filter_arguments[filter_argument_name]}', which is neither." )
                     return
-
-        # Validate
 
     # Report details of fully processed user directives prior to querying.
 
@@ -391,13 +374,13 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
     status_report = status_report + f", sort_by={sort_by}"
 
     for filter_argument_name in filter_arguments:
-        if isinstance(filter_arguments[filter_argument_name], str):
+        
+        if isinstance( filter_arguments[filter_argument_name], str ):
             status_report = status_report + f", {filter_argument_name}='{filter_arguments[filter_argument_name]}'"
-
         else:
             status_report = status_report + f", {filter_argument_name}={filter_arguments[filter_argument_name]}"
 
-    log.debug( f"Processed filter directives: '{status_report}'" )
+    log.debug( f"Processed user directives: '{status_report}'" )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -406,8 +389,9 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
 
     # try:
     # Columns Endpoint
-    with query_api_instance as client:
-        columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync(client=client)
+    #with query_api_instance as client:
+    #    columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync(client=client)
+    columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync(client=query_api_instance)
 
     # except openapi_client.ApiException as e:
     #    print("Exception when calling ColumnsApi->columns_endpoint_columns_post: %s\n" % e)
@@ -453,8 +437,8 @@ def columns(*, return_data_as='', output_file='', sort_by='', debug = False, **f
 
     # Filter banned columns.
 
-    for banned_column in banned_columns:
-        result_dataframe = result_dataframe.loc[result_dataframe['column'] != banned_column]
+    #for banned_column in banned_columns:
+    #    result_dataframe = result_dataframe.loc[result_dataframe['column'] != banned_column]
 
     log.debug( 'Created result DataFrame' )
 
