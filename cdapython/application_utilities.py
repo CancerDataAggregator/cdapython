@@ -301,7 +301,6 @@ def verify_inputs(
         provenance,
         return_data_as,
         output_file,
-        count_only,
         log
         ):
     # Top-level type and sanity checking (i.e. not examining list contents yet): ensure nothing untoward got passed into our parameters.
@@ -440,14 +439,6 @@ def verify_inputs(
 
         return
 
-    # `count_only`
-    if count_only != True and count_only != False:
-        log.critical(
-            f"fetch_rows(): ERROR: The `count_only` parameter must be set to True or False; you specified '{count_only}', which is neither."
-        )
-
-        return
-    
 
 def build_match_from_file_filter(match_from_file, target_data_type, log):
     match_from_file_input_file = match_from_file["input_file"]
