@@ -8,7 +8,7 @@ from multiprocessing.pool import ApplyResult
 
 from cdapython.discover import columns, tables
 from cdapython.logging_wrappers import get_logger
-from cdapython.application_utilities import get_api_client, cleanup_match_statement
+from cdapython.application_utilities import get_api_client, validate_and_transform_match_filter_list 
 
 from cda_client.models.q_node import QNode
 from cda_client.errors import UnexpectedStatus
@@ -800,7 +800,7 @@ def summarize(
     # ...and save parse results for each filter expression as a separate Query object (to be combined later).
 
     try:
-        queries_for_match_all = cleanup_match_statement(col_values, match_all)
+        queries_for_match_all = validate_and_transform_match_filter_list( col_values, match_all )
     except Exception as e:
         log.critical(e)
         return
@@ -816,7 +816,7 @@ def summarize(
     # ...and save parse results for each filter expression as a separate Query object (to be combined later).
 
     try:
-        queries_for_match_any = cleanup_match_statement(col_values, match_any)
+        queries_for_match_any = validate_and_transform_match_filter_list( col_values, match_any )
     except Exception as e:
         log.critical(e)
         return
