@@ -124,7 +124,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         filter_value = re.sub( r'^\S+\s+\S+\s+(\S.*)$', r'\1', filter_expression )
 
         # We said quotes weren't required for string values. Doesn't technically mean they can't be used. Remove them.
-        filter_value = re.sub( r'''^['"]*(.*)['"]*$''', r'', filter_value)
+        filter_value = re.sub( r'''^['"]*(.*)['"]*$''', r'\1', filter_value)
 
         #############################################################################################################################
         # Validate VALUE types and process wildcards.
