@@ -258,6 +258,14 @@ def get_data(
             log.error( f"'match_all' filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format. See the help text for details." )
             return
 
+    # Validate and normalize match_all filter strings. Save results as a list of statement strings.
+
+    try:
+        queries_for_match_all = cleanup_match_statement( cached_column_metadata, match_all )
+    except Exception as e:
+        log.error( e )
+        return
+
     #############################################################################################################################
     # Manage basic validation for the `match_any` parameter, which enumerates user-specified requirements for which
     # returned rows must satisfy at least one (OR; union; 'at least one of these must apply').
@@ -274,68 +282,68 @@ def get_data(
             log.error( f"'match_any' filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format. See the help text for details." )
             return
 
+    # Validate and normalize match_any filter strings. Save results as a list of statement strings.
+
+    try:
+        queries_for_match_any = cleanup_match_statement( cached_column_metadata, match_any )
+    except Exception as e:
+        log.error( e )
+        return
+
     #############################################################################################################################
     # Manage basic validation for the `data_source` parameter, which enumerates user-specified filters on upstream data
     # sources.
 
     for item in data_source:
-        if not isinstance(item, str) or len(item) == 0:
-            log.critical(
-                f"get_data(): ERROR: value assigned to the 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither."
-            )
-
+        if not isinstance( item, str ) or len( item ) == 0:
+            log.error( f"The 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither." )
             return
 
-    # Let us not care about case, and remove any whitespace before it can do any damage.
+    # Let's not care about case, and remove any whitespace before it can do any damage.
+    data_source = [ re.sub( r'\s+', r'', item ).upper() for item in data_source ]
 
-    data_source = [re.sub(r"\s+", r"", item).lower() for item in data_source]
-
-    # TEMPORARY: enumerate valid values and warn the user if they supplied something else.
-    # At time of writing this is too expensive to retrieve dynamically from the API,
-    # so the valid value list is hard-coded here and in the docstring for this function.
+    # TEMPORARY: enumerate valid `data_source` values and warn the user if they supplied something else.
     #
-    # This should be replaced ASAP with a fetch from a 'release metadata' table or something
-    # similar.
+    # This should be replaced ASAP with a fetch from the /release_metadata endpoint.
 
-    allowed_data_source_values = {"gdc", "pdc", "idc", "cds", "icdc"}
+    allowed_data_source_values = {
+        'GDC',
+        'PDC',
+        'IDC',
+        'CDS',
+        'ICDC'
+    }
 
     for item in data_source:
         if item not in allowed_data_source_values:
-            log.critical(
-                f"get_data(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{item}', which is not."
-            )
-
+            log.error( f"The 'data_source' parameter must be one or more of [ 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' ]. You supplied '{item}', which is not that." )
             return
 
-    #############################################################################################################################
-    # UPDATE? :: Enforce mutual exclusivity across different join directives: `add_columns` and `provenance`.
 
-    # If it exists, save the name (and, in the following code block, the data type)
-    # of the ID field of the table from which we are to join any extra non-`table`
-    # columns, so we can present well-formed output later in a consistent way.
+
+    #############################################################################################################################
+    ### FLAGGED FOR REMOVAL AFTER UPDATE
+    ### Enforce mutual exclusivity across different join directives: `add_columns` and `provenance`.
+    ### 
+    ### [...]
+    ### 
+    ### If it exists, save the name (and, in the following code block, the data type)
+    ### of the ID field of the table from which we are to join any extra non-`table`
+    ### columns, so we can present well-formed output later in a consistent way.
 
 
     
     #############################################################################################################################
     # Manage basic validation for `add_columns`, which enumerates user-specified non-`table` columns to be
-    # joined with the main `table` result rows.
+    # added to the main `table` result rows.
 
     # Eliminate undesirable characters and convert all values to lowercase.
+    add_columns = [ re.sub( r'[^a-z0-9_]', r'', column_to_add ).lower() for column_to_add in add_columns ]
 
-    add_columns = [re.sub(r"[^a-z0-9_]", r"", column_to_add).lower() for column_to_add in add_columns]
 
 
-    try:
-        queries_for_match_all = cleanup_match_statement(cached_column_metadata, match_all)
-    except Exception as e:
-        log.critical(e)
-        return
 
-    try:
-        queries_for_match_any = cleanup_match_statement(cached_column_metadata, match_any)
-    except Exception as e:
-        log.critical(e)
-        return
+
 
     if match_from_file['cda_column_to_match'] != '':
         target_data_type = columns(column=match_from_file["cda_column_to_match"])["data_type"][0]

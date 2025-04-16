@@ -778,7 +778,7 @@ def column_values(
     # Check the data_source parameter.
 
     if not isinstance( data_source, str ):
-        log.critical( f"column_values(): ERROR: value assigned to 'data_source' parameter must be a string (e.g. 'GDC'); you specified '{data_source}', which is not." )
+        log.error( f"The 'data_source' parameter must be a string (e.g. 'GDC'); you specified '{data_source}', which is not." )
         return
 
     # Let's not care about case, and remove any whitespace before it can do any damage.
@@ -797,7 +797,7 @@ def column_values(
     }
 
     if data_source != '' and data_source not in allowed_data_source_values:
-        log.critical( f"column_values(): ERROR: values assigned to the 'data_source' parameter must be one of { 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' }. You supplied '{data_source}', which is not." )
+        log.error( f"The 'data_source' parameter must be one of [ 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' ]. You supplied '{data_source}', which is not." )
         return
 
     #############################################################################################################################
