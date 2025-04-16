@@ -512,7 +512,9 @@ def get_data(
 
     if not suppress_data_source_results:
         
+        # Make a new column called 'data_source', populated with empty lists.
         result_dataframe['data_source'] = [ [] for _ in range( len( result_dataframe ) ) ]
+
 
 
 
@@ -529,185 +531,92 @@ def get_data(
 
     added_columns = list()
 
-    for column_name in result_dataframe:
+    for column in result_dataframe:
         
-        if column_name != 'data_source' and column_name not in source_table_columns_in_order and column_name not in columns_to_add:
-            columns_to_suppress.append( column_name )
+        if column != 'data_source' and column not in source_table_columns_in_order and column not in columns_to_add:
+            columns_to_suppress.append( column )
 
-        if column_name != 'data_source' and column_name not in source_table_columns_in_order:
-            added_columns.append( column_name )
+        if column != 'data_source' and column not in source_table_columns_in_order:
+            added_columns.append( column )
 
     if len( columns_to_suppress ) > 0:
         
         log.debug(f"   -- filtering API columns: {columns_to_suppress}")
+        result_dataframe = result_dataframe.drop( columns=columns_to_suppress )
 
-        result_dataframe = result_dataframe.drop(columns=columns_to_drop)
+    # Resequence the output columns according to the sequence given by the columns() function.
+    final_column_order = list()
 
-    # # Resequence the output columns according to the sequence given by the columns() function.
+    # First, order all the native fields from this endpoint that weren't explicitly excluded by the user, in the default (relative) order.
+    for column in source_table_columns_in_order:
+        if column in result_dataframe:
+            final_column_order.append( column )
 
-    # final_column_order = list()
+    # Then our `data_source` result summary, if it wasn't suppressed.
+    if not suppress_data_source_results:
+        final_column_order.append( 'data_source' )
 
-    # # First, all the native fields from this endpoint, in the default (relative) order.
+    # Then the fields from other tables that the user added.
+    for added_column in added_columns:
+        final_column_order.append( added_column )
 
-    # for column in columns_to_fetch:
-    #     if column not in added_columns:
-    #         final_column_order.append(column)
+    if len( result_dataframe.columns ) > 0:
+        
+        result_dataframe = result_dataframe[ final_column_order ]
 
-    # # Then the fields from other tables that the user added.
+        log.debug( "Handling missing values..." )
 
-    # for added_column in added_columns:
-    #     final_column_order.append(added_column)
+        result_column_names = result_dataframe.columns.to_list()
 
-    # if len(result_dataframe.columns) > 0:
-    #     # result_dataframe = result_dataframe[ final_column_order ]
+        for column in result_column_names:
+            
+            # CDA has no float values. Cast all numeric data to integers.
+            # print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(result_column_data_types[column]))
 
-    #     # Joins that transit through intermediate entity tables can come back from the API with phantom missing data (e.g.
-    #     """
-    #     {
-    #         "node_type": "SELECT",
-    #         "l": {
-    #             "node_type": "SELECTVALUES",
-    #             "value": "subject_id, cause_of_death, days_to_birth, days_to_death, ethnicity, race, sex, species, vital_status, diagnosis_id, method_of_diagnosis"
-    #         },
-    #         "r": {
-    #             "node_type": "LIKE",
-    #         "l": {
-    #             "node_type": "column",
-    #             "value": "subject_id"
-    #         },
-    #             "r": {
-    #                 "node_type": "quoted",
-    #                 "value": "TCGA.TCGA-Z2%"
-    #             }
-    #         }
-    #     }
-    #     """
-    #     # ...will produce a weird table with missing diagnosis rows, apparently because it thought it had to bring _something_ back for each researchsubject it checked.
-    #     #
-    #     # So we strip out all rows whose requested joined table data is missing ID information (if any such extra data was asked for in the first place):
+            if result_column_data_types[column] in { 'numeric', 'integer', 'bigint' }:
+                
+                # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
+                # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
+                # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
+                # storage of missing values. These will print as '<NA>'.
 
-    #     if join_table_id_field is not None:
-    #         result_dataframe = result_dataframe.loc[~(result_dataframe[join_table_id_field].isna())]
+                result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
 
-    #     log.debug("Handling missing values...")
+            elif result_column_data_types[column] in { 'text', 'boolean' }:
+                
+                # Replace values that are None (== null) with '<NA>' (to match what we['re forced to] use
+                # for null numeric values.
 
-        # for column in columns_to_fetch:
+                result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
 
-        #     # CDA has no float values. Cast all numeric data to integers.
+            elif column != 'data_source':
+                
+                # This isn't anticipated. Yell if we get something unexpected.
+                log.critical( f"Unexpected data type `{result_column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
+                return
 
-        #     print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(result_column_data_types[column]))
+        # TO DO: Consolidate provenance information if present.
 
-        #     if result_column_data_types[column] in { 'numeric', 'integer', 'bigint' }:
-
-        #         # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
-        #         # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
-        #         # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
-        #         # storage of missing values. These will print as '<NA>'.
-
-        #         result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
-
-        #     elif result_column_data_types[column] in { 'text', 'boolean' }:
-
-        #         # Replace values that are None (== null) with empty strings. (This has been tested and works
-        #         # for both strings and booleans.)
-
-        #         result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
-
-        #     elif result_column_data_types[column] == 'array_of_id_dictionaries':
-
-        #         # All good here, these shouldn't ever be null -- every `table` row has at least one entry in `table`_identifier.
-
-        #         pass
-
-        #     else:
-
-        #         # This isn't anticipated. Yell if we get something unexpected.
-
-        #         log.critical( f"get_data(): ERROR: Unexpected data type `{result_column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
-
-        #         return
-
-        # Consolidate provenance information if present.
-
-        # if provenance == True:
-        #     if table == "mutation":
-        #         rename_columns = {
-        #             "subject_identifier_system": "subject_data_source",
-        #             "subject_identifier_field_name": "subject_data_source_id",
-        #         }
-
-        #         result_dataframe = result_dataframe.rename(columns=rename_columns)
-
-        #         result_dataframe["subject_data_source_id"] = (
-        #             result_dataframe["subject_data_source_id"] + ":" + result_dataframe["subject_identifier_value"]
-        #         )
-
-        #         # axis=0: rows; axis=1: columns.
-
-        #         result_dataframe = result_dataframe.drop("subject_identifier_value", axis=1)
-
-        #     else:
-        #         # We'll need to build a new result matrix, including one copy of
-        #         # each row for each identifier present. Iteratively build a list of
-        #         # tuples (rows) and convert the list to a new DataFrame when complete.
-
-        #         new_result_matrix = list()
-
-        #         new_result_column_names = result_dataframe.columns.tolist()
-
-        #         new_result_column_names.remove(f"{table}_identifier")
-
-        #         # There are likely more efficient ways to do this; target this block
-        #         # for optimization if it ever becomes a bottleneck.
-
-        #         for result_row_index, result_row in result_dataframe.iterrows():
-        #             identifier_array = result_row[f"{table}_identifier"]
-
-        #             for identifier_record in identifier_array:
-        #                 data_source = identifier_record["upstream_identifiers_data_source"]
-
-        #                 data_source_id = identifier_record["data_source_id_field_name"] + ":" + identifier_record["data_source_id_value"]
-
-        #                 new_row = list()
-
-        #                 for column_name in new_result_column_names:
-        #                     new_row.append(result_row[column_name])
-
-        #                 new_row = new_row + [data_source, data_source_id]
-
-        #                 new_result_matrix.append(tuple(new_row))
-
-        #         new_result_column_names = new_result_column_names + [f"{table}_data_source", f"{table}_data_source_id"]
-
-        #         result_dataframe = pd.DataFrame(new_result_matrix, columns=new_result_column_names)
-
-    if return_data_as == "" or return_data_as == "dataframe":
-        # Right now, the default is the same as if the user had
-        # specified return_data_as='dataframe'.
-
+    if return_data_as == '' or return_data_as == 'dataframe':
+        
+        # Right now, the default is the same as if the user had specified return_data_as='dataframe'.
         return result_dataframe
 
-    elif return_data_as == "tsv":
-        # Write results to a user-specified TSV.
-
+    elif return_data_as == 'tsv':
+        
         log.debug( f"Printing results to TSV file '{output_file}'" )
 
-        try:
-            result_dataframe.to_csv(output_file, sep="\t", index=False)
+        # Write results to a user-specified TSV.
 
+        try:
+            result_dataframe.to_csv( output_file, sep='\t', index=False )
             return
 
         except Exception as error:
-            log.critical(
-                f"get_data(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'."
-            )
-
+            log.critical( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
             return
 
-    log.critical(
-        "get_data(): ERROR: Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error."
-    )
-
+    log.critical( 'Something has gone unexpectedly and disastrously wrong with result-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
     return
 
 
