@@ -511,9 +511,10 @@ def get_data(
         # Make a new column called 'data_source', populated with empty lists.
         result_dataframe['data_source'] = [ [] for _ in range( len( result_dataframe ) ) ]
 
-
-
-
+        for row_index, result_record in result_dataframe.iterrows():
+            for upstream_data_source in allowed_data_source_values:
+                if result_record[ f"{table}_data_at_{upstream_data_source.lower()}" ] == True:
+                    result_dataframe['data_source'].iloc[row_index].append( upstream_data_source )
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
@@ -589,8 +590,6 @@ def get_data(
                     # This isn't anticipated. Yell if we get something unexpected.
                     log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
                     return
-
-        # TO DO: Consolidate provenance information if present.
 
     if return_data_as == '' or return_data_as == 'dataframe':
         
