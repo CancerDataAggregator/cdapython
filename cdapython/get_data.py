@@ -582,6 +582,7 @@ def get_data(
 
                     else:
                         
+                        print( column )
                         print( result_dataframe[column].dtype )
                         result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
 
