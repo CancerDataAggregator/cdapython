@@ -6,9 +6,10 @@ import tabulate
 
 from multiprocessing.pool import ApplyResult
 
+from cdapython.application_utilities import get_api_client
 from cdapython.discover import columns, tables
 from cdapython.logging_wrappers import get_logger
-from cdapython.application_utilities import get_api_client, validate_and_transform_match_filter_list 
+from cdapython.validation import validate_and_transform_match_filter_list
 
 from cda_client.models.q_node import QNode
 from cda_client.errors import UnexpectedStatus
@@ -25,6 +26,8 @@ from cda_client.api.summary import subject_summary_endpoint_summary_subject_post
 #############################################################################################################################
 #############################################################################################################################
 
+
+#############################################################################################################################
 # Mechanism for serializing contents of a QNode object to debug logs. Used only by summarize() as of 2025-04-11.
 
 class CdaApiQueryEncoder(json.JSONEncoder):

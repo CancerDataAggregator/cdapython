@@ -6,13 +6,14 @@ import cda_client
 
 from pandas.api.types import is_numeric_dtype
 
-from cdapython.logging_wrappers import get_logger
+from cdapython.application_utilities import build_match_from_file_filter, cleanup_inputs, get_api_client, verify_inputs
 from cdapython.discover import columns
+from cdapython.logging_wrappers import get_logger
+from cdapython.validation import validate_and_transform_match_filter_list
 
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
 from cda_client.models.q_node import QNode
-from cdapython.application_utilities import build_match_from_file_filter, cleanup_inputs, get_api_client, validate_and_transform_match_filter_list, verify_inputs
 
 #############################################################################################################################
 #############################################################################################################################
@@ -197,7 +198,7 @@ def get_data(
         result_column_data_types[ column_record['column'] ] = column_record['data_type']
 
         # Remember the order in which columns() delivered the source table's columns.
-        source_table_columns_in_order.append(column_record['column'])
+        source_table_columns_in_order.append( column_record['column'] )
 
     #############################################################################################################################
     # Process return-type directives `return_data_as` and `output_file`.
