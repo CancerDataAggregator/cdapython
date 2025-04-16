@@ -574,13 +574,10 @@ def get_data(
                     
                     # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
                     # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
-                    # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
-                    # storage of missing values. These will print as '<NA>'.
+                    # Pandas workaround: use extension type 'Int64' (note initial capital) -- itself an alias for numpy.int64 --
+                    # which supports the storage of missing values. These will print as '<NA>'.
 
-                    print( column )
-                    print( result_dataframe[column].dtype )
                     result_dataframe[column] = result_dataframe[column].apply( lambda cell_val: [ numpy.int64( round( element_val ) ) for element_val in cell_val ] if isinstance( cell_val, list ) else numpy.int64( round( cell_val ) ) )
-                    #result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
 
                 elif column_data_types[column] in { 'text', 'boolean' }:
                     
