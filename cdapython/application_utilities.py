@@ -113,7 +113,9 @@ def get_unique_values_api_client():
 
 #############################################################################################################################
 #
-# cleanup_match_statement(column_data, match_statement) : Parse `match_*` filter expressions: complain if
+# validate_and_transform_match_filter_list( cached_column_metadata, match_statement ):
+# 
+# Fail if:
 #
 #     * requested columns don't exist
 #     * illegal or type-inappropriate operators are used
@@ -125,13 +127,14 @@ def get_unique_values_api_client():
 #############################################################################################################################
 
 
-def cleanup_match_statement(column_data, match_statement):
+def validate_and_transform_match_filter_list( cached_column_metadata, match_statement ):
     """
-    Parse `match_*` filter expressions and transform for validity with API
+    Parse `match_*` filter expressions and transform for syntax alidity with the API.
 
     Arguments:
-        column_data ( list of strings; required ):
-            Result of columns() call. Parameterized to save from calling columns() multiple times
+        cached_column_metadata ( list of strings; required ):
+            Column metadata from the API, cached by the calling function for downstream reuse without further network disturbance.
+            The data structure is a DataFrame with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
 
         match_statement ( list of strings; optional ):
             One or more conditions, expressed as filter strings
@@ -148,32 +151,50 @@ def cleanup_match_statement(column_data, match_statement):
     #############################################################################################################################
     # Define the list of supported filter-string operators.
 
-    allowed_operators = {">", ">=", "<", "<=", "=", "!=", "like", "is", "is not", "in"}
+    allowed_operators = {
+        '>',
+        '>=',
+        '<',
+        '<=',
+        '=',
+        '!='
+    }
 
     #############################################################################################################################
     # Enumerate restrictions on operator use to appropriate data types.
 
     operators_by_data_type = {
-        "bigint": allowed_operators,
-        "boolean": {"=", "!="},
-        "integer": allowed_operators,
-        "numeric": allowed_operators,
-        "text": {"=", "!=", "like"},
+        'bigint': allowed_operators,
+        'boolean': { '=', '!=' },
+        'integer': allowed_operators,
+        'numeric': allowed_operators,
+        'text': { '=', '!=' },
     }
 
     #############################################################################################################################
     # Enable aliases for various ways to say "True" and "False". (Case will be lowered as soon as each literal is received.)
 
-    boolean_alias = {"true": "true", "t": "true", "false": "false", "f": "false"}
+    boolean_alias = {
+        'true': 'true',
+        't': 'true',
+        'false': 'false',
+        'f': 'false'
+    }
 
     for item in match_statement:
+        
         # Try to extract a column name from this filter expression. Don't be case-sensitive.
-
-        filter_column_name = re.sub(r"^([\S]+)\s.*", r"\1", item).lower()
+        filter_column_name = re.sub( r'^([\S]+)\s.*', r'\1', item ).lower()
 
         # Let's see if this thing exists.
 
-        # filter_column_metadata = column_data.query(f'column == "{filter_column_name}"')
+        filter_column_metadata = cached_column_metadata[ cached_column_metadata['column'] == filter_column_name ]
+
+        print( type( filter_column_metadata )
+
+        print( filter_column_metadata )
+
+        return
 
         # if filter_column_metadata is None or len(filter_column_metadata) != 1:
         #     raise RuntimeError(f"ERROR: requested column '{filter_column_name}' is not a searchable CDA column.")

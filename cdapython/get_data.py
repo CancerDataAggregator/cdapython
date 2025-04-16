@@ -12,8 +12,7 @@ from cdapython.discover import columns
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
 from cda_client.models.q_node import QNode
-from cdapython.application_utilities import get_api_client, cleanup_match_statement, cleanup_inputs, verify_inputs, build_match_from_file_filter
-
+from cdapython.application_utilities import build_match_from_file_filter, cleanup_inputs, get_api_client, validate_and_transform_match_filter_list, verify_inputs
 
 #############################################################################################################################
 #############################################################################################################################
@@ -261,7 +260,7 @@ def get_data(
     # Validate and normalize match_all filter strings. Save results as a list of statement strings.
 
     try:
-        queries_for_match_all = cleanup_match_statement( cached_column_metadata, match_all )
+        queries_for_match_all = validate_and_transform_match_filter_list( cached_column_metadata, match_all )
     except Exception as e:
         log.error( e )
         return
@@ -285,7 +284,7 @@ def get_data(
     # Validate and normalize match_any filter strings. Save results as a list of statement strings.
 
     try:
-        queries_for_match_any = cleanup_match_statement( cached_column_metadata, match_any )
+        queries_for_match_any = validate_and_transform_match_filter_list( cached_column_metadata, match_any )
     except Exception as e:
         log.error( e )
         return
