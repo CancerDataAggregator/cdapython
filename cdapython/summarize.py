@@ -28,24 +28,6 @@ from cda_client.api.summary import subject_summary_endpoint_summary_subject_post
 
 
 #############################################################################################################################
-# Mechanism for serializing contents of a QNode object to debug logs. Used only by summarize() as of 2025-04-11.
-
-class CdaApiQueryEncoder(json.JSONEncoder):
-    def default(self, o):
-        if type(o) == "mappingproxy":
-            return None
-
-        tmp_dict = vars(o)
-
-        if "query" in tmp_dict:
-            return tmp_dict["query"]
-
-        if "_data_store" in tmp_dict:
-            return tmp_dict["_data_store"]
-
-        return None
-
-#############################################################################################################################
 #
 # summarize_files(): Get a report describing columns of interest in the CDA file table, summarizing column values over
 #                    all files matching user-supplied query filters. Optionally add columns from other tables, which are
@@ -1353,7 +1335,6 @@ def summarize(
     q_node.exclude_columns = columns_to_remove
 
     # Dump JSON describing the full combined query structure.
-    #log.debug( f"Query JSON transmitted:\n{json.dumps( q_node.to_dict(), indent=4, cls=CdaApiQueryEncoder )}" )
     log.debug( f"Query JSON transmitted:\n{json.dumps( q_node.to_dict(), indent=4 )}" )
 
     #############################################################################################################################
@@ -1452,7 +1433,7 @@ def summarize(
 
     # This is immensely verbose, sometimes.
 
-    log.debug( f"/summary/{table} endpoint result:\n{json.dumps(paged_response_data_object.to_dict()['result'], indent=4)}" )
+    log.debug( f"/summary/{table} endpoint result:\n{json.dumps( paged_response_data_object.to_dict()['result'], indent=4 )}" )
 
     # Make a Pandas DataFrame out of the first batch of results.
     #
