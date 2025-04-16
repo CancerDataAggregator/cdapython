@@ -1017,7 +1017,7 @@ def column_values(
     #     "next_url": null
     # }
 
-    log.debug( f"Page one results:\n{json.dumps( paged_response_data_object.to_dict(), indent=4 )}\n" )
+    log.debug( f"Page one results ( NOTE: pattern filters have not yet been applied ):\n{json.dumps( paged_response_data_object.to_dict(), indent=4 )}\n" )
 
     result_dataframe = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
 

@@ -429,7 +429,7 @@ def get_data(
     #     "next_url": null
     # }
 
-    log.debug( f"Received API response:\n{paged_response_data_object.to_dict()}\n" )
+    log.debug( f"Page one results:\n{json.dumps( paged_response_data_object.to_dict(), indent=4 )}\n"
     
     result_dataframe = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
 
