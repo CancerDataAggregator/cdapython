@@ -569,7 +569,7 @@ def get_data(
                 # CDA has no float values. Cast all numeric data to integers.
                 # print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(column_data_types[column]))
 
-                if column_data_types[column] in { 'numeric', 'integer', 'bigint' }:
+                if column_data_types[column] in { 'integer', 'bigint' }:
                     
                     # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
                     # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
