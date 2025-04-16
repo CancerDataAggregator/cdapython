@@ -521,27 +521,24 @@ def get_data(
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
-    # metadata for `table` rows) has been requested.
-
-    # Note that we could just filter `result_dataframe` with the 'specify target
-    # columns' assignment that we use a little later to sort the remaining output
-    # columns, but I think this way is much easier to understand.
-
-    columns_to_suppress = list()
+    # metadata for `table` rows) has been requested. Also make sure non-user-facing columns
+    # (e.g. `subject_data_at_gdc`) are not passed through to the user unprocessed.
 
     added_columns = list()
+    columns_to_suppress = list()
 
     for column in result_dataframe:
         
-        if column != 'data_source' and column not in source_table_columns_in_order and column not in columns_to_add:
-            columns_to_suppress.append( column )
+        if column != 'data_source':
+            
+            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None:
+                columns_to_suppress.append( column )
 
-        if column != 'data_source' and column not in source_table_columns_in_order:
-            added_columns.append( column )
+            elif column not in source_table_columns_in_order:
+                added_columns.append( column )
 
     if len( columns_to_suppress ) > 0:
-        
-        log.debug(f"   -- filtering API columns: {columns_to_suppress}")
+        log.debug( f"   -- filtering API columns: {columns_to_suppress}" )
         result_dataframe = result_dataframe.drop( columns=columns_to_suppress )
 
     # Resequence the output columns according to the sequence given by the columns() function.
