@@ -86,8 +86,8 @@ def get_data(
 
         provenance ( boolean; optional ):
             If True, get_data() will attach cross-reference information
-            to each result row describing the upstream data sources from
-            which it was derived.
+            to each result row identifying that row in the context of
+            the upstream data source(s) from which it was derived.
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
             Specify how get_data() should return results: as a pandas DataFrame,
@@ -148,87 +148,62 @@ def get_data(
 
     """
 
-    #############################################################################################################################
-
-    # cache the columns call and tables info so we don't have to call it more than once during get_data
     log = get_logger()
-    column_values = columns()
 
-    # Make sure inputs are clean
-    match_all, match_any, add_columns, exclude_columns, data_source = cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source)
+    #############################################################################################################################
+    # Cache column metadata from the API for downstream reuse without further network disturbance.
+    # 
+    # The data structure is a DataFrame with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
 
-    # Make sure the inputs are what they should be
+    cached_column_metadata = columns()
+
+    # Normalize user-supplied parameter data. Right now, this just returns a one-element list for any of these that come in as strings and leaves the rest unmodified.
+    match_all, match_any, add_columns, exclude_columns, data_source = cleanup_inputs( match_all, match_any, add_columns, exclude_columns, data_source )
+
+    # Validate user-supplied parameter data.
     verify_inputs(
-        column_values,
-        match_all, 
-        match_any, 
-        add_columns, 
-        exclude_columns, 
-        data_source,
-        table,
-        match_from_file,
-        provenance,
-        return_data_as,
-        output_file,
+        cached_column_metadata,
+        match_all, match_any, add_columns, exclude_columns, data_source, table, match_from_file, provenance, return_data_as, output_file,
         log
-        )
+    )
 
     #############################################################################################################################
     # Preprocess table metadata, to enable consistent processing (and reporting) throughout.
 
     # Track the data type present in each `table` column, so we can
-    # format results properly downstream.
+    # format results properly downstream. Among other things we need to
+    # know details of numeric types, when constructing DataFrames to return
+    # to the user, so we can compensate for pandas' inconsistent handling
+    # of numeric null values.
 
     result_column_data_types = dict()
 
     # Store the default column ordering as provided by the columns() function,
-    # to enable us to always display the same data in the same way.
+    # so all cdapython interfaces always display the same data in the same way
+    # by default.
 
     source_table_columns_in_order = list()
 
-    table_cols = column_values.query(f'table == "{table}"')
+    source_table_column_metadata = cached_column_metadata[ cached_column_metadata['table'] == table ]
 
-    if table_cols is None:
+    if source_table_column_metadata is None:
+        
         # Since we've checked for the existence of table previously, this case should never happen.
-        log.critical(f"No such table {table}. Please retry with an existent table.")
-
+        log.error( f"CDA table '{table}' not found. Try tables() for a list." )
         return
 
-    for row_index, column_record in table_cols.iterrows():
-        result_column_data_types[column_record["column"]] = column_record["data_type"]
+    for row_index, column_record in source_table_column_metadata.iterrows():
+        
+        # Save the data_type of each column in the source table.
+        result_column_data_types[ column_record['column'] ] = column_record['data_type']
 
-        source_table_columns_in_order.append(column_record["column"])
-    
-
-    # "`table`_associated_project" and "`table`_identifier", provided by the API
-    # as non-atomic objects (a list and a list of dicts, respectively) and
-    # previously embedded whole into single cells of the rectangular matrices
-    # that we returned to users as as result data, are now to be withheld
-    # from default user-facing endpoint results, to allow us to meet expectations
-    # about basic uniformity (and rapid usability) of CDA result data.
-    #
-    # Reliable retrieval of one-to-many project associations is deferred
-    # until the CRDC Common Model is implemented, with its own dedicated
-    # `project` entity.
-    #
-    # If `provenance` is set to True, we will retain the identifier information
-    # and include its contents in restructured results.
-    #
-    # These two columns don't appear in columns() output right now,
-    # so they never make it into `source_table_columns_in_order`.
-    # If we want one, we need to add it back.
-    if provenance == True and table != "mutation":
-        source_table_columns_in_order.append(f"{table}_identifier")
-
-        result_column_data_types[f"{table}_identifier"] = "array_of_id_dictionaries"
+        # Remember the order in which columns() delivered the source table's columns.
+        source_table_columns_in_order.append(column_record['column'])
 
     #############################################################################################################################
     # Process return-type directives `return_data_as` and `output_file`.
 
-    allowed_return_types = {"", "dataframe", "tsv"}
-
     # Let's not be picky if someone wants to give us return_data_as='DataFrame' or return_data_as='TSV'
-
     return_data_as = return_data_as.lower()
 
     # We can't do much validation on filenames. If `output_file` isn't
@@ -238,61 +213,49 @@ def get_data(
 
     output_file = output_file.strip()
 
+    allowed_return_types = {
+        '',
+        'dataframe',
+        'tsv'
+    }
+
     if return_data_as not in allowed_return_types:
+        
         # Complain if we receive an unexpected `return_data_as` value.
-
-        log.critical(
-            f"get_data(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'."
-        )
-
+        log.error( f"Unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'." )
         return
 
-    elif return_data_as == "tsv" and output_file == "":
+    elif return_data_as == 'tsv' and output_file == '':
+        
         # If the user asks for TSV, they also have to give us a path for the output file. If they didn't, complain.
-
-        log.critical(
-            "get_data(): ERROR: return type 'tsv' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/tsv/to'."
-        )
-
+        log.error( "Return type 'tsv' was requested, but 'output_file' was not specified. Please specify output_file='some/path/string/to/write/your/tsv/to/your_tsv_output_file.tsv'." )
         return
 
-    elif return_data_as != "tsv" and output_file != "":
-        # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
+    elif return_data_as != 'tsv' and output_file != '':
+        
+        # If the user put something in the `output_file` parameter but didn't specify `result_data_as`='tsv',
         # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
         # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
         # so we complain and ask them to clarify.
 
-        log.critical(
-            f"get_data(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'."
-        )
-        log.critical("(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.).")
-
+        log.error( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'." )
+        log.error( '(Note that if you don\'t specify any value for \'return_data_as\', it defaults to \'dataframe\'.).' )
         return
-
-    #############################################################################################################################
-    # Enable aliases for various ways to say "True" and "False". (Case will be lowered as soon as each literal is received.)
-
-    boolean_alias = {"true": "true", "t": "true", "false": "false", "f": "false"}
 
     #############################################################################################################################
     # Manage basic validation for the `match_all` parameter, which enumerates user-specified requirements that returned
     # rows must all simultaneously satisfy (AND; intersection; 'all of these must apply').
 
     for item in match_all:
-        if not isinstance(item, str) or len(item) == 0:
-            log.critical(
-                f"get_data(): ERROR: value assigned to 'match_all' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_all}', which is neither."
-            )
-
+        
+        if not isinstance( item, str ) or len( item ) == 0:
+            log.error( f"The 'match_all' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_all}', which is neither." )
             return
 
-        # Check overall format.
+        # Validate minimal filter string format: <non-whitespace string (column name)><whitespace><non-whitespace string (operator)><whitespace><non-whitespace string (beginning of value to match)><any mix of whitespace and non-whitespace characters (end of value to match)>
 
-        if re.search(r"^\S+\s+\S+\s+\S.*$", item) is None:
-            log.critical(
-                f"get_data(): ERROR: match_all: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format."
-            )
-
+        if re.search( r'^\S+\s+\S+\s+\S.*$', item ) is None:
+            log.error( f"'match_all' filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format. See the help text for details." )
             return
 
     #############################################################################################################################
@@ -300,23 +263,16 @@ def get_data(
     # returned rows must satisfy at least one (OR; union; 'at least one of these must apply').
 
     for item in match_any:
-        if not isinstance(item, str) or len(item) == 0:
-            log.critical(
-                f"get_data(): ERROR: value assigned to 'match_any' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_any}', which is neither."
-            )
-
+        
+        if not isinstance( item, str ) or len( item ) == 0:
+            log.error( f"The 'match_any' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_any}', which is neither." )
             return
 
-        # Check overall format.
+        # Validate minimal filter string format: <non-whitespace string (column name)><whitespace><non-whitespace string (operator)><whitespace><non-whitespace string (beginning of value to match)><any mix of whitespace and non-whitespace characters (end of value to match)>
 
-        if re.search(r"^\S+\s+\S+\s+\S.*$", item) is None:
-            log.critical(
-                f"get_data(): ERROR: match_any: filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format."
-            )
-
+        if re.search( r'^\S+\s+\S+\s+\S.*$', item ) is None:
+            log.error( f"'match_any' filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format. See the help text for details." )
             return
-
-    
 
     #############################################################################################################################
     # Manage basic validation for the `data_source` parameter, which enumerates user-specified filters on upstream data
@@ -370,13 +326,13 @@ def get_data(
 
 
     try:
-        queries_for_match_all = cleanup_match_statement(column_values, match_all)
+        queries_for_match_all = cleanup_match_statement(cached_column_metadata, match_all)
     except Exception as e:
         log.critical(e)
         return
 
     try:
-        queries_for_match_any = cleanup_match_statement(column_values, match_any)
+        queries_for_match_any = cleanup_match_statement(cached_column_metadata, match_any)
     except Exception as e:
         log.critical(e)
         return

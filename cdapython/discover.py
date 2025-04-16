@@ -189,15 +189,13 @@ def columns(
     if return_data_as not in allowed_return_types:
         
         # Complain if we receive an unexpected `return_data_as` value.
-
-        log.critical( f"columns(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'.")
+        log.error( f"Unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
         return
 
     elif return_data_as == 'tsv' and output_file == '':
         
         # If the user asks for a TSV, they also have to give us a path for that TSV. If they didn't, complain.
-
-        log.critical( 'columns(): ERROR: return type \'tsv\' requested, but \'output_file\' not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to\'.')
+        log.error( "Return type 'tsv' was requested, but 'output_file' was not specified. Please specify output_file='some/path/string/to/write/your/tsv/to/your_tsv_output_file.tsv'." )
         return
 
     elif return_data_as != 'tsv' and output_file != '':
@@ -207,7 +205,8 @@ def columns(
         # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
         # so we complain and ask them to clarify.
 
-        log.critical( f"columns(): ERROR: 'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
+        log.error( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'." )
+        log.error( '(Note that if you don\'t specify any value for \'return_data_as\', it defaults to \'dataframe\'.).' )
         return
 
     #############################################################################################################################
