@@ -1,3 +1,4 @@
+import json
 import os
 import pandas as pd
 import re
@@ -959,7 +960,7 @@ def column_values(
         'force': force,
     }
 
-    log.debug( f"Processed all parameter directives. Calling API to fetch data for '{parameter_dict}'." )
+    log.debug( f"Processed all parameter directives. Calling API to fetch data for\n{json.dumps( parameter_dict, indent=4 )}\n" )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -983,7 +984,7 @@ def column_values(
         )
     )
 
-    log.debug( 'Querying CDA API \'unique_values\' endpoint: columnname={column}; system={data_source}; count=True; total_count=True; limit={records_per_page}; offset={starting_offset}' )
+    log.debug( f"Sending query to API:\n{json.dumps( { 'columnname': column, 'system': data_source, 'count': True, 'total_count': True, 'limit': records_per_page, 'offset': starting_offset }, indent=4 )}\n" )
 
     # Report some metadata about the results we got back.
 

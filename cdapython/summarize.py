@@ -1335,7 +1335,7 @@ def summarize(
     q_node.exclude_columns = columns_to_remove
 
     # Dump JSON describing the full combined query structure.
-    log.debug( f"Query JSON transmitted:\n{json.dumps( q_node.to_dict(), indent=4 )}" )
+    log.debug( f"Sending query to API:\n{json.dumps( q_node.to_dict(), indent=4 )}\n" )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -1433,7 +1433,7 @@ def summarize(
 
     # This is immensely verbose, sometimes.
 
-    log.debug( f"/summary/{table} endpoint result:\n{json.dumps( paged_response_data_object.to_dict()['result'], indent=4 )}" )
+    log.debug( f"/summary/{table} endpoint response:\n{json.dumps( paged_response_data_object.to_dict()['result'], indent=4 )}\n" )
 
     # Make a Pandas DataFrame out of the first batch of results.
     #

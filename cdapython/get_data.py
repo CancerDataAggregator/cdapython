@@ -375,8 +375,6 @@ def get_data(
     #############################################################################################################################
     # Fetch data from the API.
 
-    log.debug( f"Querying CDA API '/data/{table}' endpoint" )
-
     query_selector = {
         'file': cda_client.api.data.file_fetch_rows_endpoint_data_file_post,
         'subject': cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post,
@@ -389,10 +387,9 @@ def get_data(
     starting_offset = 0
     rows_per_page = 500000
 
-    # Use the QueryApi instance object's `{table}_query` endpoint-accessor
-    # function to get data from the REST API.
-    # hope i don't need this {json.dumps( q_node.to_dict(), indent=4, cls=CdaApiQueryEncoder )}
-    log.debug( f"Sending query:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
+    # Use the QueryApi instance object's `{table}_query` endpoint-accessor function to get data from the REST API.
+
+    log.debug( f"Sending query to API '/data/{table}' endpoint:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
     
     query_api_instance = get_api_client()
 
