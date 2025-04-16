@@ -583,6 +583,7 @@ def get_data(
 
                     else:
                         
+                        print( column )
                         result_dataframe[column] = result_dataframe[column].apply( lambda cell_val: [ numpy.int64( round( element_val ) ) for element_val in cell_val ] if isinstance( cell_val, list ) else numpy.int64( round( cell_val ) ) )
 
                 elif column_data_types[column] in { 'text', 'boolean' }:
