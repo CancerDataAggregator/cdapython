@@ -512,7 +512,7 @@ def get_data(
 
     if not suppress_data_source_results:
         
-        result_dataframe['data_source'] = list()
+        result_dataframe['data_source'] = [ [] for _ in range( len( df ) ) ]
 
 
 
