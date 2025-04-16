@@ -566,9 +566,9 @@ def get_data(
             if column != 'data_source':
                 
                 # CDA has no float values. Cast all numeric data to integers.
-                # print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(result_column_data_types[column]))
+                # print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(column_data_types[column]))
 
-                if result_column_data_types[column] in { 'numeric', 'integer', 'bigint' }:
+                if column_data_types[column] in { 'numeric', 'integer', 'bigint' }:
                     
                     # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
                     # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
@@ -577,7 +577,7 @@ def get_data(
 
                     result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
 
-                elif result_column_data_types[column] in { 'text', 'boolean' }:
+                elif column_data_types[column] in { 'text', 'boolean' }:
                     
                     # Replace values that are None (== null) with '<NA>' (to match what we['re forced to] use
                     # for null numeric values.
@@ -587,7 +587,7 @@ def get_data(
                 else:
                     
                     # This isn't anticipated. Yell if we get something unexpected.
-                    log.critical( f"Unexpected data type `{result_column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
+                    log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
                     return
 
         # TO DO: Consolidate provenance information if present.
