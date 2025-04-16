@@ -4,8 +4,6 @@ import re
 
 import cda_client
 
-from pandas.api.types import is_numeric_dtype
-
 from cdapython.application_utilities import build_match_from_file_filter, cleanup_inputs, get_api_client, verify_inputs
 from cdapython.discover import columns
 from cdapython.logging_wrappers import get_logger
@@ -307,12 +305,13 @@ def get_data(
         else:
             queries_for_match_all.append( f"{table}_data_at_{upstream_data_source.lower()} = True" )
 
-    # If data_source isn't null, make sure to retrieve the columns we need for our data source summary output. These are not returned by default from the API.
+    # Make sure to retrieve the columns we need for data source summary output (whether or not
+    # the data_source filter was used by the user, we summarize upstream data sources by default).
+    # These columns are not returned by default from the API.
 
-    if len( data_source ) > 0:
-        for upstream_data_source in allowed_data_source_values:
-            if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns:
-                add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" )
+    for upstream_data_source in allowed_data_source_values:
+        if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns:
+            add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" )
 
 
 
@@ -343,7 +342,7 @@ def get_data(
 
 
     #############################################################################################################################
-    # Parse `add_columns` list to build our API request object.
+    # Parse `add_columns` and `exclude_columns` lists to build our API request object.
 
     columns_to_add = list()
 
@@ -355,8 +354,16 @@ def get_data(
     
     columns_to_exclude = list()
 
+    suppress_data_source_results = False
+
     for column_to_exclude in exclude_columns:
         
+        # Handle 'data_source' explicitly; it's a user-facing summary column the API neither knows
+        # nor needs to care about.
+
+        if column_to_exclude.lower() == 'data_source':
+            suppress_data_source_results = True
+
         # Ignore requests to exclude columns that are already excluded. Let the API sort out
         # what to do if a user requests to both add and exclude a column.
 
@@ -407,26 +414,53 @@ def get_data(
     # Make a Pandas DataFrame out of the first batch of results.
     #
     # The API returns responses in JSON format: convert that JSON into a DataFrame
-    # using pandas' json_normalize() function. Example JSON response:
+    # using pandas' json_normalize() function. Example JSON response ( Note not all of these columns are returned by default: some were requested, others induced by a non-null `data_source` parameter):
     #
     # {
     #     "result": [
-    #             {
-    #                 "sex": "female",
-    #                 "value_count": 31215
-    #             },
-    #             {
-    #                 "sex": "male",
-    #                 "value_count": 28571
-    #             },
-    #             {
-    #                 "sex": null,
-    #                 "value_count": 64240
-    #             }
+    #         {
+    #             "subject_id": "TCGA.TCGA-AA-A022",
+    #             "subject_crdc_id": null,
+    #             "species": "human",
+    #             "year_of_birth": 1917,
+    #             "year_of_death": null,
+    #             "cause_of_death": null,
+    #             "race": null,
+    #             "ethnicity": null,
+    #             "subject_data_at_gdc": true,
+    #             "subject_data_at_idc": true,
+    #             "subject_data_at_cds": false,
+    #             "subject_data_at_pdc": true,
+    #             "subject_data_at_icdc": false,
+    #             "sex": [
+    #                 "female"
+    #             ]
+    #         },
+    #         
+    #         ...
+    #         
+    #         {
+    #             "subject_id": "TCGA.TCGA-BH-A18N",
+    #             "subject_crdc_id": null,
+    #             "species": "human",
+    #             "year_of_birth": 1913,
+    #             "year_of_death": 2004,
+    #             "cause_of_death": null,
+    #             "race": "White",
+    #             "ethnicity": "Non-Hispanic",
+    #             "subject_data_at_gdc": true,
+    #             "subject_data_at_idc": true,
+    #             "subject_data_at_cds": false,
+    #             "subject_data_at_pdc": true,
+    #             "subject_data_at_icdc": false,
+    #             "sex": [
+    #                 "female"
+    #             ]
+    #         }
     #     ],
-    #     "query_sql": "SELECT row_to_json(column_json) AS row_to_json_1 FROM (SELECT observation.sex AS sex, count(*) AS value_count FROM observation WHERE observation.data_at_gdc IS true GROUP BY observation.sex ORDER BY observation.sex) AS column_json",
-    #     "total_row_count": 3,
-    #     "next_url": null
+    #     "query_sql": "WITH subject_preselect AS (SELECT subject.id_alias AS id_alias FROM subject WHERE (EXISTS (SELECT 1 FROM observation WHERE subject.id_alias = observation.subject_alias AND coalesce(upper(observation.sex), :coalesce_2) = upper(:upper_1))) AND subject.year_of_birth < :year_of_birth_1 AND subject.data_at_gdc = true), observation_subject_columns AS (SELECT array_remove(array_agg(DISTINCT observation.sex), NULL) AS sex, observation.subject_alias AS subject_alias FROM observation WHERE observation.subject_alias IN (SELECT subject_preselect.id_alias FROM subject_preselect) GROUP BY observation.subject_alias) SELECT row_to_json(json_result) AS row_to_json_1 FROM (SELECT subject.id AS subject_id, subject.crdc_id AS subject_crdc_id, subject.species AS species, subject.year_of_birth AS year_of_birth, subject.year_of_death AS year_of_death, subject.cause_of_death AS cause_of_death, subject.race AS race, subject.ethnicity AS ethnicity, subject.year_of_birth AS year_of_birth, subject.data_at_gdc AS subject_data_at_gdc, subject.data_at_idc AS subject_data_at_idc, subject.data_at_cds AS subject_data_at_cds, subject.data_at_pdc AS subject_data_at_pdc, subject.data_at_gdc AS subject_data_at_gdc, subject.data_at_icdc AS subject_data_at_icdc, coalesce(observation_subject_columns.sex, :coalesce_1) AS sex FROM subject LEFT OUTER JOIN observation_subject_columns ON observation_subject_columns.subject_alias = subject.id_alias WHERE subject.id_alias IN (SELECT subject_preselect.id_alias FROM subject_preselect)) AS json_result",
+    #     "total_row_count": 9,
+    #     "next_url": ""
     # }
 
     log.debug( f"Page one results:\n{json.dumps( paged_response_data_object.to_dict(), indent=4 )}\n" )
@@ -441,37 +475,47 @@ def get_data(
 
     incremented_offset = starting_offset + rows_per_page
 
-    while paged_response_data_object.next_url is not None and len(paged_response_data_object.next_url) > 0:
-        # Show the `next_url` address returned to us by the API.
-        #
-        # print( paged_response_data_object['next_url'], file=sys.stderr )
-        log.debug(f'Pulling next paged result from api: {paged_response_data_object.to_dict()['next_url']}')
+    while paged_response_data_object.next_url is not None and len( paged_response_data_object.next_url ) > 0:
+        
+        log.debug( f"Pulling next paged result from API via next_url value from response: { paged_response_data_object.to_dict()['next_url'] }")
 
         paged_response_data_object = query_selector[table].sync(
-            client=query_api_instance, body=query_object, offset=incremented_offset, limit=rows_per_page
+            client=query_api_instance,
+            body=query_object,
+            offset=incremented_offset,
+            limit=rows_per_page
         )
-        #TODO catch api exceptions
 
-        next_result_batch = pd.json_normalize(paged_response_data_object.to_dict()["result"])
+        # Forward error types known to be returned by the API.
+        if isinstance( paged_response_data_object, ClientError ) or isinstance( paged_response_data_object, InternalError ):
+            log.error( f"{paged_response_data_object.error_type}: {paged_response_data_object.message}" )
+
+        next_result_batch = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
 
         if not result_dataframe.empty and not next_result_batch.empty:
+            
             # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
-
-            #TODO: double check this
-            for col in next_result_batch.columns:
-                if is_numeric_dtype(next_result_batch[col]):
-                    next_result_batch[col] = next_result_batch[col].fillna(0)
-
-            next_result_batch = next_result_batch.astype(result_dataframe.dtypes)
-
-            result_dataframe = pd.concat([result_dataframe, next_result_batch])
+            # 
+            # Possiby relevant note: never fill in missing numeric values with 0!
+            next_result_batch = next_result_batch.astype( result_dataframe.dtypes )
+            result_dataframe = pd.concat( [result_dataframe, next_result_batch] )
 
         incremented_offset = incremented_offset + rows_per_page
 
     #############################################################################################################################
     # Postprocess API result data.
 
-    log.debug("Organizing result data...")
+    log.debug( "Organizing result data..." )
+
+    # Collect data source information and populate our user-facing `data_source` result column summary,
+    # unless its been repressed via exclude_columns=['data_source'].
+
+    if not suppress_data_source_results:
+        
+        result_dataframe['data_source'] = list()
+
+
+
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
@@ -481,21 +525,23 @@ def get_data(
     # columns' assignment that we use a little later to sort the remaining output
     # columns, but I think this way is much easier to understand.
 
-    # columns_to_drop = list()
+    columns_to_suppress = list()
 
-    # added_columns = list()
+    added_columns = list()
 
-    # for column_name in result_dataframe:
-    #     if column_name not in columns_to_fetch:
-    #         columns_to_drop.append(column_name)
+    for column_name in result_dataframe:
+        
+        if column_name != 'data_source' and column_name not in source_table_columns_in_order and column_name not in columns_to_add:
+            columns_to_suppress.append( column_name )
 
-    #     elif column_name not in source_table_columns_in_order:
-    #         added_columns.append(column_name)
+        if column_name != 'data_source' and column_name not in source_table_columns_in_order:
+            added_columns.append( column_name )
 
-    # if len(columns_to_drop) > 0:
-    #     log.debug(f"   -- filtering API columns: {columns_to_drop}")
+    if len( columns_to_suppress ) > 0:
+        
+        log.debug(f"   -- filtering API columns: {columns_to_suppress}")
 
-    #     result_dataframe = result_dataframe.drop(columns=columns_to_drop)
+        result_dataframe = result_dataframe.drop(columns=columns_to_drop)
 
     # # Resequence the output columns according to the sequence given by the columns() function.
 
