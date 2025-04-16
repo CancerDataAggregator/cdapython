@@ -170,13 +170,13 @@ def get_data(
     #############################################################################################################################
     # Preprocess table metadata, to enable consistent processing (and reporting) throughout.
 
-    # Track the data type present in each `table` column, so we can
+    # Track the data type present in each CDA column, so we can
     # format results properly downstream. Among other things we need to
     # know details of numeric types, when constructing DataFrames to return
     # to the user, so we can compensate for pandas' inconsistent handling
     # of numeric null values.
 
-    result_column_data_types = dict()
+    column_data_types = dict()
 
     # Store the default column ordering as provided by the columns() function,
     # so all cdapython interfaces always display the same data in the same way
@@ -184,21 +184,15 @@ def get_data(
 
     source_table_columns_in_order = list()
 
-    source_table_column_metadata = cached_column_metadata[ cached_column_metadata['table'] == table ]
-
-    if source_table_column_metadata is None:
+    for row_index, column_record in cached_column_metadata.iterrows():
         
-        # Since we've checked for the existence of table previously, this case should never happen.
-        log.error( f"CDA table '{table}' not found. Try tables() for a list." )
-        return
+        # Save the data_type of each CDA column.
+        column_data_types[ column_record['column'] ] = column_record['data_type']
 
-    for row_index, column_record in source_table_column_metadata.iterrows():
-        
-        # Save the data_type of each column in the source table.
-        result_column_data_types[ column_record['column'] ] = column_record['data_type']
-
-        # Remember the order in which columns() delivered the source table's columns.
-        source_table_columns_in_order.append( column_record['column'] )
+        if column_record['table'] == table:
+            
+            # Remember the order in which columns() delivered the source table's columns.
+            source_table_columns_in_order.append( column_record['column'] )
 
     #############################################################################################################################
     # Process return-type directives `return_data_as` and `output_file`.
