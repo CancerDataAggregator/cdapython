@@ -88,11 +88,11 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         # Normalize the rest of the known operators (used for null and fuzzy matches) to conform to cdapython query syntax.
 
         elif re.search( r'^(\S+)\s+IS\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
-            filter_expression = re.sub( r'^(\S+)\s+IS\s+\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
+            filter_expression = re.sub( r'^(\S+)\s+IS\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
 
         elif re.search( r'^(\S+)\s+LIKE\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
             print("DING!")
-            filter_expression = re.sub( r'^(\S+)\s+LIKE\s+\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
+            filter_expression = re.sub( r'^(\S+)\s+LIKE\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
 
         #############################################################################################################################
         # Validate minimal filter string format: <non-whitespace string (column name)><whitespace><non-whitespace string (operator)><whitespace><non-whitespace string (beginning of value to match)><any mix of whitespace and non-whitespace characters (end of value to match)>
