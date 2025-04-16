@@ -567,30 +567,32 @@ def get_data(
 
         for column in result_column_names:
             
-            # CDA has no float values. Cast all numeric data to integers.
-            # print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(result_column_data_types[column]))
-
-            if result_column_data_types[column] in { 'numeric', 'integer', 'bigint' }:
+            if column != 'data_source':
                 
-                # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
-                # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
-                # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
-                # storage of missing values. These will print as '<NA>'.
+                # CDA has no float values. Cast all numeric data to integers.
+                # print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(result_column_data_types[column]))
 
-                result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
+                if result_column_data_types[column] in { 'numeric', 'integer', 'bigint' }:
+                    
+                    # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
+                    # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
+                    # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
+                    # storage of missing values. These will print as '<NA>'.
 
-            elif result_column_data_types[column] in { 'text', 'boolean' }:
-                
-                # Replace values that are None (== null) with '<NA>' (to match what we['re forced to] use
-                # for null numeric values.
+                    result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
 
-                result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
+                elif result_column_data_types[column] in { 'text', 'boolean' }:
+                    
+                    # Replace values that are None (== null) with '<NA>' (to match what we['re forced to] use
+                    # for null numeric values.
 
-            elif column != 'data_source':
-                
-                # This isn't anticipated. Yell if we get something unexpected.
-                log.critical( f"Unexpected data type `{result_column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
-                return
+                    result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
+
+                else:
+                    
+                    # This isn't anticipated. Yell if we get something unexpected.
+                    log.critical( f"Unexpected data type `{result_column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
+                    return
 
         # TO DO: Consolidate provenance information if present.
 
