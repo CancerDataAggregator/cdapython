@@ -47,23 +47,22 @@ def summarize_files(
     exclude_columns=[]
 ):
     """
-    For a set of file rows that all match a user-specified set of filters --
+    For a set of CDA file rows that all match a user-specified set of filters --
     "result rows" -- get a report showing counts of values present in that
     set of rows, profiled across (user-modifiable) columns of interest.
 
     Arguments:
         return_data_as ( string; optional: 'dataframe_list' or 'dict' or 'json' ):
-            Specify how summarize_files() should return results: as a list
-            of pandas DataFrames, as a Python dictionary, or as output written to a
-            JSON file named by the user.  If this argument is omitted,
-            summarize_files() will, for each DataFrame that would have been returned
-            by the 'dataframe_list' option, print a table to the standard output
-            stream (and nothing will be returned).
+            Specify how to return results: as a list of pandas DataFrames, as a
+            Python dictionary, or as output written to a JSON file named by the user.
+            If this argument is omitted, then for each DataFrame that would have
+            been returned by the 'dataframe_list' option, a table will be
+            pretty-printed to the standard output stream (and nothing will be returned).
 
         output_file( string; optional ):
             If return_data_as='json' is specified, output_file should contain a
-            resolvable path to a file into which summarize_files() will write
-            JSON-formatted results.
+            resolvable path to a file into which JSON-formatted results will be
+            written.
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -88,7 +87,7 @@ def summarize_files(
             'CDS' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
-            One or more columns from a second table to add to summary output for `table`.
+            One or more columns from a second table to add to summary output.
 
         exclude_columns ( string or list of strings; optional ):
             One or more columns to remove from summary output.
@@ -125,8 +124,8 @@ def summarize_files(
             summarize_files( match_all=[ 'primary_disease_type = *duct*', 'sex = F*', 'size < 100' ] )
 
         NULL is a special VALUE which can be used to match missing data. For
-        example, to get a summary report for files where the `access` field is missing data,
-        we can write:
+        example, to get a summary report for CDA files where the `access` field
+        is missing data, we can write:
 
             summarize_files( match_all=[ 'access = NULL' ] )
 
@@ -134,8 +133,8 @@ def summarize_files(
 
         list of pandas DataFrames, with one DataFrame for each summarized column,
         enumerating counts (or statistically summarizing unbounded numeric values) over all
-        of that column's data values appearing in any file rows that match the
-        user-specified filter critera (the 'result rows'). Two DataFrames in this list --
+        of that column's data values appearing in any CDA file rows that match the
+        user-specified filter criteria (the 'result rows'). Two DataFrames in this list --
         'number_of_matching_files' and 'number_of_subjects_related_to_matching_files' --
         will contain integers representing the total number of result file rows and the
         total number of related subjects, respectively. Every other DataFrame in the list
@@ -144,7 +143,7 @@ def summarize_files(
 
         OR Python dictionary enumerating counts of all data values for each summarized column
         (or a statistical summary of those data values, in the case of unbounded numeric data)
-        across all file rows that match the user-specified filter criteria (the 'result rows').
+        across all CDA file rows that match the user-specified filter criteria (the 'result rows').
         Two summary keys in this dictionary -- 'number_of_matching_files' and
         'number_of_subjects_related_to_matching_files' -- will point to integers representing
         the total number of result file rows and the total number of associated subject rows,
@@ -190,23 +189,21 @@ def summarize_subjects(
     exclude_columns=[]
 ):
     """
-    For a set of subject rows that all match a user-specified set of filters --
+    For a set of CDA subject rows that all match a user-specified set of filters --
     "result rows" -- get a report showing counts of values present in that
     set of rows, profiled across (user-modifiable) columns of interest.
 
     Arguments:
         return_data_as ( string; optional: 'dataframe_list' or 'dict' or 'json' ):
-            Specify how summarize_subjects() should return results: as a list
-            of pandas DataFrames, as a Python dictionary, or as output written to a
-            JSON file named by the user.  If this argument is omitted,
-            summarize_subjects() will, for each DataFrame that would have been returned
-            by the 'dataframe_list' option, print a table to the standard output
-            stream (and nothing will be returned).
+            Specify how to return results: as a list of pandas DataFrames, as a
+            Python dictionary, or as output written to a JSON file named by the user.
+            If this argument is omitted, then for each DataFrame that would have
+            been returned by the 'dataframe_list' option, a table will be
+            pretty-printed to the standard output stream (and nothing will be returned).
 
         output_file( string; optional ):
             If return_data_as='json' is specified, output_file should contain a
-            resolvable path to a file into which summarize_subjects() will write
-            JSON-formatted results.
+            resolvable path to a file into which JSON-formatted results will be written.
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -231,7 +228,7 @@ def summarize_subjects(
             'CDS' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
-            One or more columns from a second table to add to summary output for `table`.
+            One or more columns from a second table to add to summary output.
 
         exclude_columns ( string or list of strings; optional ):
             One or more columns to remove from summary output.
@@ -268,8 +265,8 @@ def summarize_subjects(
             summarize_subjects( match_all=[ 'primary_disease_type = *duct*', 'sex = F*' ] )
 
         NULL is a special VALUE which can be used to match missing data. For
-        example, to get a summary report for files where the `year_of_birth` field is missing data,
-        we can write:
+        example, to get a summary report for CDA subjects where the `year_of_birth` field
+        is missing data, we can write:
 
             summarize_subjects( match_all=[ 'year_of_birth = NULL' ] )
 
@@ -277,8 +274,8 @@ def summarize_subjects(
 
         list of pandas DataFrames, with one DataFrame for each summarized column,
         enumerating counts (or statistically summarizing unbounded numeric values) over all
-        of that column's data values appearing in any subject rows that match the
-        user-specified filter critera (the 'result rows'). Two DataFrames in this list --
+        of that column's data values appearing in any CDA subject rows that match the
+        user-specified filter criteria (the 'result rows'). Two DataFrames in this list --
         'number_of_matching_subjects' and 'number_of_files_related_to_matching_subjects' --
         will contain integers representing the total number of result subject rows and the
         total number of related files, respectively. Every other DataFrame in the list
@@ -287,7 +284,7 @@ def summarize_subjects(
 
         OR Python dictionary enumerating counts of all data values for each summarized column
         (or a statistical summary of those data values, in the case of unbounded numeric data)
-        across all subject rows that match the user-specified filter criteria (the 'result rows').
+        across all CDA subject rows that match the user-specified filter criteria (the 'result rows').
         Two summary keys in this dictionary -- 'number_of_matching_subjects' and
         'number_of_files_related_to_matching_subjects' -- will point to integers representing
         the total number of result subject rows and the total number of associated file rows,
@@ -425,7 +422,7 @@ def summarize(
         list of pandas DataFrames, with one DataFrame for each summarized column,
         enumerating counts (or statistically summarizing unbounded numeric values) over all
         of that column's data values appearing in any rows that match the
-        user-specified filter critera (the 'result rows'). Two of four possible special
+        user-specified filter criteria (the 'result rows'). Two of four possible special
         DataFrames in this list ('number_of_matching_files', 'number_of_matching_subjects',
         'number_of_subjects_related_to_matching_files', 'number_of_files_related_to_matching_subjects')
         will contain integers representing the total number of result rows and the

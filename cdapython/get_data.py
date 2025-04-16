@@ -14,6 +14,7 @@ from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
 from cda_client.models.q_node import QNode
 
+
 #############################################################################################################################
 #############################################################################################################################
 # Nomenclature notes:
@@ -23,15 +24,238 @@ from cda_client.models.q_node import QNode
 #############################################################################################################################
 #############################################################################################################################
 
-def get_file_data():
-    pass
-
-def get_subject_data():
-    pass
 
 #############################################################################################################################
 #
-# get_data( table=`table` ): Get CDA data records ('result rows') from `table` that match user-specified criteria.
+# get_file_data( ): Get CDA file data rows ('result rows') that match user-specified criteria.
+#
+#############################################################################################################################
+
+def get_file_data(
+    *,
+    match_all=[],
+    match_any=[],
+    match_from_file={'input_file': '', 'input_column': '', 'cda_column_to_match': ''},
+    data_source=[],
+    add_columns=[],
+    exclude_columns=[],
+    provenance=False,
+    return_data_as='dataframe',
+    output_file=''
+):
+    """
+    Get CDA file rows ('result rows') that match user-specified criteria.
+
+    Arguments:
+        match_all ( string or list of strings; optional ):
+            One or more conditions, expressed as filter strings (see below),
+            ALL of which must be met by all result rows.
+
+        match_any ( string or list of strings; optional ):
+            One or more conditions, expressed as filter strings (see below),
+            AT LEAST ONE of which must be met by all result rows.
+
+        match_from_file ( 3-element dictionary of strings; optional ):
+            A dictionary containing 3 named elements:
+                1. 'input_file': The name of a (local) TSV file (with column names in its first row)
+                2. 'input_column': The name of a column in that TSV
+                3. 'cda_column_to_match': The name of a CDA column
+            Restrict result rows to those where the value of the given CDA
+            column matches at least one value from the given column
+            in the given TSV file.
+
+        data_source ( string or list of strings; optional ):
+            Restrict results to those deriving from the given upstream
+            data source(s). Current valid values are 'GDC', 'IDC', 'PDC',
+            'CDS' and 'ICDC'. (Default: no filter.)
+
+        add_columns ( string or list of strings; optional ):
+            One or more columns from a second table to add to result data.
+
+        exclude_columns ( string or list of strings; optional ):
+            One or more columns to remove from result data.
+
+        provenance ( boolean; optional ):
+            If True, attach cross-reference information to each result row
+            identifying that row in the context of the upstream data source(s)
+            from which it was derived.
+
+        return_data_as ( string; optional: 'dataframe' or 'tsv' ):
+            Specify how to return results: as a pandas DataFrame,
+            or as output written to a TSV file named by the user. If this
+            argument is omitted, the default is to return results as a DataFrame.
+
+        output_file ( string; optional ):
+            If return_data_as='tsv' is specified, `output_file` should contain a
+            resolvable path to a file into which tab-delimited results will be
+            written.
+
+    Filter strings:
+        Filter strings are expressions of the form 'COLUMN_NAME OP VALUE'
+        (note in particular that the whitespace surrounding OP is required),
+        where
+
+            COLUMN_NAME is a searchable CDA column (see the columns() function
+            for details)
+
+            OP is one of: < <=  > >= = !=
+
+            VALUE is a particular value of whatever data type is stored
+            in COLUMN_NAME (see the columns() function for details), or
+            the special keyword NULL, indicating the filter should match
+            missing (null) values in COLUMN_NAME.
+
+        Operators = and != will work on numeric, boolean and string VALUEs.
+
+        Operators < <= > >= will only work on numeric VALUEs.
+
+        Users can require partial matches to string VALUEs by adding * to either or
+        both ends. For example:
+
+            diagnosis = *duct*
+            sex = F*
+
+        String VALUEs need not be quoted inside of filter strings. For example, to include
+        the filters specified just above in the `match_all` argument, we can write:
+
+            get_file_data( match_all=[ 'diagnosis = *duct*', 'sex = F*' ] )
+
+        NULL is a special VALUE which can be used to match missing data. For
+        example, to get CDA file data for which the `cause_of_death` field
+        is missing data in associated subject rows, we can write:
+
+            get_file_data( match_all=[ 'cause_of_death = NULL' ] )
+
+    Returns:
+        (Default) A pandas.DataFrame containing CDA file data matching the user-specified
+            filter criteria. The DataFrame's named columns will match columns in the `file` table
+            plus any optional user-added columns from other tables, and each row in the DataFrame
+            will represent one CDA `file` row (possibly with related data from other tables
+            appended to it, according to user directives).
+
+        OR returns nothing, but writes results to a user-specified TSV file.
+
+    """
+
+    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=provenance, return_data_as=return_data_as, output_file=output_file )
+
+#############################################################################################################################
+#
+# get_subject_data( ): Get CDA subject data rows ('result rows') that match user-specified criteria.
+#
+#############################################################################################################################
+
+def get_subject_data(
+    *,
+    match_all=[],
+    match_any=[],
+    match_from_file={'input_file': '', 'input_column': '', 'cda_column_to_match': ''},
+    data_source=[],
+    add_columns=[],
+    exclude_columns=[],
+    provenance=False,
+    return_data_as='dataframe',
+    output_file=''
+):
+    """
+    Get CDA subject rows ('result rows') that match user-specified criteria.
+
+    Arguments:
+        match_all ( string or list of strings; optional ):
+            One or more conditions, expressed as filter strings (see below),
+            ALL of which must be met by all result rows.
+
+        match_any ( string or list of strings; optional ):
+            One or more conditions, expressed as filter strings (see below),
+            AT LEAST ONE of which must be met by all result rows.
+
+        match_from_file ( 3-element dictionary of strings; optional ):
+            A dictionary containing 3 named elements:
+                1. 'input_file': The name of a (local) TSV file (with column names in its first row)
+                2. 'input_column': The name of a column in that TSV
+                3. 'cda_column_to_match': The name of a CDA column
+            Restrict result rows to those where the value of the given CDA
+            column matches at least one value from the given column
+            in the given TSV file.
+
+        data_source ( string or list of strings; optional ):
+            Restrict results to those deriving from the given upstream
+            data source(s). Current valid values are 'GDC', 'IDC', 'PDC',
+            'CDS' and 'ICDC'. (Default: no filter.)
+
+        add_columns ( string or list of strings; optional ):
+            One or more columns from a second table to add to result data.
+
+        exclude_columns ( string or list of strings; optional ):
+            One or more columns to remove from result data.
+
+        provenance ( boolean; optional ):
+            If True, attach cross-reference information to each result row
+            identifying that row in the context of the upstream data source(s)
+            from which it was derived.
+
+        return_data_as ( string; optional: 'dataframe' or 'tsv' ):
+            Specify how to return results: as a pandas DataFrame,
+            or as output written to a TSV file named by the user. If this
+            argument is omitted, the default is to return results as a DataFrame.
+
+        output_file ( string; optional ):
+            If return_data_as='tsv' is specified, `output_file` should contain a
+            resolvable path to a file into which tab-delimited results will be
+            written.
+
+    Filter strings:
+        Filter strings are expressions of the form 'COLUMN_NAME OP VALUE'
+        (note in particular that the whitespace surrounding OP is required),
+        where
+
+            COLUMN_NAME is a searchable CDA column (see the columns() function
+            for details)
+
+            OP is one of: < <=  > >= = !=
+
+            VALUE is a particular value of whatever data type is stored
+            in COLUMN_NAME (see the columns() function for details), or
+            the special keyword NULL, indicating the filter should match
+            missing (null) values in COLUMN_NAME.
+
+        Operators = and != will work on numeric, boolean and string VALUEs.
+
+        Operators < <= > >= will only work on numeric VALUEs.
+
+        Users can require partial matches to string VALUEs by adding * to either or
+        both ends. For example:
+
+            diagnosis = *duct*
+            sex = F*
+
+        String VALUEs need not be quoted inside of filter strings. For example, to include
+        the filters specified just above in the `match_all` argument, we can write:
+
+            get_subject_data( match_all=[ 'diagnosis = *duct*', 'sex = F*' ] )
+
+        NULL is a special VALUE which can be used to match missing data. For
+        example, to get CDA subject data for which the `cause_of_death` field
+        is missing data, we can write:
+
+            get_subject_data( match_all=[ 'cause_of_death = NULL' ] )
+
+    Returns:
+        (Default) A pandas.DataFrame containing CDA subject data matching the user-specified
+            filter criteria. The DataFrame's named columns will match columns in the `subject` table
+            plus any optional user-added columns from other tables, and each row in the DataFrame
+            will represent one CDA `subject` row (possibly with related data from other tables
+            appended to it, according to user directives).
+
+        OR returns nothing, but writes results to a user-specified TSV file.
+
+    """
+
+    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=provenance, return_data_as=return_data_as, output_file=output_file )
+
+#############################################################################################################################
+#
+# get_data( table=`table` ): Get CDA data rows ('result rows') from `table` that match user-specified criteria.
 #
 #############################################################################################################################
 
@@ -49,7 +273,7 @@ def get_data(
     output_file=''
 ):
     """
-    Get CDA data records ('result rows') from `table` that match user-specified criteria.
+    Get CDA data rows ('result rows') from `table` that match user-specified criteria.
 
     Arguments:
         table ( string; required: 'file' or 'subject' ):
@@ -140,7 +364,7 @@ def get_data(
         (Default) A pandas.DataFrame containing CDA `table` rows matching the user-specified
             filter criteria. The DataFrame's named columns will match columns in `table` plus
             any optional user-added columns from other tables, and each row in the DataFrame
-            will represent one CDA `table` row (possibly with related data from a second table
+            will represent one CDA `table` row (possibly with related data from other tables
             appended to it, according to user directives).
 
         OR returns nothing, but writes results to a user-specified TSV file.
