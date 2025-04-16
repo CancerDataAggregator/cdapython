@@ -576,8 +576,13 @@ def get_data(
                     # Pandas workaround: use extension type 'Int64' (note initial capital), which supports the
                     # storage of missing values. These will print as '<NA>'.
 
-                    print( column )
-                    result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
+                    if result_dataframe[column].dtype == 'list':
+                        
+                        result_dataframe[column] = result_dataframe[column].apply( lambda list_val: [ round( element_val ).astype( 'Int64' ) for element_val in list_val ] )
+
+                    else:
+                        
+                        result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
 
                 elif column_data_types[column] in { 'text', 'boolean' }:
                     
