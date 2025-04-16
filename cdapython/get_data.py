@@ -246,18 +246,6 @@ def get_data(
     # Manage basic validation for the `match_all` parameter, which enumerates user-specified requirements that returned
     # rows must all simultaneously satisfy (AND; intersection; 'all of these must apply').
 
-    for item in match_all:
-        
-        if not isinstance( item, str ) or len( item ) == 0:
-            log.error( f"The 'match_all' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_all}', which is neither." )
-            return
-
-        # Validate minimal filter string format: <non-whitespace string (column name)><whitespace><non-whitespace string (operator)><whitespace><non-whitespace string (beginning of value to match)><any mix of whitespace and non-whitespace characters (end of value to match)>
-
-        if re.search( r'^\S+\s+\S+\s+\S.*$', item ) is None:
-            log.error( f"'match_all' filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format. See the help text for details." )
-            return
-
     # Validate and normalize match_all filter strings. Save results as a list of statement strings.
 
     try:
@@ -269,18 +257,6 @@ def get_data(
     #############################################################################################################################
     # Manage basic validation for the `match_any` parameter, which enumerates user-specified requirements for which
     # returned rows must satisfy at least one (OR; union; 'at least one of these must apply').
-
-    for item in match_any:
-        
-        if not isinstance( item, str ) or len( item ) == 0:
-            log.error( f"The 'match_any' parameter must be a nonempty filter string or a list of nonempty filter strings; you specified '{match_any}', which is neither." )
-            return
-
-        # Validate minimal filter string format: <non-whitespace string (column name)><whitespace><non-whitespace string (operator)><whitespace><non-whitespace string (beginning of value to match)><any mix of whitespace and non-whitespace characters (end of value to match)>
-
-        if re.search( r'^\S+\s+\S+\s+\S.*$', item ) is None:
-            log.error( f"'match_any' filter string '{item}' does not conform to 'COLUMN_NAME OP VALUE' format. See the help text for details." )
-            return
 
     # Validate and normalize match_any filter strings. Save results as a list of statement strings.
 

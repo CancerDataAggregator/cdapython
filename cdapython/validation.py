@@ -94,6 +94,15 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
             filter_expression = re.sub( r'^(\S+)\s+LIKE\s+\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
 
         #############################################################################################################################
+        # Validate minimal filter string format: <non-whitespace string (column name)><whitespace><non-whitespace string (operator)><whitespace><non-whitespace string (beginning of value to match)><any mix of whitespace and non-whitespace characters (end of value to match)>
+
+        if not isinstance( filter_expression, str ) or len( filter_expression ) == 0:
+            raise RuntimeError( f"Match parameters must be nonempty filter strings: you specified '{filter_expression}' (from match list {match_statement_list}), which is not." )
+
+        if re.search( r'^\S+\s+\S+\s+\S.*$', filter_expression ) is None:
+            raise RuntimeError( f"Filter string '{filter_expression}' does not conform to 'COLUMN_NAME OP VALUE' format. See the help text for details." )
+
+        #############################################################################################################################
         # Now parse the filter expression and validate COLUMN and OP tokens.
 
         # Try to extract a column name from this filter expression. Don't be case-sensitive.
