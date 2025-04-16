@@ -310,7 +310,6 @@ def get_data(
     # If data_source isn't null, make sure to retrieve the columns we need for our data source summary output. These are not returned by default from the API.
 
     if len( data_source ) > 0:
-        
         for upstream_data_source in allowed_data_source_values:
             if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns:
                 add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" )
@@ -392,8 +391,8 @@ def get_data(
 
     # Use the QueryApi instance object's `{table}_query` endpoint-accessor
     # function to get data from the REST API.
-
-    log.debug( f"Sending query:\n{query_object.to_dict()}\n" )
+    # hope i don't need this {json.dumps( q_node.to_dict(), indent=4, cls=CdaApiQueryEncoder )}
+    log.debug( f"Sending query:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
     
     query_api_instance = get_api_client()
 
