@@ -358,7 +358,7 @@ def get_data(
     # queries_for_data_source = []
 
     for ds in data_source:
-        queries_for_match_all.append(f"{table}_data_at_{ds} = True")
+        queries_for_match_all.append(f"{table}_data_at_{ds.lower()} = True")
 
     #############################################################################################################################
     # Parse `add_columns` list: use the API's SELECT and SELECTVALUES operators
