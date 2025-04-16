@@ -194,7 +194,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
         else:
             
-            # filter_value.lower() == 'null': normalize operator and value. Value normalizatin is entirely unnecessary here but satisfies the author's over-tuned need for well-formed output.
+            # filter_value.lower() == 'null': normalize operator and value.
 
             # API expects lowercase operators.
             if filter_operator == '=':

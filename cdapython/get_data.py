@@ -267,6 +267,13 @@ def get_data(
         return
 
     #############################################################################################################################
+    # Manage basic validation for `add_columns`, which enumerates user-specified non-`table` columns to be
+    # added to the main `table` result rows.
+
+    # Eliminate undesirable characters and convert all values to lowercase.
+    add_columns = [ re.sub( r'[^a-z0-9_]', r'', column_to_add ).lower() for column_to_add in add_columns ]
+
+    #############################################################################################################################
     # Manage basic validation for the `data_source` parameter, which enumerates user-specified filters on upstream data
     # sources.
 
@@ -290,10 +297,23 @@ def get_data(
         'ICDC'
     }
 
-    for item in data_source:
-        if item not in allowed_data_source_values:
-            log.error( f"The 'data_source' parameter must be one or more of [ 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' ]. You supplied '{item}', which is not that." )
+    # Parse `data_source` values: complain if any are nonconformant, and add entries to match_all as appropriate.
+
+    for upstream_data_source in data_source:
+        if upstream_data_source not in allowed_data_source_values:
+            log.error( f"The 'data_source' parameter must be a list containing one or more of [ 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' ]. You supplied '{data_source}', which is not that." )
             return
+
+        else:
+            queries_for_match_all.append( f"{table}_data_at_{upstream_data_source.lower()} = True" )
+
+    # If data_source isn't null, make sure to retrieve the columns we need for our data source summary output. These are not returned by default from the API.
+
+    if len( data_source ) > 0:
+        
+        for upstream_data_source in allowed_data_source_values:
+            
+            add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" ) if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns
 
 
 
@@ -308,18 +328,9 @@ def get_data(
     ### columns, so we can present well-formed output later in a consistent way.
 
 
-    
+
     #############################################################################################################################
-    # Manage basic validation for `add_columns`, which enumerates user-specified non-`table` columns to be
-    # added to the main `table` result rows.
-
-    # Eliminate undesirable characters and convert all values to lowercase.
-    add_columns = [ re.sub( r'[^a-z0-9_]', r'', column_to_add ).lower() for column_to_add in add_columns ]
-
-
-
-
-
+    ### NOT WORKING, PLEASE UPDATE
 
     if match_from_file['cda_column_to_match'] != '':
         target_data_type = columns(column=match_from_file["cda_column_to_match"])["data_type"][0]
@@ -327,95 +338,104 @@ def get_data(
         #TODO should this be added to match_all always?
         queries_for_match_all.append(match_from_file_filter)
 
+    ### END NOT WORKING BLOCK
     #############################################################################################################################
-    # Parse `data_source` filter expressions: complain if any are nonconformant, and (for now) save parse results for each
-    # filter expression as a separate Query object.
 
-    # queries_for_data_source = []
 
-    for ds in data_source:
-        queries_for_match_all.append(f"{table}_data_at_{ds.lower()} = True")
 
     #############################################################################################################################
-    # Parse `add_columns` list: use the API's SELECT and SELECTVALUES operators
-    # to build a Query object encoding the given column selections.
+    # Parse `add_columns` list to build our API request object.
 
-    columns_to_fetch = list()
+    columns_to_add = list()
 
     for column_to_add in add_columns:
-        # Ignore requests for columns that are already present by default.
-
-        if column_to_add not in columns_to_fetch:
-            columns_to_fetch.append(column_to_add)
+        
+        # Ignore requests for columns that are already present by default, and don't add columns twice.
+        if column_to_add not in source_table_columns_in_order and column_to_add not in columns_to_add:
+            columns_to_add.append( column_to_add )
     
-    columns_to_remove = []
+    columns_to_exclude = list()
 
-    for col in exclude_columns:
-        # Ignore requests to exclude columns that are already excluded.
+    for column_to_exclude in exclude_columns:
+        
+        # Ignore requests to exclude columns that are already excluded. Let the API sort out
+        # what to do if a user requests to both add and exclude a column.
 
-        if col in columns_to_fetch:
-            columns_to_fetch.remove(col)
+        if column_to_exclude not in columns_to_exclude:
+            columns_to_exclude.append( column_to_exclude )
 
-            columns_to_remove.append(col)
+    #############################################################################################################################
+    # Build an object to represent our upcoming API query.
 
-        else:
-            log.debug( f'Ignoring request to remove column "{col}" because it doesn\'t exist or is already excluded.' )
+    query_object = QNode()
+    query_object.match_all = queries_for_match_all
+    query_object.match_some = queries_for_match_any
+    query_object.add_columns = columns_to_add
+    query_object.exclude_columns = columns_to_exclude
 
     #############################################################################################################################
     # Fetch data from the API.
 
-    query_api_instance = get_api_client()
-
-    q_node = QNode()
-
-    q_node.match_all = queries_for_match_all
-
-    q_node.match_some = queries_for_match_any
-
-    q_node.add_columns = columns_to_fetch
-
-    q_node.exclude_columns = columns_to_remove
-
-
-    fetch_message = "fetching all results"
-
-    log.debug( f"Querying CDA API '{table}' endpoint ({fetch_message})" )
+    log.debug( f"Querying CDA API '/data/{table}' endpoint" )
 
     query_selector = {
-        "file": cda_client.api.data.file_fetch_rows_endpoint_data_file_post,
-        "subject": cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post,
+        'file': cda_client.api.data.file_fetch_rows_endpoint_data_file_post,
+        'subject': cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post,
     }
-    # We return all results to users at once. Paging occurs internally, but is made transparent to the user.
-    # The following two variables are coded according to CDA performance needs. They
-    # should ultimately be moved to a central system-parameter store for easier
-    # access: right now, they're replicated everywhere a fetch is performed, which
-    # is error-prone when it comes to long-term maintenance.
+
+    # We return all results to users at once. Paging can occur internally, but is made
+    # transparent to the user. Track offset and page size in case we have to handle paged
+    # results.
 
     starting_offset = 0
-
     rows_per_page = 500000
 
     # Use the QueryApi instance object's `{table}_query` endpoint-accessor
     # function to get data from the REST API.
 
-    log.debug( f"Sending qnode: {q_node}" )
+    log.debug( f"Sending query:\n{query_object.to_dict()}\n" )
     
-    paged_response_data_object = query_selector[table].sync( client=query_api_instance, body=q_node, limit=rows_per_page, offset=starting_offset )
+    query_api_instance = get_api_client()
 
-    # Catch errors returned by the API
-    if isinstance(paged_response_data_object, ClientError) or isinstance(paged_response_data_object, InternalError):
-        msg = f'{paged_response_data_object.error_type}: {paged_response_data_object.message}'
-        log.error(msg)
-        return
+    paged_response_data_object = query_selector[table].sync(
+        client=query_api_instance,
+        body=query_object,
+        limit=rows_per_page,
+        offset=starting_offset
+    )
 
+    # Forward error types known to be returned by the API.
+    if isinstance( paged_response_data_object, ClientError ) or isinstance( paged_response_data_object, InternalError ):
+        log.error( f"{paged_response_data_object.error_type}: {paged_response_data_object.message}" )
 
     # Make a Pandas DataFrame out of the first batch of results.
     #
     # The API returns responses in JSON format: convert that JSON into a DataFrame
-    # using pandas' json_normalize() function.
+    # using pandas' json_normalize() function. Example JSON response:
+    #
+    # {
+    #     "result": [
+    #             {
+    #                 "sex": "female",
+    #                 "value_count": 31215
+    #             },
+    #             {
+    #                 "sex": "male",
+    #                 "value_count": 28571
+    #             },
+    #             {
+    #                 "sex": null,
+    #                 "value_count": 64240
+    #             }
+    #     ],
+    #     "query_sql": "SELECT row_to_json(column_json) AS row_to_json_1 FROM (SELECT observation.sex AS sex, count(*) AS value_count FROM observation WHERE observation.data_at_gdc IS true GROUP BY observation.sex ORDER BY observation.sex) AS column_json",
+    #     "total_row_count": 3,
+    #     "next_url": null
+    # }
 
+    log.debug( f"Received API response:\n{paged_response_data_object.to_dict()}\n" )
     
-    result_dataframe = pd.json_normalize(paged_response_data_object.to_dict()["result"])
+    result_dataframe = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
 
     # The data we've fetched so far might be just the first page (if the total number
     # of results is greater than `rows_per_page`).
@@ -432,7 +452,7 @@ def get_data(
         log.debug(f'Pulling next paged result from api: {paged_response_data_object.to_dict()['next_url']}')
 
         paged_response_data_object = query_selector[table].sync(
-            client=query_api_instance, body=q_node, offset=incremented_offset, limit=rows_per_page
+            client=query_api_instance, body=query_object, offset=incremented_offset, limit=rows_per_page
         )
         #TODO catch api exceptions
 

@@ -966,8 +966,8 @@ def column_values(
 
     query_api_instance = get_api_client()
     
-    records_per_page = 500000
     starting_offset = 0
+    records_per_page = 500000
 
     paged_response_data_object = (
         
