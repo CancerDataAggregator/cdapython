@@ -1324,18 +1324,14 @@ def summarize(
 
     query_api_instance = get_api_client()
 
-    q_node = QNode()
-
-    q_node.match_all = queries_for_match_all
-
-    q_node.match_some = queries_for_match_any
-
-    q_node.add_columns = columns_to_fetch
-
-    q_node.exclude_columns = columns_to_remove
+    query_object = QNode()
+    query_object.match_all = queries_for_match_all
+    query_object.match_some = queries_for_match_any
+    query_object.add_columns = columns_to_fetch
+    query_object.exclude_columns = columns_to_remove
 
     # Dump JSON describing the full combined query structure.
-    log.debug( f"Sending query to API:\n{json.dumps( q_node.to_dict(), indent=4 )}\n" )
+    log.debug( f"Sending query to API:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -1345,7 +1341,7 @@ def summarize(
     # Allow users to override the system-default URL for the CDA API by setting their CDA_API_URL
     # environment variable.
 
-    url_override = os.environ.get("CDA_API_URL")
+    url_override = os.environ.get( 'CDA_API_URL' )
     # TODO: What is this trying to accomplish?
     # if url_override is not None and len(url_override) > 0:
     #     api_configuration = CdaConfiguration(host=url_override, verify=True, verbose=True)
@@ -1378,11 +1374,14 @@ def summarize(
     # function to get data from the REST API.
 
     query_selector = {
-        "file": summary_file_endpoint,
-        "subject": summary_subject_endpoint,
+        'file': summary_file_endpoint,
+        'subject': summary_subject_endpoint,
     }
 
-    paged_response_data_object = query_selector[table].sync(client=query_api_instance, body=q_node)
+    paged_response_data_object = query_selector[table].sync(
+        client=query_api_instance,
+        body=query_object
+    )
 
     # Gracefully fetch asynchronously-generated results once they're ready.
 

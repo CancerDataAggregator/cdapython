@@ -19,7 +19,7 @@ from cda_client.models.q_node import QNode
 # Nomenclature notes:
 #
 # * try to standardize all potential user-facing synonyms for basic database data structures
-#   (field, entity, endpoint, cell, value, term, etc.) to "table", "column", "row" and "value".
+#   (field, entity, endpoint, cell, value, term, etc.) to 'table', 'column', 'row' and 'value'.
 #############################################################################################################################
 #############################################################################################################################
 
@@ -40,13 +40,13 @@ def get_data(
     *,
     match_all=[],
     match_any=[],
-    match_from_file={"input_file": "", "input_column": "", "cda_column_to_match": ""},
+    match_from_file={'input_file': '', 'input_column': '', 'cda_column_to_match': ''},
     data_source=[],
     add_columns=[],
     exclude_columns=[],
     provenance=False,
-    return_data_as="dataframe",
-    output_file=""
+    return_data_as='dataframe',
+    output_file=''
 ):
     """
     Get CDA data records ('result rows') from `table` that match user-specified criteria.
@@ -100,7 +100,7 @@ def get_data(
             tab-delimited results.
 
     Filter strings:
-        Filter strings are expressions of the form "COLUMN_NAME OP VALUE"
+        Filter strings are expressions of the form 'COLUMN_NAME OP VALUE'
         (note in particular that the whitespace surrounding OP is required),
         where
 
@@ -148,6 +148,7 @@ def get_data(
     """
 
     # TO DO: re-enable provenance parameter
+    # TO DO: re-enable match_from_file parameter
 
     log = get_logger()
 
@@ -223,7 +224,7 @@ def get_data(
     elif return_data_as == 'tsv' and output_file == '':
         
         # If the user asks for TSV, they also have to give us a path for the output file. If they didn't, complain.
-        log.error( "Return type 'tsv' was requested, but 'output_file' was not specified. Please specify output_file='some/path/string/to/write/your/tsv/to/your_tsv_output_file.tsv'." )
+        log.error( 'Return type \'tsv\' was requested, but \'output_file\' was not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to/your_tsv_output_file.tsv\'.' )
         return
 
     elif return_data_as != 'tsv' and output_file != '':
@@ -313,24 +314,12 @@ def get_data(
 
 
     #############################################################################################################################
-    ### FLAGGED FOR REMOVAL AFTER UPDATE
-    ### Enforce mutual exclusivity across different join directives: `add_columns` and `provenance`.
-    ### 
-    ### [...]
-    ### 
-    ### If it exists, save the name (and, in the following code block, the data type)
-    ### of the ID field of the table from which we are to join any extra non-`table`
-    ### columns, so we can present well-formed output later in a consistent way.
-
-
-
-    #############################################################################################################################
     ### NOT WORKING, PLEASE UPDATE
 
     if match_from_file['cda_column_to_match'] != '':
-        target_data_type = columns(column=match_from_file["cda_column_to_match"])["data_type"][0]
+        target_data_type = columns(column=match_from_file['cda_column_to_match'])['data_type'][0]
         match_from_file_filter = build_match_from_file_filter(match_from_file, target_data_type, log)
-        #TODO should this be added to match_all always?
+        #TO DO: should this be added to match_all always?
         queries_for_match_all.append(match_from_file_filter)
 
     ### END NOT WORKING BLOCK
@@ -502,7 +491,7 @@ def get_data(
     #############################################################################################################################
     # Postprocess API result data.
 
-    log.debug( "Organizing result data..." )
+    log.debug( 'Organizing result data...' )
 
     # Collect data source information and populate our user-facing `data_source` result column summary,
     # unless its been repressed via exclude_columns=['data_source'].
@@ -559,7 +548,7 @@ def get_data(
         
         result_dataframe = result_dataframe[ final_column_order ]
 
-        log.debug( "Handling missing values..." )
+        log.debug( 'Handling missing values...' )
 
         result_column_names = result_dataframe.columns.to_list()
 
