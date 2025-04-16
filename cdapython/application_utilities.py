@@ -190,7 +190,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
         filter_column_metadata = cached_column_metadata[ cached_column_metadata['column'] == filter_column_name ]
 
-        print( type( filter_column_metadata )
+        print( type( filter_column_metadata ) )
 
         print( filter_column_metadata )
 
