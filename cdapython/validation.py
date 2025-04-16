@@ -180,6 +180,14 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
                 if re.search(r'.\*.', filter_value) is not None:
                     raise RuntimeError( f"Wildcards (*) are only allowed at the ends of string values; string '{original_filter_value}' is noncompliant (it has one in the middle). Please fix." )
 
+                # API expects percent signs.
+
+                filter_value = re.sub( r'\*', r'%', filter_value )
+
+                # API expects string tokens to be quoted.
+
+                filter_value = f"'{filter_value}'"
+
             else:
 
                 # Just to be safe. Types change.
