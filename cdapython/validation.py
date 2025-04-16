@@ -91,7 +91,6 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
             filter_expression = re.sub( r'^(\S+)\s+IS\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
 
         elif re.search( r'^(\S+)\s+LIKE\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
-            print("DING!")
             filter_expression = re.sub( r'^(\S+)\s+LIKE\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
 
         #############################################################################################################################
