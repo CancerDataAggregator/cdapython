@@ -1353,7 +1353,8 @@ def summarize(
     q_node.exclude_columns = columns_to_remove
 
     # Dump JSON describing the full combined query structure.
-    log.debug( f"Query JSON transmitted:\n{json.dumps( q_node.to_dict(), indent=4, cls=CdaApiQueryEncoder )}" )
+    #log.debug( f"Query JSON transmitted:\n{json.dumps( q_node.to_dict(), indent=4, cls=CdaApiQueryEncoder )}" )
+    log.debug( f"Query JSON transmitted:\n{json.dumps( q_node.to_dict(), indent=4 )}" )
 
     #############################################################################################################################
     # Fetch data from the API.
