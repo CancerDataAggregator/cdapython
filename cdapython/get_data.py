@@ -312,8 +312,8 @@ def get_data(
     if len( data_source ) > 0:
         
         for upstream_data_source in allowed_data_source_values:
-            
-            add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" ) if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns
+            if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns:
+                add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" )
 
 
 
