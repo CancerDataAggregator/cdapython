@@ -172,20 +172,19 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
                 if re.search( r'^\*', filter_value ) is not None or re.search( r'\*$', filter_value ) is not None:
                     
+                    # API expects lowercase operators.
                     if filter_operator == '!=':
-                        filter_operator = 'NOT LIKE'
+                        filter_operator = 'not like'
                     else:
-                        filter_operator = 'LIKE'
+                        filter_operator = 'like'
 
                 if re.search(r'.\*.', filter_value) is not None:
                     raise RuntimeError( f"Wildcards (*) are only allowed at the ends of string values; string '{original_filter_value}' is noncompliant (it has one in the middle). Please fix." )
 
                 # API expects percent signs.
-
                 filter_value = re.sub( r'\*', r'%', filter_value )
 
                 # API expects string tokens to be quoted.
-
                 filter_value = f"'{filter_value}'"
 
             else:
@@ -197,14 +196,15 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
             
             # filter_value.lower() == 'null': normalize operator and value. Value normalizatin is entirely unnecessary here but satisfies the author's over-tuned need for well-formed output.
 
+            # API expects lowercase operators.
             if filter_operator == '=':
-                filter_operator = 'IS'
+                filter_operator = 'is'
             elif filter_operator == '!=':
-                filter_operator = 'IS NOT'
+                filter_operator = 'is not'
             else:
                 raise RuntimeError( f"Unexpected operator encountered for NULL: '{filter_operator}' (from '{filter_expression}') -- please use = or != instead." )
 
-            filter_value = 'NULL'
+            filter_value = 'null'
 
         normalized_filter_expression = filter_column_name + ' ' + filter_operator + ' ' + filter_value
 
