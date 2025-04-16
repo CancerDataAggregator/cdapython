@@ -579,7 +579,7 @@ def get_data(
 
                     print( column )
                     print( result_dataframe[column].dtype )
-                    result_dataframe[column] = result_dataframe[column].apply( lambda cell_val: [ round( element_val ).astype( 'Int64' ) for element_val in cell_val ] if isinstance( cell_val, list ) else numpy.int64( round( cell_val ) ) )
+                    result_dataframe[column] = result_dataframe[column].apply( lambda cell_val: [ numpy.int64( round( element_val ) ) for element_val in cell_val ] if isinstance( cell_val, list ) else numpy.int64( round( cell_val ) ) )
                     #result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
 
                 elif column_data_types[column] in { 'text', 'boolean' }:
