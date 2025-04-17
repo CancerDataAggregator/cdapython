@@ -1606,19 +1606,21 @@ def summarize(
 
                         print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
 
-                    # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
+                    if print_df is not None and len( print_df ) > 0:
+                        
+                        # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
 
-                    print(
-                        tabulate.tabulate(
-                            print_df,
-                            showindex=False,
-                            headers=print_df.columns,
-                            tablefmt="double_outline",
-                            colalign=colalign_list,
-                            maxcolwidths=maxcolwidths_list,
-                            disable_numparse=True,
+                        print(
+                            tabulate.tabulate(
+                                print_df,
+                                showindex=False,
+                                headers=print_df.columns,
+                                tablefmt="double_outline",
+                                colalign=colalign_list,
+                                maxcolwidths=maxcolwidths_list,
+                                disable_numparse=True,
+                            )
                         )
-                    )
 
             return
 
