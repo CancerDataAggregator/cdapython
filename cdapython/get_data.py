@@ -387,12 +387,18 @@ def get_data(
     # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
     # and leave the rest unmodified.
 
-    for parameter_name in [ 'match_all', 'match_any', 'data_source', 'add_columns', 'exclude_columns' ]:
-        try:
-            locals()[parameter_name] = normalize_to_list( parameter_name, locals()[parameter_name], str )
-        except Exception as e:
-            log.error( e )
-            return
+    # If someone can devise a way to do this with a control loop, I'm all ears. I gave up after 20 minutes
+    # of fiddling with `locals()`.
+
+    try:
+        match_all = normalize_to_list( 'match_all', match_all, str )
+        match_any = normalize_to_list( 'match_any', match_any, str )
+        data_source = normalize_to_list( 'data_source', data_source, str )
+        add_columns = normalize_to_list( 'add_columns', add_columns, str )
+        exclude_columns = normalize_to_list( 'exclude_columns', exclude_columns, str )
+    except Exception as e:
+        log.error( e )
+        return
 
     # Validate user-supplied parameter data.
     verify_inputs(
