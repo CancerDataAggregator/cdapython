@@ -4,6 +4,8 @@ import pandas as pd
 import re
 import tabulate
 
+import cda_client
+
 from multiprocessing.pool import ApplyResult
 
 from cdapython.application_utilities import get_api_url
@@ -11,8 +13,8 @@ from cdapython.discover import columns, tables
 from cdapython.logging_wrappers import get_logger
 from cdapython.validation import validate_and_transform_match_filter_list
 
-from cda_client.models.q_node import QNode
 from cda_client.errors import UnexpectedStatus
+from cda_client.models.q_node import QNode
 from cda_client.api.summary import file_summary_endpoint_summary_file_post as summary_file_endpoint
 from cda_client.api.summary import subject_summary_endpoint_summary_subject_post as summary_subject_endpoint
 
