@@ -588,7 +588,7 @@ def get_data(
 
     log.debug( f"Sending query to API '/data/{table}' endpoint:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
     
-    query_api_instance = cda_client.Client( base_url=get_api_url() )
+    query_api_instance = cda_client.Client( with_headers={}, base_url=get_api_url() )
 
     paged_response_data_object = query_selector[table].sync(
         client=query_api_instance,
