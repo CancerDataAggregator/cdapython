@@ -5,6 +5,8 @@ import re
 
 import cda_client
 import cda_client.api
+import cda_client.api.columns
+#import cda_client.api.columns.columns_endpoint_columns_get
 
 from cdapython.logging_wrappers import get_logger
 from cdapython.application_utilities import get_api_client
