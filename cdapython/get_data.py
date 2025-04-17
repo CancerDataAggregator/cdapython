@@ -384,12 +384,12 @@ def get_data(
     cached_column_metadata = columns()
 
     # Normalize user-supplied parameter data: returns a one-element list for any of these that come in as single values (instead of lists of values) and leaves the rest unmodified.
-
-    match_all = normalize_to_list( 'match_all', match_all, str )
-    match_any = normalize_to_list( 'match_any', match_any, str )
-    add_columns = normalize_to_list( 'add_columns', add_columns, str )
-    exclude_columns = normalize_to_list( 'exclude_columns', exclude_columns, str )
-    data_source = normalize_to_list( 'data_source', data_source, str )
+    for parameter_name in [ 'match_all', 'match_any', 'data_source', 'add_columns', 'exclude_columns' ]:
+        try:
+            normalize_to_list( parameter_name, locals()[parameter_name], str )
+        except Exception as e:
+            log.error( e )
+            return
 
     # Validate user-supplied parameter data.
     verify_inputs(
