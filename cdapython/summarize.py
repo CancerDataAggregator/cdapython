@@ -1605,6 +1605,7 @@ def summarize(
                                 result_dict[''].append( f"{re.sub( r'_', r' ', key )}" )
 
                                 print ( print_df.columns.values )
+                                print ( key )
 
                                 result_dict[result_name].append( f"{print_df[key][0]:>15}" )
 
