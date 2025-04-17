@@ -521,11 +521,11 @@ def get_data(
     #############################################################################################################################
     ### NOT WORKING, PLEASE UPDATE
 
-    if match_from_file['cda_column_to_match'] != '':
-        target_data_type = columns(column=match_from_file['cda_column_to_match'])['data_type'][0]
-        match_from_file_filter = build_match_from_file_filter(match_from_file, target_data_type, log)
-        #TO DO: should this be added to match_all always?
-        queries_for_match_all.append(match_from_file_filter)
+    # if match_from_file['cda_column_to_match'] != '':
+    #     target_data_type = columns(column=match_from_file['cda_column_to_match'])['data_type'][0]
+    #     match_from_file_filter = build_match_from_file_filter(match_from_file, target_data_type, log)
+    #     #TO DO: should this be added to match_all always?
+    #     queries_for_match_all.append(match_from_file_filter)
 
     ### END NOT WORKING BLOCK
     #############################################################################################################################
