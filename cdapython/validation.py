@@ -318,36 +318,40 @@ def validate_parameter_values(
     if table is None or not isinstance( table, str ) or table not in cached_column_metadata['table'].unique():
         raise RuntimeError( f"The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list." )
 
-    # Check `match_from_file` data for sanity.
+    if called_function in [ 'get_data', 'summarize' ]:
+        
+        # Check `match_from_file` data for sanity.
 
-    # Is `match_from_file` a dict with the expected set of keys?
-    if not isinstance(match_from_file, dict) or set( match_from_file.keys() ) != { 'input_file', 'input_column', 'cda_column_to_match' }:
-        raise RuntimeError( f"'match_from_file' must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not." )
+        # Is `match_from_file` a dict with the expected set of keys?
+        if not isinstance( match_from_file, dict ) or set( match_from_file.keys() ) != { 'input_file', 'input_column', 'cda_column_to_match' }:
+            raise RuntimeError( f"'match_from_file' must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not." )
 
-    # Does `match_from_file`['cda_column_to_match'] exist?
-    if match_from_file['cda_column_to_match'] != '' and match_from_file['cda_column_to_match'] not in cached_column_metadata['column'].unique():
-        raise RuntimeError( f"'match_from_file['cda_column_to_match']' must be a valid CDA column; you supplied {match_from_file['cda_column_to_match']}, which is not." )
+        # Does `match_from_file`['cda_column_to_match'] exist?
+        if match_from_file['cda_column_to_match'] != '' and match_from_file['cda_column_to_match'] not in cached_column_metadata['column'].unique():
+            raise RuntimeError( f"'match_from_file['cda_column_to_match']' must be a valid CDA column; you supplied {match_from_file['cda_column_to_match']}, which is not." )
 
-    # Does `match_from_file`['input_file'] exist and does it have a column named `match_from_file`['input_column']?
-    try:
-        with open( match_from_file['input_file'] ) as IN:
-            input_file_column_names = next( IN ).rstrip( '\n' ).split( '\t' )
-            if match_from_file['input_column'] not in input_file_column_names:
-                raise RuntimeError( f"'match_from_file['input_column']' must specify a column that exists in 'match_from_file['input_file']'. You specified '{match_from_file['input_column']}', which is not present in '{match_from_file['input_file']}'." )
+        # Does `match_from_file`['input_file'] exist and does it have a column named `match_from_file`['input_column']?
+        if match_from_file['input_file'] != '':
+            
+            try:
+                with open( match_from_file['input_file'] ) as IN:
+                    input_file_column_names = next( IN ).rstrip( '\n' ).split( '\t' )
+                    if match_from_file['input_column'] not in input_file_column_names:
+                        raise RuntimeError( f"'match_from_file['input_column']' must specify a column that exists in 'match_from_file['input_file']'. You specified '{match_from_file['input_column']}', which is not present in '{match_from_file['input_file']}'." )
 
-    except Exception as error:
-        raise RuntimeError( f"Couldn't read from match_from_file input file '{match_from_file['input_file']}': got error of type '{type(error)}', with error message '{error}'." )
+            except Exception as error:
+                raise RuntimeError( f"Couldn't read from match_from_file input file '{match_from_file['input_file']}': got error of type '{type(error)}', with error message '{error}'." )
 
-    # Are the values given in `match_from_file` internally consistent? (Strange results might occur if not.)
-    if match_from_file['cda_column_to_match'] == '':
-        if match_from_file['input_file'] != '' or match_from_file['input_column'] != '':
-            raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
-    elif match_from_file['input_file'] == '':
-        if match_from_file['cda_column_to_match'] != '' or match_from_file['input_column'] != '':
-            raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
-    elif match_from_file['input_column'] == '':
-        if match_from_file['cda_column_to_match'] != '' or match_from_file['input_file'] != '':
-            raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+        # Are the values given in `match_from_file` internally consistent? (Strange results might occur if not.)
+        if match_from_file['cda_column_to_match'] == '':
+            if match_from_file['input_file'] != '' or match_from_file['input_column'] != '':
+                raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+        elif match_from_file['input_file'] == '':
+            if match_from_file['cda_column_to_match'] != '' or match_from_file['input_column'] != '':
+                raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+        elif match_from_file['input_column'] == '':
+            if match_from_file['cda_column_to_match'] != '' or match_from_file['input_file'] != '':
+                raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
 
     if match_from_file['input_file'] != '' and  match_from_file['input_file'] == output_file:
         raise RuntimeError( f"You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different." )
