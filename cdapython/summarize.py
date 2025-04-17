@@ -1564,50 +1564,50 @@ def summarize(
 
                     colalign_list = [ "left" ]
 
-                    if len( print_df.columns ) == 1:
-                        
-                        colalign_list = [ "left" ]
-
-                    elif 'count_result' in print_df.columns.values:
-                        
-                        maxcolwidths_list = [ None, max_col_width ]
-
-                        colalign_list = [ "right", "right" ]
-
-                        # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
-
-                        print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and len( x ) > max_col_width ) else x )
-
-                        # Put the count values first in the display.
-
-                        new_column_ordering = list( reversed( print_df.columns.tolist() ) )
-
-                        print_df = print_df[new_column_ordering]
-
-                    elif 'median' in print_df.columns.values:
-                        
-                        colalign_list = [ "right" ]
-
-                        result_name = print_df['cda_column_name'][0]
-
-                        result_dict = {
-                            
-                            '': list(),
-                            result_name: list()
-                        }
-
-                        # Hard-coding this is fragile, but safe for now and there's a lot to do.
-
-                        for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
-                            
-                            result_dict[''].append( f"{re.sub( r'_', r' ', key )}" )
-
-                            result_dict[result_name].append( f"{print_df[key][0]:>15}" )
-
-                        print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
-
                     if print_df is not None and len( print_df ) > 0:
                         
+                        if len( print_df.columns ) == 1:
+                            
+                            colalign_list = [ "left" ]
+
+                        elif 'count_result' in print_df.columns.values:
+                            
+                            maxcolwidths_list = [ None, max_col_width ]
+
+                            colalign_list = [ "right", "right" ]
+
+                            # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
+
+                            print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and len( x ) > max_col_width ) else x )
+
+                            # Put the count values first in the display.
+
+                            new_column_ordering = list( reversed( print_df.columns.tolist() ) )
+
+                            print_df = print_df[new_column_ordering]
+
+                        elif 'median' in print_df.columns.values:
+                            
+                            colalign_list = [ "right" ]
+
+                            result_name = print_df['cda_column_name'][0]
+
+                            result_dict = {
+                                
+                                '': list(),
+                                result_name: list()
+                            }
+
+                            # Hard-coding this is fragile, but safe for now and there's a lot to do.
+
+                            for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
+                                
+                                result_dict[''].append( f"{re.sub( r'_', r' ', key )}" )
+
+                                result_dict[result_name].append( f"{print_df[key][0]:>15}" )
+
+                            print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
+
                         # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
 
                         print(
