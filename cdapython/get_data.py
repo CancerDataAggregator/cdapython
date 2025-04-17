@@ -383,7 +383,10 @@ def get_data(
 
     cached_column_metadata = columns()
 
-    # Normalize user-supplied parameter data: returns a one-element list for any of these that come in as single values (instead of lists of values) and leaves the rest unmodified.
+    # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
+    # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
+    # and leave the rest unmodified.
+
     for parameter_name in [ 'match_all', 'match_any', 'data_source', 'add_columns', 'exclude_columns' ]:
         try:
             normalize_to_list( parameter_name, locals()[parameter_name], str )
@@ -838,7 +841,6 @@ def get_data(
 
     log.critical( 'Something has gone unexpectedly and disastrously wrong with result-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
     return
-
 
 #############################################################################################################################
 #

@@ -3,15 +3,6 @@ import re
 import pandas as pd
 
 import cda_client
-import cda_client.api
-import cda_client.api.columns
-import cda_client.api.columns.columns_endpoint_columns_get
-import cda_client.api.data
-import cda_client.api.data.file_fetch_rows_endpoint_data_file_post
-import cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post
-import cda_client.api.summary
-import cda_client.api.unique_values
-import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post
 
 #############################################################################################################################
 #
@@ -63,7 +54,7 @@ def verify_inputs(
         return
 
     else:
-        # So - yes we have a function "def tables()" that does this already, but since we already have the columns data
+        # So - yes we have a function `tables()` that does this already, but since we already have the columns data
         # we use this one-liner to extract the tables.
         table_results = sorted(column_values["table"].unique())
 
