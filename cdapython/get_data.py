@@ -7,7 +7,7 @@ import cda_client
 import cda_client.api.data.file_fetch_rows_endpoint_data_file_post
 import cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post
 
-from cdapython.application_utilities import build_match_from_file_filter, get_api_client, verify_inputs
+from cdapython.application_utilities import build_match_from_file_filter, get_api_url, verify_inputs
 from cdapython.discover import columns
 from cdapython.logging_wrappers import get_logger
 from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list
@@ -624,7 +624,7 @@ def get_data(
 
     log.debug( f"Sending query to API '/data/{table}' endpoint:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
     
-    query_api_instance = get_api_client()
+    query_api_instance = cda_client.Client( base_url=get_api_url() )
 
     paged_response_data_object = query_selector[table].sync(
         client=query_api_instance,

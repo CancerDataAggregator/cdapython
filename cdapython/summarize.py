@@ -6,7 +6,7 @@ import tabulate
 
 from multiprocessing.pool import ApplyResult
 
-from cdapython.application_utilities import get_api_client
+from cdapython.application_utilities import get_api_url
 from cdapython.discover import columns, tables
 from cdapython.logging_wrappers import get_logger
 from cdapython.validation import validate_and_transform_match_filter_list
@@ -1319,66 +1319,32 @@ def summarize(
 
     #             final_query = actually_final_query
 
-    query_api_instance = get_api_client()
-
     query_object = QNode()
     query_object.match_all = queries_for_match_all
     query_object.match_some = queries_for_match_any
     query_object.add_columns = columns_to_fetch
     query_object.exclude_columns = columns_to_remove
 
-    # Dump JSON describing the full combined query structure.
-    log.debug( f"Sending query to API:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
-
     #############################################################################################################################
     # Fetch data from the API.
 
-    # Make an ApiClient object containing the information necessary to connect to the CDA database.
+    # Dump JSON describing the full combined query structure.
+    log.debug( f"Querying CDA API '/summary/{table}' endpoint:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
 
-    # Allow users to override the system-default URL for the CDA API by setting their CDA_API_URL
-    # environment variable.
-
-    url_override = os.environ.get( 'CDA_API_URL' )
-    # TODO: What is this trying to accomplish?
-    # if url_override is not None and len(url_override) > 0:
-    #     api_configuration = CdaConfiguration(host=url_override, verify=True, verbose=True)
-
-    #     api_client_instance = ApiClient(configuration=api_configuration)
-
-    #     # Report that we're pulling in a hostname from the CDA_API_URL environment variable.
-
-    #     log.debug( "Loaded CDA_API_URL from environment" )
-    #     log.debug( api_configuration.get_host_settings() )
-    #     log.debug( "Loaded CDA_API_URL from environment" )
-
-    # else:
-    #     api_configuration = CdaConfiguration(verify=True, verbose=True)
-
-    #     api_client_instance = ApiClient(configuration=api_configuration)
-
-    #     # Report the default location data for the CDA API, as loaded from the CdaConfiguration class.
-    #     log.debug( "Loaded CDA API URL from default config" )
-    #     log.debug( api_configuration.get_host_settings() )
-    #     log.debug( "Loaded CDA API URL from default config" )
-
-    # log.debug( f"Querying CDA API '{table}/counts' endpoint" )
-
-    # Make a QueryApi object using the connection information in the ApiClient object.
-
-    query_api_instance = get_api_client()
-
-    # Use the QueryApi instance object's `{table}_counts_query` endpoint-accessor
-    # function to get data from the REST API.
+    # Support selection of the appropriate endpoint based on the value of `table`.
 
     query_selector = {
         'file': summary_file_endpoint,
         'subject': summary_subject_endpoint,
     }
 
-    paged_response_data_object = query_selector[table].sync(
-        client=query_api_instance,
-        body=query_object
-    )
+    # Make an API client object to manage query transmission.
+
+    query_api_instance = cda_client.Client( base_url=get_api_url() )
+
+    # Send the query to the relevant endpoint and save response data.
+
+    paged_response_data_object = query_selector[table].sync( client=query_api_instance, body=query_object )
 
     # Gracefully fetch asynchronously-generated results once they're ready.
 

@@ -6,29 +6,50 @@ import cda_client
 
 #############################################################################################################################
 #
-# get_api_client(): Return an ApiClient object containing the information necessary to connect to the CDA database.
+# get_api_url(): Return the current system URL for the CDA REST API.
 #
 #############################################################################################################################
 
-def get_api_client():
+def get_api_url():
     """
-    Return an ApiClient object.
-
-    Returns:
-        query_api_instance: query api instance that can be used to communicate with CDA API
+    Return the currently-set URL pointing to the CDA REST API.
     """
-    # Allow users to override the system-default URL for the CDA API by setting their CDA_API_URL
-    # environment variable.
 
-    url = "http://127.0.0.1:8000"
+    # System default.
 
-    url_override = os.environ.get("CDA_API_URL")
+    default_api_url = 'http://127.0.0.1:8000'
 
-    if url_override is not None and len(url_override) > 0:
-        url = url_override
+    # Has the user set a non-default URL?
 
-    # Alter our debug reports a bit if we're only counting results, instead of fetching them.
-    return cda_client.Client(base_url=url)
+    local_api_url = os.environ.get( '__CDA_API_URL' )
+
+    if local_api_url is not None and len( local_api_url ) > 0:
+        
+        return local_api_url
+
+    else:
+        
+        return default_api_url
+
+#############################################################################################################################
+#
+# set_api_url(): Set the current system URL for the CDA REST API.
+#
+#############################################################################################################################
+
+def set_api_url( new_api_url ):
+    """
+    Set the current system URL for the CDA REST API.
+    """
+
+    # Do some basic sanity checking.
+
+    if re.search( r'^https*:\/\/', new_api_url ) is None:
+        raise RuntimeError( 'set_api_url(): Only HTTP and HTTPS URLs are allowed.' )
+    elif len( new_api_url ) > 100:
+        raise RuntimeError( 'set_api_url(): Whatever that was, it wasn\'t the URL of the CDA REST API.' )
+
+    os.environ['__CDA_API_URL'] = new_api_url
 
 def verify_inputs(
         column_values,

@@ -8,7 +8,7 @@ import cda_client.api.columns.columns_endpoint_columns_get
 import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post
 
 from cdapython.logging_wrappers import get_logger
-from cdapython.application_utilities import get_api_client
+from cdapython.application_utilities import get_api_url
 
 
 #############################################################################################################################
@@ -393,7 +393,7 @@ def columns(
     #############################################################################################################################
     # Fetch data from the API.
 
-    query_api_instance = get_api_client()
+    query_api_instance = cda_client.Client( base_url=get_api_url() )
 
     # Ask the columns endpoint for information. (It has no parameters.)
 
@@ -967,7 +967,7 @@ def column_values(
     #############################################################################################################################
     # Fetch data from the API.
 
-    query_api_instance = get_api_client()
+    query_api_instance = cda_client.Client( base_url=get_api_url() )
     
     starting_offset = 0
     records_per_page = 500000
