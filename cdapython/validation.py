@@ -2,6 +2,60 @@ import re
 
 #############################################################################################################################
 #
+# normalize_to_list( parameter_name, user_supplied_parameter_value, value_type ):
+# 
+# Covert single bare values to one-element lists to support strong downstream assumptions about parameter structures.
+# 
+# Fail if:
+#
+#     * `user_supplied_parameter_value` is neither a list of `value_type` elements nor a single `value_type` value
+#
+#############################################################################################################################
+
+def normalize_to_list( parameter_name, user_supplied_parameter_value, value_type ):
+    """
+    For any user-supplied parameter data that represents a single value
+    for a parameter that can in general take multiple concurrent values,
+    convert that data into a one-element list, so we don't have to care
+    downstream about whether the parameter value was receievd as a
+    single bare value or as a list of values.
+
+    Arguments:
+        parameter_name ( string; required ):
+            The name of the user-facing parameter whose value we're checking.
+
+        user_supplied_parameter_value ( unknown type; required ):
+            The value of `parameter_name` as supplied by the user.
+
+        value_type ( Python class name; required ):
+            The expected data type against which we're going to validate
+            `user_supplied_parameter_value`.
+    """
+
+    # Start by assuming everything's fine, and that we have the most general case,
+    # namely a list of elements of the expected type.
+
+    list_to_return = user_supplied_parameter_value
+
+    if isinstance( user_supplied_parameter_value, value_type ):
+        
+        # We have a single value of the correct type. Convert it into a one-element list to return.
+        list_to_return = [ user_supplied_parameter_value ]
+
+    elif not isinstance( user_supplied_parameter_value, list ):
+        
+        # We have neither a value of the right type nor a list: can't continue.
+        raise RuntimeError( f"User-supplied parameter '{parameter_name}' was assigned a non-list value of unexpected type '{type(user_supplied_parameter_value)}'; should be '{value_type}' or 'list({value_type})'. Please fix." )
+
+    elif not all( isinstance( element, value_type ) for element in user_supplied_parameter_value ):
+        
+        # We have a list, but not all of its elements are of the expected type: can't continue.
+        raise RuntimeError( f"User-supplied parameter '{parameter_name}' was assigned a list containing elements of unexpected type '{type(user_supplied_parameter_value)}'; elements should all be '{value_type}'. Please fix." )
+
+    return list_to_return
+
+#############################################################################################################################
+#
 # validate_and_transform_match_filter_list( cached_column_metadata, match_statement ):
 # 
 # Fail if:

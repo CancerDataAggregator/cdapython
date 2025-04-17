@@ -5,10 +5,10 @@ import re
 
 import cda_client
 
-from cdapython.application_utilities import build_match_from_file_filter, cleanup_inputs, get_api_client, verify_inputs
+from cdapython.application_utilities import build_match_from_file_filter, get_api_client, verify_inputs
 from cdapython.discover import columns
 from cdapython.logging_wrappers import get_logger
-from cdapython.validation import validate_and_transform_match_filter_list
+from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list
 
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
@@ -383,8 +383,13 @@ def get_data(
 
     cached_column_metadata = columns()
 
-    # Normalize user-supplied parameter data. Right now, this just returns a one-element list for any of these that come in as strings and leaves the rest unmodified.
-    match_all, match_any, add_columns, exclude_columns, data_source = cleanup_inputs( match_all, match_any, add_columns, exclude_columns, data_source )
+    # Normalize user-supplied parameter data: returns a one-element list for any of these that come in as single values (instead of lists of values) and leaves the rest unmodified.
+
+    match_all = normalize_to_list( 'match_all', match_all, str )
+    match_any = normalize_to_list( 'match_any', match_any, str )
+    add_columns = normalize_to_list( 'add_columns', add_columns, str )
+    exclude_columns = normalize_to_list( 'exclude_columns', exclude_columns, str )
+    data_source = normalize_to_list( 'data_source', data_source, str )
 
     # Validate user-supplied parameter data.
     verify_inputs(

@@ -19,7 +19,6 @@ import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnn
 #
 #############################################################################################################################
 
-
 def get_api_client():
     """
     Return an ApiClient object.
@@ -39,92 +38,6 @@ def get_api_client():
 
     # Alter our debug reports a bit if we're only counting results, instead of fetching them.
     return cda_client.Client(base_url=url)
-
-
-#############################################################################################################################
-#
-# get_data_api_client(): Return a data ApiClient object containing the information necessary to connect to the CDA database.
-#
-#############################################################################################################################
-
-
-def get_data_api_client(table):
-    """
-    Return an Data ApiClient object.
-
-    Returns:
-        data_api: query api instance that can be used to communicate with CDA API data endpoint
-    """
-
-    # Create an instance of the API class
-    if table == "file":
-        with get_api_client() as client:
-            data_client = cda_client.api.data.file_fetch_rows_endpoint_data_file_post.sync(client=client)
-
-    elif table == "subject":
-        with get_api_client() as client:
-            data_client = cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post.sync(client=client)
-    return data_client
-
-
-#############################################################################################################################
-#
-# get_columns_api_client(): Return a columns ApiClient object containing the information necessary to connect to the CDA database.
-#
-#############################################################################################################################
-
-
-def get_columns_api_client():
-    """
-    Return a columns ApiClient object.
-
-    Returns:
-        columns_api: query api instance that can be used to communicate with CDA API columns endpoint
-    """
-
-    # Create an instance of the API class
-    with get_api_client() as client:
-        columns_client = cda_client.api.columns.columns_endpoint_columns_get.sync(client=client)
-    return columns_client
-
-
-#############################################################################################################################
-#
-# get_unique_values_api_client(): Return a columns ApiClient object containing the information necessary to connect to the CDA database.
-#
-#############################################################################################################################
-
-
-def get_unique_values_api_client():
-    """
-    Return a unique values ApiClient object.
-
-    Returns:
-        unique_values_api: unique values api instance that can be used to communicate with CDA API  endpoint
-    """
-
-    # Create an instance of the API class
-    with get_api_client() as client:
-        unique_values_client = cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post.sync(
-            client=client
-        )
-    return unique_values_client
-
-
-def cleanup_inputs(match_all, match_any, add_columns, exclude_columns, data_source):
-    # Listify, so we don't have to care later about whether this was a string or a list of strings.
-    if isinstance(match_all, str):
-        match_all = [match_all]
-    if isinstance(match_any, str):
-        match_any = [match_any]
-    if isinstance(add_columns, str):
-        add_columns = [add_columns]
-    if isinstance(exclude_columns, str):
-        exclude_columns = [exclude_columns]
-    if isinstance(data_source, str):
-        data_source = [data_source]
-
-    return match_all, match_any, add_columns, exclude_columns, data_source
 
 def verify_inputs(
         column_values,
