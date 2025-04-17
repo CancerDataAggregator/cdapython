@@ -389,7 +389,7 @@ def get_data(
 
     for parameter_name in [ 'match_all', 'match_any', 'data_source', 'add_columns', 'exclude_columns' ]:
         try:
-            normalize_to_list( parameter_name, locals()[parameter_name], str )
+            locals()[parameter_name] = normalize_to_list( parameter_name, locals()[parameter_name], str )
         except Exception as e:
             log.error( e )
             return
