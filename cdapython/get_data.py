@@ -434,18 +434,18 @@ def get_data(
 
     try:
         validate_parameter_values(
-            'get_data',
-            cached_column_metadata,
-            valid_data_sources,
-            table,
-            match_from_file,
-            data_source,
-            add_columns,
-            exclude_columns,
-            provenance,
-            return_data_as,
-            output_file,
-            log
+            called_function='get_data',
+            cached_column_metadata=cached_column_metadata,
+            valid_data_sources=valid_data_sources,
+            table=table,
+            match_from_file=match_from_file,
+            data_source=data_source,
+            add_columns=add_columns,
+            exclude_columns=exclude_columns,
+            provenance=provenance,
+            return_data_as=return_data_as,
+            output_file=output_file,
+            log=log
         )
     except Exception as e:
         log.error( e )
