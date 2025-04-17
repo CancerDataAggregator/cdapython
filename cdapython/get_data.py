@@ -430,6 +430,9 @@ def get_data(
 
     # Validate user-supplied parameter data.
 
+
+    print( provenance )
+
     try:
         validate_parameter_values(
             'get_data',
