@@ -620,6 +620,7 @@ def get_data(
     # Forward error types known to be returned by the API.
     if isinstance( paged_response_data_object, ClientError ) or isinstance( paged_response_data_object, InternalError ):
         log.error( f"{paged_response_data_object.error_type}: {paged_response_data_object.message}" )
+        return
 
     # Make a Pandas DataFrame out of the first batch of results.
     #
