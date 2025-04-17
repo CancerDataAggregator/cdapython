@@ -310,7 +310,7 @@ def validate_parameter_values(
     output_file,
     log
 ):
-    
+    print( add_columns )
     # The data structure coming back from columns() is a DataFrame with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
 
     # Make sure `table` exists.
