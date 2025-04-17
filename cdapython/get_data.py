@@ -379,7 +379,7 @@ def get_data(
     log = get_logger()
 
     #############################################################################################################################
-    # Input validation
+    # Validate parameter inputs.
 
     # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
     # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
@@ -423,30 +423,31 @@ def get_data(
     valid_data_sources = set()
 
     for column_record in cached_release_metadata:
-        
         record_data_source = column_record['data_source']
-
         if record_data_source != 'CDA':
-            
             # Let's not care about case.
             valid_data_sources.add( record_data_source.upper() )
 
     # Validate user-supplied parameter data.
 
-    validate_parameter_values(
-        'get_data',
-        cached_column_metadata,
-        valid_data_sources,
-        table,
-        match_from_file,
-        data_source,
-        add_columns,
-        exclude_columns,
-        provenance,
-        return_data_as,
-        output_file,
-        log
-    )
+    try:
+        validate_parameter_values(
+            'get_data',
+            cached_column_metadata,
+            valid_data_sources,
+            table,
+            match_from_file,
+            data_source,
+            add_columns,
+            exclude_columns,
+            provenance,
+            return_data_as,
+            output_file,
+            log
+        )
+    except Exception as e:
+        log.error( e )
+        return
 
     #############################################################################################################################
     # Preprocess table metadata, to enable consistent processing (and reporting) throughout.
@@ -476,52 +477,12 @@ def get_data(
             source_table_columns_in_order.append( column_record['column'] )
 
     #############################################################################################################################
-    # Process return-type directives `return_data_as` and `output_file`.
+    # Construct query substructures according to user directives.
 
-    # Let's not be picky if someone wants to give us return_data_as='DataFrame' or return_data_as='TSV'
-    return_data_as = return_data_as.lower()
-
-    # We can't do much validation on filenames. If `output_file` isn't
-    # a locally writeable path, it'll fail when we try to open it for
-    # writing. Strip trailing whitespace from both ends and wrap the
-    # file-access operation (later, below) in a try{} block.
-
-    output_file = output_file.strip()
-
-    allowed_return_types = {
-        '',
-        'dataframe',
-        'tsv'
-    }
-
-    if return_data_as not in allowed_return_types:
-        
-        # Complain if we receive an unexpected `return_data_as` value.
-        log.error( f"Unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'." )
-        return
-
-    elif return_data_as == 'tsv' and output_file == '':
-        
-        # If the user asks for TSV, they also have to give us a path for the output file. If they didn't, complain.
-        log.error( 'Return type \'tsv\' was requested, but \'output_file\' was not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to/your_tsv_output_file.tsv\'.' )
-        return
-
-    elif return_data_as != 'tsv' and output_file != '':
-        
-        # If the user put something in the `output_file` parameter but didn't specify `result_data_as`='tsv',
-        # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
-        # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
-        # so we complain and ask them to clarify.
-
-        log.error( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'." )
-        log.error( '(Note that if you don\'t specify any value for \'return_data_as\', it defaults to \'dataframe\'.).' )
-        return
-
-    #############################################################################################################################
     # Manage basic validation for the `match_all` parameter, which enumerates user-specified requirements that returned
     # rows must all simultaneously satisfy (AND; intersection; 'all of these must apply').
-
-    # Validate and normalize match_all filter strings. Save results as a list of statement strings.
+    # 
+    # Validate and normalize match_all filter strings; save results as a list of statement strings.
 
     try:
         queries_for_match_all = validate_and_transform_match_filter_list( cached_column_metadata, match_all )
@@ -529,11 +490,10 @@ def get_data(
         log.error( e )
         return
 
-    #############################################################################################################################
     # Manage basic validation for the `match_any` parameter, which enumerates user-specified requirements for which
     # returned rows must satisfy at least one (OR; union; 'at least one of these must apply').
-
-    # Validate and normalize match_any filter strings. Save results as a list of statement strings.
+    # 
+    # Validate and normalize match_any filter strings; save results as a list of statement strings.
 
     try:
         queries_for_match_any = validate_and_transform_match_filter_list( cached_column_metadata, match_any )
@@ -541,15 +501,7 @@ def get_data(
         log.error( e )
         return
 
-    #############################################################################################################################
-    # Manage basic validation for `add_columns`, which enumerates user-specified non-`table` columns to be
-    # added to the main `table` result rows.
-
-    # Eliminate undesirable characters and convert all values to lowercase.
-    add_columns = [ re.sub( r'[^a-z0-9_]', r'', column_to_add ).lower() for column_to_add in add_columns ]
-
-    #############################################################################################################################
-    # Update `queries_for_match_all` to restrict results to specified `data_source` values.
+    # Update `queries_for_match_all` to restrict results to optionally-specified `data_source` values.
 
     for upstream_data_source in data_source:
         queries_for_match_all.append( f"{table}_data_at_{upstream_data_source.lower()} = True" )
@@ -578,8 +530,7 @@ def get_data(
 
 
 
-    #############################################################################################################################
-    # Parse `add_columns` and `exclude_columns` lists to build our API request object.
+    # Parse `add_columns` and `exclude_columns` lists.
 
     columns_to_add = list()
 

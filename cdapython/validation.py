@@ -268,6 +268,12 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
 #############################################################################################################################
 #
+# END validate_and_transform_match_filter_list
+# 
+#############################################################################################################################
+
+#############################################################################################################################
+#
 # validate_parameter_values( called_function, cached_column_metadata, valid_data_sources, table, match_from_file, data_source, add_columns, exclude_columns, provenance, return_data_as, output_file, log ):
 # 
 # Validate user-supplied parameters as passed to `called_function`, after first
@@ -353,18 +359,26 @@ def validate_parameter_values(
     normalized_data_source = list()
 
     if called_function == 'column_values' and len( data_source ) > 1:
-        raise RuntimeException( f"The 'data_source' parameter must be one valid data source name (e.g. 'GDC'); you specified '{data_source}', which is not." )
+        raise RuntimeError( f"The 'data_source' parameter must be one valid data source name (e.g. 'GDC'); you specified '{data_source}', which is not." )
 
     for ds in data_source:
         if ds.upper() not in valid_data_sources:
-            raise RuntimeException( f"The 'data_source' parameter must be a list containing one or more of [ {', '.join( sorted( valid_data_sources ) )} ]. You supplied '{data_source}', which is not that." )
+            raise RuntimeError( f"The 'data_source' parameter must be a list containing one or more of [ {', '.join( sorted( valid_data_sources ) )} ]. You supplied '{data_source}', which is not that." )
         normalized_data_source.append( ds.upper() )
 
     data_source = normalized_data_source
 
     # Make sure CDA columns names in `add_columns` exist.
 
+    for column_name in add_columns:
+        if column_name not in cached_column_metadata['column'].unique():
+            raise RuntimeError( f"'add_columns' can only contain valid CDA column names. You specified '{column_name}', which is not that." )
+
     # Make sure CDA columns named in `exclude_columns` exist.
+
+    for column_name in exclude_columns:
+        if column_name not in cached_column_metadata['column'].unique():
+            raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names. You specified '{column_name}', which is not that." )
 
     # Check that `provenance` is a boolean (for get_data) or None (for summarize) and that `called_function` has an expected value.
 
@@ -375,21 +389,77 @@ def validate_parameter_values(
         if provenance is not None:
             raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom provenance values in summarize() calls; please notify the CDA devs of this event." )
     else:
-        raise RuntimeError( f"`called_function` must be one of [ 'get_data', 'summarize' ] -- '{called_function}' is neither of those. Please notify the CDA devs of this event." )
+        raise RuntimeError( f"`called_function` must be one of [ 'column_values', 'get_data', 'summarize' ] -- '{called_function}' is none of those. Please notify the CDA devs of this event." )
 
-    # `return_data_as`
-    if not isinstance(return_data_as, str):
-        log.critical(
-            f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'."
-        )
+    # Process return-type directives `return_data_as` and `output_file`.
 
-        return
+    # We can't do much validation on filenames. If `output_file` isn't
+    # a locally writeable path, it'll fail when we try to open it for
+    # writing.
 
-    # `output_file`
-    if not isinstance(output_file, str):
-        log.critical(
-            f"fetch_rows(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path."
-        )
+    allowed_return_types = {
+        'get_data': {
+            'dataframe',
+            'tsv'
+        },
+        'summarize': {
+            '',
+            'dataframe_list',
+            'dict',
+            'json'
+        }
+    }
 
-        return
+    if return_data_as is not None:
+        
+        if not isinstance( return_data_as, str ):
+            raise RuntimeError( f"Unrecognized 'return_data_as' value '{return_data_as}' requested. Valid values are [ {', '.join( allowed_return_types[called_function] )} ]." )
+
+        if not isinstance( output_file, str ):
+            raise RuntimeError( f"The `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path." )
+
+        if return_data_as not in allowed_return_types[called_function]:
+            # Complain if we receive an unexpected `return_data_as` value.
+            raise RuntimeError( f"Unrecognized 'return_data_as' value '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'." )
+
+        elif called_function == 'get_data':
+            
+            if return_data_as == 'tsv' and output_file == '':
+                # If the user asks for TSV, they also have to give us a path for the output file. If they didn't, complain.
+                raise RuntimeError( 'Return type \'tsv\' was requested, but \'output_file\' was not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to/your_tsv_output_file.tsv\'.' )
+
+            elif return_data_as != 'tsv' and output_file != '':
+                
+                # If the user put something in the `output_file` parameter but didn't specify `result_data_as`='tsv',
+                # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
+                # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
+                # so we complain and ask them to clarify.
+
+                raise RuntimeError( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
+
+        elif called_function == 'summarize':
+            
+            if return_data_as == 'json' and output_file == '':
+                # If the user asks for JSON, they also have to give us a path for the output file. If they didn't, complain.
+                raise RuntimeError( "Return type 'json' requested, but 'output_file' not specified. Please specify output_file='some/path/string/to/write/your/json/to'." )
+
+            elif return_data_as != 'json' and output_file != '':
+                # If the user put something in the `output_file` parameter but didn't specify `result_data_as='json'`,
+                # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
+                # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
+                # so we complain and ask them to clarify.
+
+                raise RuntimeError( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'json'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to printing tables to the standard output stream and not to an output file.)." )
+
+        else:
+            raise RuntimeError( f"Got unpexpectedly non-null 'return_data_as' value '{return_data_as}' from function '{called_function}'. Please report this event to the CDA devs." )
+
+    return
+
+#############################################################################################################################
+#
+# END validate_parameter_values
+# 
+#############################################################################################################################
+
 

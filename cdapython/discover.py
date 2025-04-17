@@ -1,4 +1,3 @@
-import inspect
 import json
 import os
 import pandas as pd
@@ -71,15 +70,10 @@ def tables():
     columns_result_df = columns( return_data_as='dataframe' )
 
     if columns_result_df is None:
-        
         log.error( 'Something went fatally wrong with columns( return_data_as="dataframe" ): got a null DataFrame back.' )
-
         return
-
     else:
-        
         return sorted( columns_result_df['table'].unique() )
-
 
 #############################################################################################################################
 #
@@ -185,9 +179,6 @@ def columns(
 
         OR returns nothing, but writes results to a user-specified TSV file
     """
-
-    caller_name = inspect.getouterframes( inspect.currentframe(), 2 )[1][3]
-    print( *[ type(caller_name), caller_name ], sep='\t' )
 
     log = get_logger()
 
@@ -700,13 +691,11 @@ def columns(
 #
 #############################################################################################################################
 
-
 #############################################################################################################################
 #
 # column_values( column=`column` ): Show all distinct values present in `column`, along with a count of occurrences for each value.
 #
 #############################################################################################################################
-
 
 def column_values(
     column='',
