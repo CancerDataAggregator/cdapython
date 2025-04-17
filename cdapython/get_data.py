@@ -4,6 +4,8 @@ import pandas as pd
 import re
 
 import cda_client
+import cda_client.api.data.file_fetch_rows_endpoint_data_file_post
+import cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post
 
 from cdapython.application_utilities import build_match_from_file_filter, get_api_client, verify_inputs
 from cdapython.discover import columns
