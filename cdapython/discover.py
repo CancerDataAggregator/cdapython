@@ -4,9 +4,8 @@ import pandas as pd
 import re
 
 import cda_client
-import cda_client.api
-import cda_client.api.columns
 import cda_client.api.columns.columns_endpoint_columns_get
+import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post
 
 from cdapython.logging_wrappers import get_logger
 from cdapython.application_utilities import get_api_client
