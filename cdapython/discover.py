@@ -61,9 +61,6 @@ def tables():
         list of strings: names of searchable CDA tables.
     """
 
-    caller_name = inspect.getouterframes( inspect.currentframe(), 2 )[1][3]
-    print( caller_name )
-
     log = get_logger()
 
     # Call columns(), extract unique values from the `table` column of the
@@ -188,6 +185,9 @@ def columns(
 
         OR returns nothing, but writes results to a user-specified TSV file
     """
+
+    caller_name = inspect.getouterframes( inspect.currentframe(), 2 )[1][3]
+    print( caller_name )
 
     log = get_logger()
 
