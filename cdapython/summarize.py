@@ -1484,18 +1484,22 @@ def summarize(
             if result_column not in skip_rename and result_dataframe[result_column].dtype == 'object' and isinstance( result_dataframe[result_column][0], list ) and isinstance( result_dataframe[result_column][0][0], dict ) and 'median' in result_dataframe[result_column][0][0]:
                 
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
+                # 
+                # They come back with null values if there are no results. In such a case, we don't want to include this structure in our output.
 
-                result_column_dict = dict()
-
-                result_column_dict['cda_column_name'] = [result_column]
-
-                # Hard-coding this is fragile, but safe for now and there's a lot to do.
-
-                for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
+                if result_dataframe[result_column][0][0]['median'] is not None:
                     
-                    result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
+                    result_column_dict = dict()
 
-                result_list_tail.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
+                    result_column_dict['cda_column_name'] = [result_column]
+
+                    # Hard-coding this is fragile, but safe for now and there's a lot to do.
+
+                    for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
+                        
+                        result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
+
+                    result_list_tail.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
 
             elif result_column not in skip_rename:
                 
@@ -1604,11 +1608,6 @@ def summarize(
                                 
                                 result_dict[''].append( f"{re.sub( r'_', r' ', key )}" )
 
-                                print( len( print_df ) )
-                                print( print_df )
-                                print ( print_df.columns.values )
-                                print ( key )
-
                                 result_dict[result_name].append( f"{print_df[key][0]:>15}" )
 
                             print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
@@ -1646,14 +1645,18 @@ def summarize(
             if ( result_column not in skip_rename or re.search( r'_data_source_count_summary$', result_column ) is not None ) and result_dataframe[result_column].dtype == 'object' and isinstance( result_dataframe[result_column][0], list ) and isinstance( result_dataframe[result_column][0][0], dict ) and 'median' in result_dataframe[result_column][0][0]:
                 
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
+                # 
+                # They come back with null values if there are no results. In such a case, we don't want to include this structure in our output.
 
-                result_dict[result_column] = dict()
-
-                # Hard-coding this is fragile, but safe for now and there's a lot to do.
-
-                for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
+                if result_dataframe[result_column][0][0]['median'] is not None:
                     
-                    result_dict[result_column][key] = result_dataframe[result_column][0][0][key]
+                    result_dict[result_column] = dict()
+
+                    # Hard-coding this is fragile, but safe for now and there's a lot to do.
+
+                    for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
+                        
+                        result_dict[result_column][key] = result_dataframe[result_column][0][0][key]
 
             else:
                 
