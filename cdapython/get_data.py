@@ -253,8 +253,6 @@ def get_subject_data(
 
     """
 
-    print( **kwargs )
-
     return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=provenance, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
