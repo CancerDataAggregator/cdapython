@@ -266,3 +266,130 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
     return normalized_match_statement_list
 
+#############################################################################################################################
+#
+# validate_parameter_values( called_function, cached_column_metadata, valid_data_sources, table, match_from_file, data_source, add_columns, exclude_columns, provenance, return_data_as, output_file, log ):
+# 
+# Validate user-supplied parameters as passed to `called_function`, after first
+# passing relevant parameters (`data_source`, `add_columns`, `exclude_columns`)
+# through normalize_to_list().
+# 
+# Fail if:
+# 
+#     * `called_function` is not in [ 'column_values', 'get_data', 'summarize' ]
+#     * `table` is not a CDA table
+#     * `match_from_file` isn't a dict which (if non-null) specifies an accessible input file
+#       containing a user-specified column, whose values are to be matched against a CDA column
+#       that exists
+#     * `data_source` isn't a single valid upstream data source label (for `called_function`=='column_values')
+#       or a list of valid upstream data source labels (for `called_function` in [ 'get_data', 'summarize' ])
+#     * `add_columns` or `exclude_columns` contain invalid CDA column names
+#     * `provenance` isn't a boolean value or None, depending on `called_function`
+#     * `return_data_as` isn't one of the allowable types for `called_function`
+#     * The value of `output_file` isn't consistent with the directive in `return_data_as` for `called_function`
+#
+#############################################################################################################################
+
+def validate_parameter_values(
+    called_function,
+    cached_column_metadata,
+    valid_data_sources,
+    table,
+    match_from_file,
+    data_source,
+    add_columns,
+    exclude_columns,
+    provenance,
+    return_data_as,
+    output_file,
+    log
+):
+    
+    # The data structure coming back from columns() is a DataFrame with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
+
+    # Make sure `table` exists.
+
+    if table is None or not isinstance( table, str ) or table not in cached_column_metadata['table'].unique():
+        raise RuntimeError( f"The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list." )
+
+    # Check `match_from_file` data for sanity.
+
+    # Is `match_from_file` a dict with the expected set of keys?
+    if not isinstance(match_from_file, dict) or set( match_from_file.keys() ) != { 'input_file', 'input_column', 'cda_column_to_match' }:
+        raise RuntimeError( f"'match_from_file' must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not." )
+
+    # Does `match_from_file`['cda_column_to_match'] exist?
+    if match_from_file['cda_column_to_match'] != '' and match_from_file['cda_column_to_match'] not in cached_column_metadata['column'].unique():
+        raise RuntimeError( f"'match_from_file['cda_column_to_match']' must be a valid CDA column; you supplied {match_from_file['cda_column_to_match']}, which is not." )
+
+    # Does `match_from_file`['input_file'] exist and does it have a column named `match_from_file`['input_column']?
+    try:
+        with open( match_from_file['input_file'] ) as IN:
+            input_file_column_names = next( IN ).rstrip( '\n' ).split( '\t' )
+            if match_from_file['input_column'] not in input_file_column_names:
+                raise RuntimeError( f"'match_from_file['input_column']' must specify a column that exists in 'match_from_file['input_file']'. You specified '{match_from_file['input_column']}', which is not present in '{match_from_file['input_file']}'." )
+
+    except Exception as error:
+        raise RuntimeError( f"Couldn't read from match_from_file input file '{match_from_file['input_file']}': got error of type '{type(error)}', with error message '{error}'." )
+
+    # Are the values given in `match_from_file` internally consistent? (Strange results might occur if not.)
+    if match_from_file['cda_column_to_match'] == '':
+        if match_from_file['input_file'] != '' or match_from_file['input_column'] != '':
+            raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+    elif match_from_file['input_file'] == '':
+        if match_from_file['cda_column_to_match'] != '' or match_from_file['input_column'] != '':
+            raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+    elif match_from_file['input_column'] == '':
+        if match_from_file['cda_column_to_match'] != '' or match_from_file['input_file'] != '':
+            raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+
+    if match_from_file['input_file'] != '' and  match_from_file['input_file'] == output_file:
+        raise RuntimeError( f"You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different." )
+
+    # Check that `data_source` is a single valid upstream data source label (for `called_function`=='column_values')
+    # or a list of valid upstream data source labels (for `called_function` in [ 'get_data', 'summarize' ]).
+    # `valid_data_sources` was normalized to uppercase when it was constructed by the caller.
+
+    normalized_data_source = list()
+
+    if called_function == 'column_values' and len( data_source ) > 1:
+        raise RuntimeException( f"The 'data_source' parameter must be one valid data source name (e.g. 'GDC'); you specified '{data_source}', which is not." )
+
+    for ds in data_source:
+        if ds.upper() not in valid_data_sources:
+            raise RuntimeException( f"The 'data_source' parameter must be a list containing one or more of [ {', '.join( sorted( valid_data_sources ) )} ]. You supplied '{data_source}', which is not that." )
+        normalized_data_source.append( ds.upper() )
+
+    data_source = normalized_data_source
+
+    # Make sure CDA columns names in `add_columns` exist.
+
+    # Make sure CDA columns named in `exclude_columns` exist.
+
+    # Check that `provenance` is a boolean (for get_data) or None (for summarize) and that `called_function` has an expected value.
+
+    if called_function == 'get_data':
+        if provenance != True and provenance != False:
+            raise RuntimeError( f"The `provenance` parameter must be set to True or False; you specified '{provenance}', which is neither." )
+    elif called_function == 'summarize' or called_function == 'column_values':
+        if provenance is not None:
+            raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom provenance values in summarize() calls; please notify the CDA devs of this event." )
+    else:
+        raise RuntimeError( f"`called_function` must be one of [ 'get_data', 'summarize' ] -- '{called_function}' is neither of those. Please notify the CDA devs of this event." )
+
+    # `return_data_as`
+    if not isinstance(return_data_as, str):
+        log.critical(
+            f"fetch_rows(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'."
+        )
+
+        return
+
+    # `output_file`
+    if not isinstance(output_file, str):
+        log.critical(
+            f"fetch_rows(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path."
+        )
+
+        return
+

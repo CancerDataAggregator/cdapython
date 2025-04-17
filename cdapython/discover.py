@@ -1,3 +1,4 @@
+import inspect
 import json
 import os
 import pandas as pd
@@ -5,6 +6,7 @@ import re
 
 import cda_client
 import cda_client.api.columns.columns_endpoint_columns_get
+import cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get
 import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post
 
 from cdapython.logging_wrappers import get_logger
@@ -23,10 +25,33 @@ from cdapython.application_utilities import get_api_url
 
 #############################################################################################################################
 #
-# tables(): Return a list of all searchable CDA data tables.
+# release_metadata(): Return a list of metadata dicts describing the current CDA release, columnwise.
 #
 #############################################################################################################################
 
+def release_metadata():
+    """
+    Return a list of metadata dicts describing the current CDA release, columnwise.
+    """
+
+    log = get_logger()
+
+    log.debug( 'Querying /release_metadata endpoint' )
+
+    query_api_instance = cda_client.Client( base_url=get_api_url() )
+
+    try:
+        release_metadata_response_data_object = cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get.sync( client=query_api_instance )
+    except Exception as error:
+        raise RuntimeException( f"Something went wrong trying to fetch data from the /release_metadata API endpoint: got error of type '{type(error)}', with error message '{error}'." )
+
+    return release_metadata_response_data_object.to_dict()['result']
+
+#############################################################################################################################
+#
+# tables(): Return a list of all searchable CDA data tables.
+#
+#############################################################################################################################
 
 def tables():
     """
@@ -35,6 +60,9 @@ def tables():
     Returns:
         list of strings: names of searchable CDA tables.
     """
+
+    caller_name = inspect.getouterframes( inspect.currentframe(), 2 )[1][3]
+    print( caller_name )
 
     log = get_logger()
 
@@ -664,10 +692,7 @@ def columns(
             return
 
         except Exception as error:
-            
-            log.error( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
-            return
-
+            raise RuntimeException( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
 
 #############################################################################################################################
 #
@@ -1319,9 +1344,7 @@ def column_values(
             return
 
         except Exception as error:
-            
-            log.critical( f"column_values(): ERROR: Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
-            return
+            raise RuntimeException( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
 
 #############################################################################################################################
 #

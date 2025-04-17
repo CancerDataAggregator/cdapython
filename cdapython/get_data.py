@@ -7,10 +7,10 @@ import cda_client
 import cda_client.api.data.file_fetch_rows_endpoint_data_file_post
 import cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post
 
-from cdapython.application_utilities import build_match_from_file_filter, get_api_url, verify_inputs
-from cdapython.discover import columns
+from cdapython.application_utilities import build_match_from_file_filter, get_api_url
+from cdapython.discover import columns, release_metadata
 from cdapython.logging_wrappers import get_logger
-from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list
+from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list, validate_parameter_values
 
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
@@ -379,11 +379,7 @@ def get_data(
     log = get_logger()
 
     #############################################################################################################################
-    # Cache column metadata from the API for downstream reuse without further network disturbance.
-    # 
-    # The data structure is a DataFrame with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
-
-    cached_column_metadata = columns()
+    # Input validation
 
     # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
     # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
@@ -402,10 +398,53 @@ def get_data(
         log.error( e )
         return
 
+    # Cache CDA table and column metadata from the API for downstream reuse without further
+    # network disturbance. The data structure coming back from columns() is a DataFrame
+    # with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
+
+    cached_column_metadata = columns()
+
+    # Cache valid labels for upstream data sources. The data structure coming back from
+    # release_metadata() is a list of dicts, with each dict looking like
+    # 
+    # {
+    #     'cda_table': 'file',
+    #     'cda_column': 'access',
+    #     'data_source': 'CDA',
+    #     'data_source_version': 'March 2025',
+    #     'data_source_extraction_date': '2025-03-21',
+    #     'data_source_row_count': 3025352,
+    #     'data_source_unique_value_count': 4,
+    #     'data_source_null_count': 407714
+    # }
+
+    cached_release_metadata = release_metadata()
+
+    valid_data_sources = set()
+
+    for column_record in cached_release_metadata:
+        
+        record_data_source = column_record['data_source']
+
+        if record_data_source != 'CDA':
+            
+            # Let's not care about case.
+            valid_data_sources.add( record_data_source.upper() )
+
     # Validate user-supplied parameter data.
-    verify_inputs(
+
+    validate_parameter_values(
+        'get_data',
         cached_column_metadata,
-        match_all, match_any, add_columns, exclude_columns, data_source, table, match_from_file, provenance, return_data_as, output_file,
+        valid_data_sources,
+        table,
+        match_from_file,
+        data_source,
+        add_columns,
+        exclude_columns,
+        provenance,
+        return_data_as,
+        output_file,
         log
     )
 
@@ -510,44 +549,16 @@ def get_data(
     add_columns = [ re.sub( r'[^a-z0-9_]', r'', column_to_add ).lower() for column_to_add in add_columns ]
 
     #############################################################################################################################
-    # Manage basic validation for the `data_source` parameter, which enumerates user-specified filters on upstream data
-    # sources.
-
-    for item in data_source:
-        if not isinstance( item, str ) or len( item ) == 0:
-            log.error( f"The 'data_source' parameter must be a nonempty string (e.g. 'GDC') or a list of strings (e.g. [ 'GDC', 'CDS' ]); you specified '{data_source}', which is neither." )
-            return
-
-    # Let's not care about case, and remove any whitespace before it can do any damage.
-    data_source = [ re.sub( r'\s+', r'', item ).upper() for item in data_source ]
-
-    # TEMPORARY: enumerate valid `data_source` values and warn the user if they supplied something else.
-    #
-    # This should be replaced ASAP with a fetch from the /release_metadata endpoint.
-
-    allowed_data_source_values = {
-        'GDC',
-        'PDC',
-        'IDC',
-        'CDS',
-        'ICDC'
-    }
-
-    # Parse `data_source` values: complain if any are nonconformant, and add entries to match_all as appropriate.
+    # Update `queries_for_match_all` to restrict results to specified `data_source` values.
 
     for upstream_data_source in data_source:
-        if upstream_data_source not in allowed_data_source_values:
-            log.error( f"The 'data_source' parameter must be a list containing one or more of [ 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' ]. You supplied '{data_source}', which is not that." )
-            return
-
-        else:
-            queries_for_match_all.append( f"{table}_data_at_{upstream_data_source.lower()} = True" )
+        queries_for_match_all.append( f"{table}_data_at_{upstream_data_source.lower()} = True" )
 
     # Make sure to retrieve the columns we need for data source summary output (whether or not
     # the data_source filter was used by the user, we summarize upstream data sources by default).
     # These columns are not returned by default from the API.
 
-    for upstream_data_source in allowed_data_source_values:
+    for upstream_data_source in valid_data_sources:
         if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns:
             add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" )
 
@@ -743,7 +754,7 @@ def get_data(
         result_dataframe['data_source'] = [ [] for _ in range( len( result_dataframe ) ) ]
 
         for row_index, result_record in result_dataframe.iterrows():
-            for upstream_data_source in allowed_data_source_values:
+            for upstream_data_source in valid_data_sources:
                 if result_record[ f"{table}_data_at_{upstream_data_source.lower()}" ] == True:
                     result_dataframe['data_source'].iloc[row_index].append( upstream_data_source )
 
