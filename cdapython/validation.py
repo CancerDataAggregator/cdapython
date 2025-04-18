@@ -37,7 +37,12 @@ def normalize_to_list( parameter_name, user_supplied_parameter_value, value_type
 
     list_to_return = user_supplied_parameter_value
 
-    if isinstance( user_supplied_parameter_value, value_type ):
+    if user_supplied_parameter_value is None:
+        
+        # This parameter was not set by the user: make it an empty list.
+        list_to_return = []
+
+    elif isinstance( user_supplied_parameter_value, value_type ):
         
         # We have a single value of the correct type. Convert it into a one-element list to return.
         list_to_return = [ user_supplied_parameter_value ]

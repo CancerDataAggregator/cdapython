@@ -35,12 +35,12 @@ from cda_client.models.q_node import QNode
 
 def get_file_data(
     *,
-    match_all=[],
-    match_any=[],
+    match_all=None,
+    match_any=None,
     match_from_file={'input_file': '', 'input_column': '', 'cda_column_to_match': ''},
-    data_source=[],
-    add_columns=[],
-    exclude_columns=[],
+    data_source=None,
+    add_columns=None,
+    exclude_columns=None,
     provenance=False,
     return_data_as='dataframe',
     output_file=''
@@ -149,12 +149,12 @@ def get_file_data(
 
 def get_subject_data(
     *,
-    match_all=[],
-    match_any=[],
+    match_all=None,
+    match_any=None,
     match_from_file={'input_file': '', 'input_column': '', 'cda_column_to_match': ''},
-    data_source=[],
-    add_columns=[],
-    exclude_columns=[],
+    data_source=None,
+    add_columns=None,
+    exclude_columns=None,
     provenance=False,
     return_data_as='dataframe',
     output_file=''
@@ -264,12 +264,12 @@ def get_subject_data(
 def get_data(
     table=None,
     *,
-    match_all=[],
-    match_any=[],
+    match_all=None,
+    match_any=None,
     match_from_file={'input_file': '', 'input_column': '', 'cda_column_to_match': ''},
-    data_source=[],
-    add_columns=[],
-    exclude_columns=[],
+    data_source=None,
+    add_columns=None,
+    exclude_columns=None,
     provenance=False,
     return_data_as='dataframe',
     output_file=''
