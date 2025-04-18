@@ -430,8 +430,6 @@ def get_data(
 
     # Validate user-supplied parameter data.
 
-    print( add_columns )
-
     try:
         validate_parameter_values(
             called_function='get_data',
