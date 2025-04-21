@@ -35,7 +35,7 @@ def cda_functions():
 
     log = get_logger()
 
-    log.error( 'You can get complete usage details for each function by calling "help( function_name )".' )
+    log.info( 'You can get complete usage details for each function by calling "help( function_name )".' )
 
     return sorted(
         {
