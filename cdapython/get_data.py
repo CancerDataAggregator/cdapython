@@ -657,10 +657,8 @@ def get_data(
     # These columns are not returned by default from the API.
 
     for upstream_data_source in valid_data_sources:
-        if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns:
-
-            print( f"GAH! add_columns.append( {table}_data_at_{upstream_data_source.lower()} )" )
-            add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" )
+        if f"{table}_data_at_{upstream_data_source.lower()}" not in columns_to_add:
+            columns_to_add.append( f"{table}_data_at_{upstream_data_source.lower()}" )
 
     columns_to_exclude = list()
 
