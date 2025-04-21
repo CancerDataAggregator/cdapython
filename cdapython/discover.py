@@ -38,10 +38,9 @@ def cda_functions():
     # finds themselves checking this function's output programmatically, for some reason, and is annoyed
     # by the print statement, we will entertain pull requests to be more sensitive about our assumptions.
 
-    print( 'You can get complete usage details for each function by calling "help( function_name )".' )
+    print( 'You can get complete usage details for each function by calling "help( function_name )".', end='\n\n' )
 
-    return sorted(
-        {
+    return [
             'tables',
             'columns',
             'column_values',
@@ -59,8 +58,7 @@ def cda_functions():
             'get_api_url',
             'set_api_url',
             'cda_functions'
-        }
-    )
+    ]
 
 #############################################################################################################################
 #
