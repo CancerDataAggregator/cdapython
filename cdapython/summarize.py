@@ -1070,7 +1070,7 @@ def summarize(
 
                     else:
                         
-                        data_source_combo = " and ".join( data_source_combo.upper().split( '_' ) )
+                        data_source_combo = " + ".join( data_source_combo.upper().split( '_' ) )
 
                     output_data_source_dict[f"{table}s"].append( current_count )
                     output_data_source_dict['data_source'].append( data_source_combo )
