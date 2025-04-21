@@ -962,10 +962,17 @@ def summarize(
     log.debug( f"/summary/{table} endpoint response:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
 
     # Make a Pandas DataFrame out of the first batch of results.
-    #
+
+    api_response_dict = api_response_object.to_dict()['result']
+
+    # Wrap the 'data_source' response element in a list to avoid splitting the entries into individual columns
+    # when converting into a DataFrame.
+
+    api_response_dict['data_source'] = [api_response_dict['data_source']]
+
     # Convert response JSON into a DataFrame using pandas' json_normalize() function.
 
-    result_dataframe = pd.json_normalize( api_response_object.to_dict()['result'] )
+    result_dataframe = pd.json_normalize( api_response_dict )
 
     #############################################################################################################################
     # Postprocess API result data.
@@ -1049,11 +1056,13 @@ def summarize(
 
             if result_dataframe['data_source'] is not None:
                 
+                data_source_dict = result_dataframe['data_source'][0]
+
                 # This cell should be a Python dict pairing some combination of valid data sources with a count of matching results.
 
-                for data_source_combo in result_dataframe['data_source']:
+                for data_source_combo in data_source_dict:
                     
-                    current_count = result_dataframe['data_source'][data_source_combo]
+                    current_count = data_source_dict[data_source_combo]
 
                     data_source_combo = re.sub( r'_exclusive$', r'', data_source_combo )
 
