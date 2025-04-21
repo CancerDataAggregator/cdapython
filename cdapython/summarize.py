@@ -1025,8 +1025,6 @@ def summarize(
                 
                 result_dataframe = result_dataframe.rename( columns={ result_column: new_column_name } )
 
-    print( result_dataframe )
-
     if return_data_as == '' or return_data_as == 'dataframe_list':
         
         # Right now, the default is to print one table to standard output
@@ -1056,7 +1054,7 @@ def summarize(
 
             if result_dataframe['data_source'] is not None:
                 
-                input_data_source_dict = result_dataframe['data_source'][0]
+                input_data_source_dict = result_dataframe['data_source'][0][0]
 
                 # This cell should be a Python dict pairing some combination of valid data sources with a count of matching results.
 
