@@ -4,14 +4,14 @@ import pandas as pd
 import re
 
 import cda_client
-import cda_client.api.data.file_fetch_rows_endpoint_data_file_post
-import cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post
 
 from cdapython.application_utilities import build_match_from_file_filter, get_api_url
 from cdapython.discover import columns, release_metadata
 from cdapython.logging_wrappers import get_logger
 from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list, validate_parameter_values
 
+from cda_client.api.data import file_fetch_rows_endpoint_data_file_post as file_data_endpoint
+from cda_client.api.data import subject_fetch_rows_endpoint_data_subject_post as subject_data_endpoint
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
 from cda_client.models.q_node import QNode
@@ -37,7 +37,7 @@ def get_file_data(
     *,
     match_all=None,
     match_any=None,
-    match_from_file={'input_file': '', 'input_column': '', 'cda_column_to_match': ''},
+    match_from_file={ 'input_file': '', 'input_column': '', 'cda_column_to_match': '' },
     data_source=None,
     add_columns=None,
     exclude_columns=None,
@@ -151,7 +151,7 @@ def get_subject_data(
     *,
     match_all=None,
     match_any=None,
-    match_from_file={'input_file': '', 'input_column': '', 'cda_column_to_match': ''},
+    match_from_file={ 'input_file': '', 'input_column': '', 'cda_column_to_match': '' },
     data_source=None,
     add_columns=None,
     exclude_columns=None,
@@ -266,7 +266,7 @@ def get_data(
     *,
     match_all=None,
     match_any=None,
-    match_from_file={'input_file': '', 'input_column': '', 'cda_column_to_match': ''},
+    match_from_file={ 'input_file': '', 'input_column': '', 'cda_column_to_match': '' },
     data_source=None,
     add_columns=None,
     exclude_columns=None,
@@ -504,7 +504,7 @@ def get_data(
     # Update `queries_for_match_all` to restrict results to optionally-specified `data_source` values.
 
     for upstream_data_source in data_source:
-        queries_for_match_all.append( f"{table}_data_at_{upstream_data_source.lower()} = True" )
+        queries_for_match_all.append( f"{table}_data_at_{upstream_data_source.lower()} = true" )
 
     # Make sure to retrieve the columns we need for data source summary output (whether or not
     # the data_source filter was used by the user, we summarize upstream data sources by default).
@@ -570,9 +570,11 @@ def get_data(
     #############################################################################################################################
     # Fetch data from the API.
 
+    # Support selection of the appropriate endpoint based on the value of `table`.
+
     query_selector = {
-        'file': cda_client.api.data.file_fetch_rows_endpoint_data_file_post,
-        'subject': cda_client.api.data.subject_fetch_rows_endpoint_data_subject_post,
+        'file': file_data_endpoint,
+        'subject': subject_data_endpoint
     }
 
     # We return all results to users at once. Paging can occur internally, but is made
@@ -582,7 +584,7 @@ def get_data(
     starting_offset = 0
     rows_per_page = 500000
 
-    # Use the QueryApi instance object's `{table}_query` endpoint-accessor function to get data from the REST API.
+    # Try to get data from the REST API.
 
     log.debug( f"Sending query to API '/data/{table}' endpoint:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
     

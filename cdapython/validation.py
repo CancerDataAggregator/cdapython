@@ -280,7 +280,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 # validate_parameter_values( called_function, cached_column_metadata, valid_data_sources, table, match_from_file, data_source, add_columns, exclude_columns, provenance, return_data_as, output_file, log ):
 # 
 # Validate user-supplied parameters as passed to `called_function`, after first
-# passing relevant parameters (`data_source`, `add_columns`, `exclude_columns`)
+# having passed relevant parameters (`data_source`, `add_columns`, `exclude_columns`)
 # through normalize_to_list().
 # 
 # Fail if:
@@ -374,7 +374,7 @@ def validate_parameter_values(
 
     data_source = normalized_data_source
 
-    # Make sure CDA columns names in `add_columns` exist.
+    # Make sure CDA columns named in `add_columns` exist.
 
     for column_name in add_columns:
         if column_name not in cached_column_metadata['column'].unique():
