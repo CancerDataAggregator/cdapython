@@ -1077,7 +1077,7 @@ def summarize(
                         output_data_source_dict[f"{table}s"].append( current_count )
                         output_data_source_dict['data_source'].append( data_source_combo )
 
-            result_list.append( pd.DataFrame.from_dict( output_data_source_dict ).sort_values( by='data_source' ).reset_index( drop=True ) )
+            result_list.append( pd.DataFrame.from_dict( output_data_source_dict ).sort_values( by=f"{table}s", ascending=False ).reset_index( drop=True ) )
 
         # Put the numeric summaries at the end of the displayed block of results.
 
