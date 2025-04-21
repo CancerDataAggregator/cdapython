@@ -162,8 +162,6 @@ def get_log_level( level=None ):
 
     if level is None:
         
-        print( 'No log level explicitly set: cdapython defaults to \'WARNING\'.', file=sys.stderr )
-
         return 'WARNING'
 
     else:
