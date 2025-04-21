@@ -374,12 +374,12 @@ def get_data(
     """
 
     # TO DO: re-enable provenance parameter
-    # TO DO: re-enable match_from_file parameter
 
     log = get_logger()
 
     #############################################################################################################################
     # Validate parameter inputs.
+    #############################################################################################################################
 
     # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
     # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
@@ -450,7 +450,8 @@ def get_data(
         return
 
     #############################################################################################################################
-    # Preprocess table metadata, to enable consistent processing (and reporting) throughout.
+    # Preprocess CDA table metadata, to enable consistent processing (and reporting) throughout.
+    #############################################################################################################################
 
     # Track the data type present in each CDA column, so we can
     # format results properly downstream. Among other things we need to
@@ -508,20 +509,6 @@ def get_data(
     except Exception as e:
         log.error( e )
         return
-
-
-    #############################################################################################################################
-    ### NOT WORKING, PLEASE UPDATE
-
-    # if match_from_file['cda_column_to_match'] != '':
-    #     target_data_type = columns(column=match_from_file['cda_column_to_match'])['data_type'][0]
-    #     match_from_file_filter = build_match_from_file_filter(match_from_file, target_data_type, log)
-    #     #TO DO: should this be added to match_all always?
-    #     queries_for_match_all.append(match_from_file_filter)
-
-    ### END NOT WORKING BLOCK
-    #############################################################################################################################
-
 
     #############################################################################################################################
     # If not null, process match_from_file query information: load target values to match and check to see if records with
@@ -689,6 +676,7 @@ def get_data(
 
     #############################################################################################################################
     # Fetch data from the API.
+    #############################################################################################################################
 
     # Support selection of the appropriate endpoint based on the value of `table`.
 
@@ -828,6 +816,7 @@ def get_data(
 
     #############################################################################################################################
     # Postprocess API result data.
+    #############################################################################################################################
 
     log.debug( 'Organizing result data...' )
 
@@ -923,6 +912,10 @@ def get_data(
                     # This isn't anticipated. Yell if we get something unexpected.
                     log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
                     return
+
+    #############################################################################################################################
+    # Return our response to the user.
+    #############################################################################################################################
 
     if return_data_as == '' or return_data_as == 'dataframe':
         

@@ -463,6 +463,7 @@ def summarize(
 
     #############################################################################################################################
     # Validate parameter inputs.
+    #############################################################################################################################
 
     # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
     # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
@@ -537,6 +538,7 @@ def summarize(
 
     #############################################################################################################################
     # Preprocess table metadata, to enable consistent processing (and reporting) throughout.
+    #############################################################################################################################
 
     # Track the data type present in each CDA column, so we can
     # format results properly downstream. Among other things we need to
@@ -768,6 +770,7 @@ def summarize(
 
     #############################################################################################################################
     # Fetch data from the API.
+    #############################################################################################################################
 
     # Support selection of the appropriate endpoint based on the value of `table`.
 
@@ -961,7 +964,13 @@ def summarize(
 
     log.debug( f"/summary/{table} endpoint results:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
 
-    # Make a Pandas DataFrame out of the results.
+    #############################################################################################################################
+    # Postprocess API result data.
+    #############################################################################################################################
+
+    log.debug( "Organizing result data..." )
+
+    # Make a dict out of the results so we can restructure a bit before DataFrame conversion.
 
     api_response_dict = api_response_object.to_dict()['result'][0]
 
@@ -973,14 +982,6 @@ def summarize(
     # Convert response JSON into a DataFrame using pandas' json_normalize() function.
 
     result_dataframe = pd.json_normalize( [api_response_dict] )
-
-    #############################################################################################################################
-    # Postprocess API result data.
-
-    log.debug( "Organizing result data..." )
-
-    #############################################################################################################################
-    # Postprocess API result data.
 
     # For some reason, the highest-level summary counts come through as floats. Fix that
     # (and rename them while we're at it).
@@ -1024,6 +1025,10 @@ def summarize(
             if new_column_name != result_column:
                 
                 result_dataframe = result_dataframe.rename( columns={ result_column: new_column_name } )
+
+    #############################################################################################################################
+    # Build a response for the user according to the directives we got, and send the result back to them.
+    #############################################################################################################################
 
     if return_data_as == '' or return_data_as == 'dataframe_list':
         
