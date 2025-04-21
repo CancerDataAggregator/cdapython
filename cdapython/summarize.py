@@ -659,7 +659,7 @@ def summarize(
 
     # Identify the data type of the target CDA column.
 
-    target_data_type = column_data_types( match_from_file['cda_column_to_match'] )
+    target_data_type = column_data_types[ match_from_file['cda_column_to_match'] ]
 
     processed_target_values = set()
 
