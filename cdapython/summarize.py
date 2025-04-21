@@ -1049,20 +1049,20 @@ def summarize(
 
         if not suppress_data_source_results:
             
-            data_source_dict = {
+            output_data_source_dict = {
                 f"{table}s": list(),
                 'data_source': list()
             }
 
             if result_dataframe['data_source'] is not None:
                 
-                data_source_dict = result_dataframe['data_source'][0]
+                input_data_source_dict = result_dataframe['data_source'][0]
 
                 # This cell should be a Python dict pairing some combination of valid data sources with a count of matching results.
 
-                for data_source_combo in data_source_dict:
+                for data_source_combo in input_data_source_dict:
                     
-                    current_count = data_source_dict[data_source_combo]
+                    current_count = input_data_source_dict[data_source_combo]
 
                     data_source_combo = re.sub( r'_exclusive$', r'', data_source_combo )
 
@@ -1074,10 +1074,10 @@ def summarize(
                         
                         data_source_combo = " and ".join( data_source_combo.upper().split( '_' ) )
 
-                    data_source_dict[f"{table}s"].append( current_count )
-                    data_source_dict['data_source'].append( data_source_combo )
+                    output_data_source_dict[f"{table}s"].append( current_count )
+                    output_data_source_dict['data_source'].append( data_source_combo )
 
-            result_list.append( pd.DataFrame.from_dict( data_source_dict ).sort_values( by='data_source' ).reset_index( drop=True ) )
+            result_list.append( pd.DataFrame.from_dict( output_data_source_dict ).sort_values( by='data_source' ).reset_index( drop=True ) )
 
         # Put the numeric summaries at the end of the displayed block of results.
 
