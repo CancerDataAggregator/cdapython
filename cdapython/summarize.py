@@ -1018,6 +1018,8 @@ def summarize(
                 
                 result_dataframe = result_dataframe.rename( columns={ result_column: new_column_name } )
 
+    result_dataframe
+
     if return_data_as == '' or return_data_as == 'dataframe_list':
         
         # Right now, the default is to print one table to standard output
