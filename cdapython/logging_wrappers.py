@@ -11,7 +11,10 @@ import yaml
 #############################################################################################################################
 
 def enable_console_logging():
-    
+    """
+    Enable console logging (log messages are written to standard output: this feature is enabled by default, but can be turned off).
+    """
+
     os.environ['__CDA_LOG_TO_CONSOLE'] = 'True'
 
 #############################################################################################################################
@@ -21,7 +24,10 @@ def enable_console_logging():
 #############################################################################################################################
 
 def disable_console_logging():
-    
+    """
+    Prevent log messages from being displayed to standard output.
+    """
+
     os.environ['__CDA_LOG_TO_CONSOLE'] = 'False'
 
 #############################################################################################################################
@@ -31,7 +37,11 @@ def disable_console_logging():
 #############################################################################################################################
 
 def enable_file_logging( filename='cdapython_log.txt' ):
-    
+    """
+    Write log messages to `filename`. This does not prevent log messages from being written to standard output as well:
+    see disable_console_logging() to switch that feature off if desired.
+    """
+
     os.environ['__CDA_LOG_TO_FILE'] = filename
 
 #############################################################################################################################
@@ -41,7 +51,10 @@ def enable_file_logging( filename='cdapython_log.txt' ):
 #############################################################################################################################
 
 def disable_file_logging():
-    
+    """
+    Stop writing log messages to a local file.
+    """
+
     os.environ['__CDA_LOG_TO_FILE'] = ''
 
 #############################################################################################################################
@@ -52,10 +65,10 @@ def disable_file_logging():
 
 def get_logger() -> logging.Logger:
     """
-    Returns logger instance that uses config file settings to initialize.
+    Returns a logging.Logger instance initalized according to settings in config/logger_default_config.yml.
 
     Returns:
-        log: logging tool that can be used to output messages of varying granularity
+        logging.Logger object: an interface that can be used to output messages of varying granularity/severity.
     """
 
     # Establish the current log level. If none exists, default to `logging.WARNING`.
