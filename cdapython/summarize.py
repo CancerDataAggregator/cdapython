@@ -609,20 +609,20 @@ def summarize(
         return
 
     #############################################################################################################################
-    # Process match_from_file query information: load target values to match and check to see if records with missing
-    # values in the target column should be included.
-
-    match_from_file_target_values = set()
-
-    # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
-    # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
-    # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
-    # anger and confusion when results don't match the input set along the given column.
-
-    match_from_file_nulls_allowed = False
+    # If not null, process match_from_file query information: load target values to match and check to see if records with
+    # missing values in the target column should be included.
 
     if match_from_file['input_file'] != '':
         
+        match_from_file_target_values = set()
+
+        # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
+        # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
+        # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
+        # anger and confusion when results don't match the input set along the given column.
+
+        match_from_file_nulls_allowed = False
+
         try:
             
             with open( match_from_file['input_file'] ) as IN:
@@ -648,83 +648,83 @@ def summarize(
             log.error( f"Couldn't load data from requested column '{match_from_file['input_column']}' from requested TSV file '{match_from_file['input_file']}': got error of type '{type( error )}', with error message '{error}'.")
             return
 
-    #### TO DO: BEGIN: Move following chunk to validation.py:
+        #### TO DO: BEGIN: Move following chunk to validation.py:
 
-    # Parse `match_from_file` filter values: complain if
-    #
-    #     * filter values don't match the data types of the columns they're paired with
-    #     * wildcards appear anywhere (they're not compatible with the IN keyword, and we don't currently support the construction of per-value LIKE filters)
-    #
-    # ...and save parse results as a combined filter expression in a Query object (to be combined with others later).
+        # Parse `match_from_file` filter values: complain if
+        #
+        #     * filter values don't match the data types of the columns they're paired with
+        #     * wildcards appear anywhere (they're not compatible with the IN keyword, and we don't currently support the construction of per-value LIKE filters)
+        #
+        # ...and save parse results as a combined filter expression in a Query object (to be combined with others later).
 
-    # Identify the data type of the target CDA column.
+        # Identify the data type of the target CDA column.
 
-    target_data_type = column_data_types[ match_from_file['cda_column_to_match'] ]
+        target_data_type = column_data_types[ match_from_file['cda_column_to_match'] ]
 
-    processed_target_values = set()
+        processed_target_values = set()
 
-    boolean_alias = {
-        'true': 'true',
-        't': 'true',
-        'false': 'false',
-        'f': 'false'
-    }
+        boolean_alias = {
+            'true': 'true',
+            't': 'true',
+            'false': 'false',
+            'f': 'false'
+        }
 
-    for target_value in match_from_file_target_values:
-        
-        # Validate value types and test for wildcards.
-
-        if target_data_type == 'boolean':
+        for target_value in match_from_file_target_values:
             
-            # If we're supposed to be in a boolean column, make sure we've got a true/false value.
-            if target_value.lower() not in boolean_alias:
-                log.error( f"match_from_file: requested column {match_from_file['cda_column_to_match']} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither." )
-                return
+            # Validate value types and test for wildcards.
+
+            if target_data_type == 'boolean':
+                
+                # If we're supposed to be in a boolean column, make sure we've got a true/false value.
+                if target_value.lower() not in boolean_alias:
+                    log.error( f"match_from_file: requested column {match_from_file['cda_column_to_match']} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither." )
+                    return
+
+                else:
+                    target_value = boolean_alias[target_value]
+
+            elif target_data_type in ['bigint', 'integer', 'numeric']:
+                
+                # If we're supposed to be in a numeric column, make sure we've got a number.
+                if re.search( r'^[-+]?\d+(\.\d+)?$', target_value ) is None:
+                    log.error( f"match_from_file: requested column {match_from_file['cda_column_to_match']} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not." )
+                    return
+
+            elif target_data_type == 'text':
+                
+                # Check for wildcards: if found, vomit.
+                if re.search(r'\*', target_value) is not None:
+                    log.error( f"match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); value '{target_value}' is noncompliant. Please fix." )
+                    return
 
             else:
-                target_value = boolean_alias[target_value]
-
-        elif target_data_type in ['bigint', 'integer', 'numeric']:
-            
-            # If we're supposed to be in a numeric column, make sure we've got a number.
-            if re.search( r'^[-+]?\d+(\.\d+)?$', target_value ) is None:
-                log.error( f"match_from_file: requested column {match_from_file['cda_column_to_match']} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not." )
+                
+                # Just to be safe. Types change.
+                log.error( f"match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
                 return
 
-        elif target_data_type == 'text':
+            processed_target_values.add( target_value )
+
+        #### TO DO: END:: Move preceding chunk to validation.py
+
+        # Parse and normalize `match_from_file` filter data.
+
+        match_from_file_filter_strings = set()
+
+        if match_from_file_nulls_allowed:
             
-            # Check for wildcards: if found, vomit.
-            if re.search(r'\*', target_value) is not None:
-                log.error( f"match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); value '{target_value}' is noncompliant. Please fix." )
-                return
+            match_from_file_filter_strings.add( f"{match_from_file['cda_column_to_match']} is null" )
 
-        else:
+        if target_data_type == 'text' and len( processed_target_values ) > 0:
             
-            # Just to be safe. Types change.
-            log.error( f"match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
-            return
+            match_from_file_filter_strings.add( f"{match_from_file['cda_column_to_match']} in [ '" + "', '".join( processed_target_values ) + "' ]" )
 
-        processed_target_values.add( target_value )
+        # Add results to the queries_for_match_any Query object.
 
-    #### TO DO: END:: Move preceding chunk to validation.py
+        initial_match_any_filter_strings = set( queries_for_match_any )
 
-    # Parse and normalize `match_from_file` filter data.
-
-    match_from_file_filter_strings = set()
-
-    if match_from_file_nulls_allowed:
-        
-        match_from_file_filter_strings.add( f"{match_from_file['cda_column_to_match']} is null" )
-
-    if target_data_type == 'text' and len( processed_target_values ) > 0:
-        
-        match_from_file_filter_strings.add( f"{match_from_file['cda_column_to_match']} in [ '" + "', '".join( processed_target_values ) + "' ]" )
-
-    # Add results to the queries_for_match_any Query object.
-
-    initial_match_any_filter_strings = set( queries_for_match_any )
-
-    queries_for_match_any = list( initial_match_any_filter_strings | match_from_file_filter_strings )
+        queries_for_match_any = list( initial_match_any_filter_strings | match_from_file_filter_strings )
 
     #############################################################################################################################
     # Parse `add_columns` and `exclude_columns` lists.
