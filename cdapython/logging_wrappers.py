@@ -131,7 +131,7 @@ def get_valid_log_levels():
 
 def set_log_level( level=None ):
     """
-    Changes the current log level. Valid values are 'debug', 'info', 'warning', 'error', and 'critical'.
+    Changes the current log level. A list of valid values is returned by get_valid_log_levels().
     """
     if level is None:
         print( f"ERROR: set_log_level(): log level cannot be null. Try something like 'set_log_level( 'debug' )'.", file=sys.stderr )
@@ -140,7 +140,7 @@ def set_log_level( level=None ):
     level = level.upper()
 
     if level not in get_valid_log_levels():
-        print( f"ERROR: set_log_level(): log level '{level}' invalid. Try help( set_log_level ) for a list of valid level names.", file=sys.stderr )
+        print( f"ERROR: set_log_level(): log level '{level}' invalid. Try get_valid_log_levels() for a list of valid level names.", file=sys.stderr )
         return
 
     os.environ['__CDA_LOG_LEVEL'] = level
