@@ -703,7 +703,7 @@ def summarize(
             else:
                 
                 # Just to be safe. Types change.
-                log.error( f"match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
+                log.critical( f"match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
                 return
 
             processed_target_values.add( target_value )
@@ -959,9 +959,9 @@ def summarize(
 
     # This is immensely verbose, sometimes.
 
-    log.debug( f"/summary/{table} endpoint response:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
+    log.debug( f"/summary/{table} endpoint results:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
 
-    # Make a Pandas DataFrame out of the first batch of results.
+    # Make a Pandas DataFrame out of the results.
 
     api_response_dict = api_response_object.to_dict()['result'][0]
 
@@ -1150,8 +1150,7 @@ def summarize(
 
                 else:
                     
-                    log.error( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
-
+                    log.critical( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
                     return
 
         result_list = result_list + result_list_tail
@@ -1322,7 +1321,7 @@ def summarize(
 
                 else:
                     
-                    log.error( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
+                    log.critical( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
                     return
 
         if return_data_as == 'dict':
@@ -1351,8 +1350,7 @@ def summarize(
 
                 return
 
-    log.error( 'Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
-
+    log.critical( 'Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
     return
 
 #############################################################################################################################

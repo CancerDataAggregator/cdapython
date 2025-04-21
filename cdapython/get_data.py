@@ -478,7 +478,9 @@ def get_data(
 
     #############################################################################################################################
     # Construct query substructures according to user directives.
+    #############################################################################################################################
 
+    #############################################################################################################################
     # Manage basic validation for the `match_all` parameter, which enumerates user-specified requirements that returned
     # rows must all simultaneously satisfy (AND; intersection; 'all of these must apply').
     # 
@@ -490,6 +492,12 @@ def get_data(
         log.error( e )
         return
 
+    # Update `queries_for_match_all` to restrict results to optionally-specified `data_source` values.
+
+    for upstream_data_source in data_source:
+        queries_for_match_all.append( f"{table}_data_at_{upstream_data_source.lower()} = true" )
+
+    #############################################################################################################################
     # Manage basic validation for the `match_any` parameter, which enumerates user-specified requirements for which
     # returned rows must satisfy at least one (OR; union; 'at least one of these must apply').
     # 
@@ -500,20 +508,6 @@ def get_data(
     except Exception as e:
         log.error( e )
         return
-
-    # Update `queries_for_match_all` to restrict results to optionally-specified `data_source` values.
-
-    for upstream_data_source in data_source:
-        queries_for_match_all.append( f"{table}_data_at_{upstream_data_source.lower()} = true" )
-
-    # Make sure to retrieve the columns we need for data source summary output (whether or not
-    # the data_source filter was used by the user, we summarize upstream data sources by default).
-    # These columns are not returned by default from the API.
-
-    for upstream_data_source in valid_data_sources:
-        if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns:
-            add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" )
-
 
 
     #############################################################################################################################
@@ -529,7 +523,125 @@ def get_data(
     #############################################################################################################################
 
 
+    #############################################################################################################################
+    # If not null, process match_from_file query information: load target values to match and check to see if records with
+    # missing values in the target column should be included.
 
+    if match_from_file['input_file'] != '':
+        
+        match_from_file_target_values = set()
+
+        # Interpret missing data as 'empty values allowed' -- if we don't do this, we're setting our users up to (a) create a TSV
+        # from fetched results and then (b) filter downstream queries based on those results subject to a hidden condition that
+        # any results fetched in (a) that have missing values will be ignored when filtering, which seems to me like a recipe for
+        # anger and confusion when results don't match the input set along the given column.
+
+        match_from_file_nulls_allowed = False
+
+        try:
+            
+            with open( match_from_file['input_file'] ) as IN:
+                
+                column_names = next( IN ).rstrip( '\n' ).split( '\t' )
+
+                for next_line in IN:
+                    
+                    record = dict( zip( column_names, next_line.rstrip( '\n' ).split( '\t' ) ) )
+
+                    target_value = record[match_from_file['input_column']]
+
+                    if target_value is None or target_value == '' or target_value == '<NA>':
+                        
+                        match_from_file_nulls_allowed = True
+
+                    else:
+                        
+                        match_from_file_target_values.add( target_value )
+
+        except Exception as error:
+            
+            log.error( f"Couldn't load data from requested column '{match_from_file['input_column']}' from requested TSV file '{match_from_file['input_file']}': got error of type '{type( error )}', with error message '{error}'.")
+            return
+
+        #### TO DO: BEGIN: Move following chunk to validation.py:
+
+        # Parse `match_from_file` filter values: complain if
+        #
+        #     * filter values don't match the data types of the columns they're paired with
+        #     * wildcards appear anywhere (they're not compatible with the IN keyword, and we don't currently support the construction of per-value LIKE filters)
+        #
+        # ...and save parse results as a combined filter expression in a Query object (to be combined with others later).
+
+        # Identify the data type of the target CDA column.
+
+        target_data_type = column_data_types[ match_from_file['cda_column_to_match'] ]
+
+        processed_target_values = set()
+
+        boolean_alias = {
+            'true': 'true',
+            't': 'true',
+            'false': 'false',
+            'f': 'false'
+        }
+
+        for target_value in match_from_file_target_values:
+            
+            # Validate value types and test for wildcards.
+
+            if target_data_type == 'boolean':
+                
+                # If we're supposed to be in a boolean column, make sure we've got a true/false value.
+                if target_value.lower() not in boolean_alias:
+                    log.error( f"match_from_file: requested column {match_from_file['cda_column_to_match']} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither." )
+                    return
+
+                else:
+                    target_value = boolean_alias[target_value]
+
+            elif target_data_type in ['bigint', 'integer', 'numeric']:
+                
+                # If we're supposed to be in a numeric column, make sure we've got a number.
+                if re.search( r'^[-+]?\d+(\.\d+)?$', target_value ) is None:
+                    log.error( f"match_from_file: requested column {match_from_file['cda_column_to_match']} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not." )
+                    return
+
+            elif target_data_type == 'text':
+                
+                # Check for wildcards: if found, vomit.
+                if re.search(r'\*', target_value) is not None:
+                    log.error( f"match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); value '{target_value}' is noncompliant. Please fix." )
+                    return
+
+            else:
+                
+                # Just to be safe. Types change.
+                log.critical( f"match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
+                return
+
+            processed_target_values.add( target_value )
+
+        #### TO DO: END:: Move preceding chunk to validation.py
+
+        # Parse and normalize `match_from_file` filter data.
+
+        match_from_file_filter_strings = set()
+
+        if match_from_file_nulls_allowed:
+            
+            match_from_file_filter_strings.add( f"{match_from_file['cda_column_to_match']} is null" )
+
+        if target_data_type == 'text' and len( processed_target_values ) > 0:
+            
+            match_from_file_filter_strings.add( f"{match_from_file['cda_column_to_match']} in [ '" + "', '".join( processed_target_values ) + "' ]" )
+
+        # Add results to the queries_for_match_any Query object.
+
+        initial_match_any_filter_strings = set( queries_for_match_any )
+
+        queries_for_match_any = list( initial_match_any_filter_strings | match_from_file_filter_strings )
+
+    #############################################################################################################################
     # Parse `add_columns` and `exclude_columns` lists.
 
     columns_to_add = list()
@@ -540,6 +652,14 @@ def get_data(
         if column_to_add not in source_table_columns_in_order and column_to_add not in columns_to_add:
             columns_to_add.append( column_to_add )
     
+    # Make sure to retrieve the columns we need for data source summary output (whether or not
+    # the data_source filter was used by the user, we summarize upstream data sources by default).
+    # These columns are not returned by default from the API.
+
+    for upstream_data_source in valid_data_sources:
+        if f"{table}_data_at_{upstream_data_source.lower()}" not in add_columns:
+            add_columns.append( f"{table}_data_at_{upstream_data_source.lower()}" )
+
     columns_to_exclude = list()
 
     suppress_data_source_results = False
@@ -590,7 +710,7 @@ def get_data(
     
     query_api_instance = cda_client.Client( base_url=get_api_url() )
 
-    paged_response_data_object = query_selector[table].sync(
+    api_response_object = query_selector[table].sync(
         client=query_api_instance,
         body=query_object,
         limit=rows_per_page,
@@ -598,8 +718,8 @@ def get_data(
     )
 
     # Forward error types known to be returned by the API.
-    if isinstance( paged_response_data_object, ClientError ) or isinstance( paged_response_data_object, InternalError ):
-        log.error( f"{paged_response_data_object.error_type}: {paged_response_data_object.message}" )
+    if isinstance( api_response_object, ClientError ) or isinstance( api_response_object, InternalError ):
+        log.error( f"{api_response_object.error_type}: {api_response_object.message}" )
         return
 
     # Make a Pandas DataFrame out of the first batch of results.
@@ -654,9 +774,15 @@ def get_data(
     #     "next_url": ""
     # }
 
-    log.debug( f"Page one results:\n{json.dumps( paged_response_data_object.to_dict(), indent=4 )}\n" )
+    # Report some metadata about the results we got back.
+
+    log.debug( f"/data/{table} endpoint query SQL:\n{api_response_object.to_dict()['query_sql']}" )
+
+    log.debug( f"Page one results:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
     
-    result_dataframe = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
+    # Convert response JSON into a DataFrame using pandas' json_normalize() function.
+
+    result_dataframe = pd.json_normalize( api_response_object.to_dict()['result'] )
 
     # The data we've fetched so far might be just the first page (if the total number
     # of results is greater than `rows_per_page`).
@@ -666,11 +792,11 @@ def get_data(
 
     incremented_offset = starting_offset + rows_per_page
 
-    while paged_response_data_object.next_url is not None and len( paged_response_data_object.next_url ) > 0:
+    while api_response_object.next_url is not None and len( api_response_object.next_url ) > 0:
         
-        log.debug( f"Pulling next paged result from API via next_url value from response: { paged_response_data_object.to_dict()['next_url'] }")
+        log.debug( f"Pulling next paged result from API with an offset of {incremented_offset} and a max page size of {rows_per_page}")
 
-        paged_response_data_object = query_selector[table].sync(
+        api_response_object = query_selector[table].sync(
             client=query_api_instance,
             body=query_object,
             offset=incremented_offset,
@@ -678,16 +804,21 @@ def get_data(
         )
 
         # Forward error types known to be returned by the API.
-        if isinstance( paged_response_data_object, ClientError ) or isinstance( paged_response_data_object, InternalError ):
-            log.error( f"{paged_response_data_object.error_type}: {paged_response_data_object.message}" )
+        if isinstance( api_response_object, ClientError ) or isinstance( api_response_object, InternalError ):
+            log.error( f"{api_response_object.error_type}: {api_response_object.message}" )
 
-        next_result_batch = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
+        # Convert response JSON into a DataFrame using pandas' json_normalize() function.
+
+        next_result_batch = pd.json_normalize( api_response_object.to_dict()['result'] )
+
+        # Add data from this page to our full result set.
 
         if not result_dataframe.empty and not next_result_batch.empty:
             
             # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
             # 
             # Possiby relevant note: never fill in missing numeric values with 0!
+
             next_result_batch = next_result_batch.astype( result_dataframe.dtypes )
             result_dataframe = pd.concat( [result_dataframe, next_result_batch] )
 
@@ -730,7 +861,7 @@ def get_data(
                 added_columns.append( column )
 
     if len( columns_to_suppress ) > 0:
-        log.debug( f"   -- filtering API columns: {columns_to_suppress}" )
+        log.debug( f"Filtering API columns: {columns_to_suppress}" )
         result_dataframe = result_dataframe.drop( columns=columns_to_suppress )
 
     # Resequence the output columns according to the sequence given by the columns() function.
@@ -762,7 +893,6 @@ def get_data(
             if column != 'data_source':
                 
                 # CDA has no float values. Cast all numeric data to integers.
-                # print('name: ' + column + ' ' + str(type(result_dataframe[column])) + ' datatypes=' + str(column_data_types[column]))
 
                 if column_data_types[column] in { 'integer', 'bigint' }:
                     
@@ -808,7 +938,7 @@ def get_data(
             return
 
         except Exception as error:
-            log.critical( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
+            log.error( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
             return
 
     log.critical( 'Something has gone unexpectedly and disastrously wrong with result-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
