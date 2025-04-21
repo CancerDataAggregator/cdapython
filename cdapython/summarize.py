@@ -718,7 +718,7 @@ def summarize(
 
     if target_data_type == 'text' and len( processed_target_values ) > 0:
         
-        match_from_file_filter_strings.add( f"{match_from_file['cda_column_to_match']} in [ '" + "', '".join( processed_target_values ) + "' ]" ):
+        match_from_file_filter_strings.add( f"{match_from_file['cda_column_to_match']} in [ '" + "', '".join( processed_target_values ) + "' ]" )
 
     # Add results to the queries_for_match_any Query object.
 
