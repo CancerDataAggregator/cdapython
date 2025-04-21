@@ -243,7 +243,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
                 # API expects percent signs.
                 filter_value = re.sub( r'\*', r'%', filter_value )
 
-                # API expects string tokens to be quoted.
+                # API needs strings quoted. Minimal replication case: match a string that contains only numbers. Need to distinguish from integer input.
                 filter_value = f"'{filter_value}'"
 
             else:
@@ -253,8 +253,6 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
         else:
             
-            # filter_value.lower() == 'null': normalize operator and value.
-
             # API expects lowercase operators.
             if filter_operator == '=':
                 filter_operator = 'is'
@@ -388,7 +386,7 @@ def validate_parameter_values(
         if column_name not in cached_column_metadata['column'].unique():
             raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names. You specified '{column_name}', which is not that." )
 
-    # Check that `provenance` is a boolean (for get_data) or None (for summarize) and that `called_function` has an expected value.
+    # Check that `provenance` is a boolean (for get_data) or None (for column_values, summarize) and that `called_function` has an expected value.
 
     if called_function == 'get_data':
         if provenance != True and provenance != False:
@@ -428,7 +426,7 @@ def validate_parameter_values(
 
         if return_data_as not in allowed_return_types[called_function]:
             # Complain if we receive an unexpected `return_data_as` value.
-            raise RuntimeError( f"Unrecognized 'return_data_as' value '{return_data_as}' requested. Please use one of 'dataframe' or 'tsv'." )
+            raise RuntimeError( f"Unrecognized 'return_data_as' value '{return_data_as}' requested. Valid values are [ {', '.join( allowed_return_types[called_function] )} ]." )
 
         elif called_function == 'get_data':
             

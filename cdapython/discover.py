@@ -24,27 +24,46 @@ from cdapython.application_utilities import get_api_url
 
 #############################################################################################################################
 #
-# release_metadata(): Return a list of metadata dicts describing the current CDA release, columnwise.
+# cda_functions(): Return a list of user-facing cdapython functions useful for both scripting and interactive data sessions.
 #
 #############################################################################################################################
 
-def release_metadata():
+def cda_functions():
     """
-    Return a list of metadata dicts describing the current CDA release, columnwise.
+    Returns a list of cdapython functions useful for both scripting and interactive data sessions.
     """
 
-    log = get_logger()
+    log = get_logger( 'INFO' )
 
-    log.debug( 'Querying /release_metadata endpoint' )
+    log.info( 'You can get complete usage details for each function by calling "help( function_name )".' )
 
-    query_api_instance = cda_client.Client( base_url=get_api_url() )
+    return sorted(
+        {
+            'tables',
+            'columns',
+            'column_values',
+            'summarize_subjects',
+            'summarize_files',
+            'get_subject_data',
+            'get_file_data',
+            'get_valid_log_levels',
+            'get_log_level',
+            'set_log_level',
+            'enable_console_logging',
+            'disable_console_logging',
+            'enable_file_logging',
+            'disable_file_logging',
+            'get_api_url',
+            'set_api_url',
+            'cda_functions'
+        }
+    )
 
-    try:
-        release_metadata_response_data_object = cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get.sync( client=query_api_instance )
-    except Exception as error:
-        raise RuntimeException( f"Something went wrong trying to fetch data from the /release_metadata API endpoint: got error of type '{type(error)}', with error message '{error}'." )
-
-    return release_metadata_response_data_object.to_dict()['result']
+#############################################################################################################################
+#
+# END cda_functions()
+#
+#############################################################################################################################
 
 #############################################################################################################################
 #
@@ -80,7 +99,6 @@ def tables():
 # END tables()
 #
 #############################################################################################################################
-
 
 #############################################################################################################################
 #
@@ -1338,6 +1356,36 @@ def column_values(
 #############################################################################################################################
 #
 # END column_values()
+#
+#############################################################################################################################
+
+#############################################################################################################################
+#
+# release_metadata(): Return a list of metadata dicts describing the current CDA release, columnwise.
+#
+#############################################################################################################################
+
+def release_metadata():
+    """
+    Return a list of metadata dicts describing the current CDA release, columnwise.
+    """
+
+    log = get_logger()
+
+    log.debug( 'Querying /release_metadata endpoint' )
+
+    query_api_instance = cda_client.Client( base_url=get_api_url() )
+
+    try:
+        release_metadata_response_data_object = cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get.sync( client=query_api_instance )
+    except Exception as error:
+        raise RuntimeException( f"Something went wrong trying to fetch data from the /release_metadata API endpoint: got error of type '{type(error)}', with error message '{error}'." )
+
+    return release_metadata_response_data_object.to_dict()['result']
+
+#############################################################################################################################
+#
+# END release_metadata()
 #
 #############################################################################################################################
 

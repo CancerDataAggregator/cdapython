@@ -410,7 +410,7 @@ def get_data(
     # {
     #     'cda_table': 'file',
     #     'cda_column': 'access',
-    #     'data_source': 'CDA',
+    #     'data_source': 'GDC',
     #     'data_source_version': 'March 2025',
     #     'data_source_extraction_date': '2025-03-21',
     #     'data_source_row_count': 3025352,
