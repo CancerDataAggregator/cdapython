@@ -33,7 +33,7 @@ def cda_functions():
     Returns a list of cdapython functions useful for both scripting and interactive data sessions.
     """
 
-    log = get_logger( 'INFO' )
+    log = get_logger()
 
     log.info( 'You can get complete usage details for each function by calling "help( function_name )".' )
 
