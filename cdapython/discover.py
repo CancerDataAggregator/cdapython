@@ -33,9 +33,12 @@ def cda_functions():
     Returns a list of cdapython functions useful for both scripting and interactive data sessions.
     """
 
-    log = get_logger()
+    # There doesn't seem to be a need to check invocation context before just printing to standard output,
+    # here, as this function is primarily designed to be consulted in interactive sessions. If anyone ever
+    # finds themselves checking this function's output programmatically, for some reason, and is annoyed
+    # by the print statement, we will entertain pull requests to be more sensitive about our assumptions.
 
-    log.info( 'You can get complete usage details for each function by calling "help( function_name )".' )
+    print( 'You can get complete usage details for each function by calling "help( function_name )".' )
 
     return sorted(
         {
