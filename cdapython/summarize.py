@@ -1048,8 +1048,8 @@ def summarize(
         if not suppress_data_source_results:
             
             output_data_source_dict = {
-                f"{table}s": list(),
-                'data_source': list()
+                'data_source': list(),
+                f"{table}s": list()
             }
 
             if result_dataframe['data_source'] is not None:
