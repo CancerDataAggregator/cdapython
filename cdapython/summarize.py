@@ -963,7 +963,7 @@ def summarize(
 
     # Make a Pandas DataFrame out of the first batch of results.
 
-    api_response_dict = api_response_object.to_dict()['result']
+    api_response_dict = api_response_object.to_dict()['result'][0]
 
     # Wrap the 'data_source' response element in a list to avoid splitting the entries into individual columns
     # when converting into a DataFrame.
@@ -972,7 +972,7 @@ def summarize(
 
     # Convert response JSON into a DataFrame using pandas' json_normalize() function.
 
-    result_dataframe = pd.json_normalize( api_response_dict )
+    result_dataframe = pd.json_normalize( [api_response_dict] )
 
     #############################################################################################################################
     # Postprocess API result data.
