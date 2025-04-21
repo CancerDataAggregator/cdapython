@@ -1062,18 +1062,20 @@ def summarize(
                     
                     current_count = input_data_source_dict[data_source_combo]
 
-                    data_source_combo = re.sub( r'_exclusive$', r'', data_source_combo )
-
-                    if re.search( r'_', data_source_combo ) is None:
+                    if current_count is not None and current_count != 0:
                         
-                        data_source_combo = f"{data_source_combo.upper()} only"
+                        data_source_combo = re.sub( r'_exclusive$', r'', data_source_combo )
 
-                    else:
-                        
-                        data_source_combo = " + ".join( data_source_combo.upper().split( '_' ) )
+                        if re.search( r'_', data_source_combo ) is None:
+                            
+                            data_source_combo = f"{data_source_combo.upper()} only"
 
-                    output_data_source_dict[f"{table}s"].append( current_count )
-                    output_data_source_dict['data_source'].append( data_source_combo )
+                        else:
+                            
+                            data_source_combo = " + ".join( data_source_combo.upper().split( '_' ) )
+
+                        output_data_source_dict[f"{table}s"].append( current_count )
+                        output_data_source_dict['data_source'].append( data_source_combo )
 
             result_list.append( pd.DataFrame.from_dict( output_data_source_dict ).sort_values( by='data_source' ).reset_index( drop=True ) )
 
