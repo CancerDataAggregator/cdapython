@@ -116,10 +116,10 @@ def get_logger() -> logging.Logger:
 
 def get_valid_log_levels():
     """
-    Returns list of log level strings that can be used to set_log_level.
+    Returns list of log level strings that can be passed to set_log_level().
 
     Returns:
-        set of module-defined integer codes and strings: all valid labels for log levels that can be passed to Handler.setLevel() (via set_log_level()).
+        set of module-defined strings: all valid human-readable labels for log levels that can be passed to set_log_level().
     """
     return { 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' }
 
@@ -144,5 +144,30 @@ def set_log_level( level=None ):
         return
 
     os.environ['__CDA_LOG_LEVEL'] = level
+
+#############################################################################################################################
+#
+# get_log_level(): Returns the current log level
+#
+#############################################################################################################################
+
+def get_log_level( level=None ):
+    """
+    Returns the current user-specified log level, if set, or the default log level, if not.
+    """
+
+    if '__CDA_LOG_LEVEL' in os.environ:
+        
+        level = os.environ['__CDA_LOG_LEVEL']
+
+    if level is None:
+        
+        print( 'No log level explicitly set: cdapython defaults to \'WARNING\'.', file=sys.stderr )
+
+        return 'WARNING'
+
+    else:
+        
+        return level
 
 
