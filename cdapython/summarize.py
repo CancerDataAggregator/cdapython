@@ -1266,11 +1266,13 @@ def summarize(
                 
                 if result_dataframe['data_source'] is not None:
                     
+                    input_data_source_dict = result_dataframe['data_source'][0][0]
+
                     # This cell should be a Python dict pairing some combination of valid data sources with a count of matching results.
 
-                    for data_source_combo in result_dataframe['data_source']:
+                    for data_source_combo in input_data_source_dict:
                         
-                        current_count = result_dataframe['data_source'][data_source_combo]
+                        current_count = input_data_source_dict[data_source_combo]
 
                         data_source_combo = re.sub( r'_exclusive$', r'', data_source_combo )
 
