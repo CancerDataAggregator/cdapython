@@ -1274,21 +1274,23 @@ def summarize(
                         
                         current_count = input_data_source_dict[data_source_combo]
 
-                        data_source_combo = re.sub( r'_exclusive$', r'', data_source_combo )
-
-                        if re.search( r'_', data_source_combo ) is None:
+                        if current_count is not None and current_count != 0:
                             
-                            data_source_combo = f"{data_source_combo.upper()} only"
+                            data_source_combo = re.sub( r'_exclusive$', r'', data_source_combo )
 
-                        else:
-                            
-                            data_source_combo = " and ".join( data_source_combo.upper().split( '_' ) )
+                            if re.search( r'_', data_source_combo ) is None:
+                                
+                                data_source_combo = f"{data_source_combo.upper()} only"
 
-                        if 'data_source' not in result_dict:
-                            
-                            result_dict['data_source'] = dict()
+                            else:
+                                
+                                data_source_combo = " and ".join( data_source_combo.upper().split( '_' ) )
 
-                        result_dict['data_source'][data_source_combo] = current_count
+                            if 'data_source' not in result_dict:
+                                
+                                result_dict['data_source'] = dict()
+
+                            result_dict['data_source'][data_source_combo] = current_count
 
             else:
                 
