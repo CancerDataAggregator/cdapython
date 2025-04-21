@@ -1284,6 +1284,10 @@ def summarize(
                             
                             data_source_combo = " and ".join( data_source_combo.upper().split( '_' ) )
 
+                        if 'data_source' not in result_dict:
+                            
+                            result_dict['data_source'] = dict()
+
                         result_dict['data_source'][data_source_combo] = current_count
 
             else:
