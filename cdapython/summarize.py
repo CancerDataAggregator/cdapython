@@ -1040,7 +1040,7 @@ def summarize(
             
             data_source_dict = {
                 f"{table}s": list(),
-                'data_sources': list()
+                'data_source': list()
             }
 
             if result_dataframe['data_source'] is not None:
@@ -1062,9 +1062,9 @@ def summarize(
                         data_source_combo = " and ".join( data_source_combo.upper().split( '_' ) )
 
                     data_source_dict[f"{table}s"].append( current_count )
-                    data_source_dict['data_sources'].append( data_source_combo )
+                    data_source_dict['data_source'].append( data_source_combo )
 
-            result_list.append( pd.DataFrame.from_dict( data_source_dict ).sort_values( by='data_sources' ).reset_index( drop=True )
+            result_list.append( pd.DataFrame.from_dict( data_source_dict ).sort_values( by='data_source' ).reset_index( drop=True )
 
         # Put the numeric summaries at the end of the displayed block of results.
 
@@ -1269,7 +1269,7 @@ def summarize(
                             
                             data_source_combo = " and ".join( data_source_combo.upper().split( '_' ) )
 
-                        result_dict['data_sources'][data_source_combo] = current_count
+                        result_dict['data_source'][data_source_combo] = current_count
 
             else:
                 
