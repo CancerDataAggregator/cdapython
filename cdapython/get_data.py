@@ -780,7 +780,9 @@ def get_data(
 
     log.debug( f"/data/{table} endpoint query SQL:\n{api_response_object.to_dict()['query_sql']}" )
 
-    log.debug( f"Page one results:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
+    # This is stupidly verbose.
+
+    # log.debug( f"Page one results:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
     
     # Convert response JSON into a DataFrame using pandas' json_normalize() function.
 
