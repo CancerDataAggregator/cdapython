@@ -6,7 +6,7 @@ import re
 import cda_client
 import cda_client.api.columns.columns_endpoint_columns_get
 import cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get
-import cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post
+import cda_client.api.column_values.column_values_endpoint_column_values_column_post
 
 from cdapython.logging_wrappers import get_logger
 from cdapython.application_utilities import get_api_url
@@ -1007,15 +1007,13 @@ def column_values(
 
     paged_response_data_object = (
         
-        cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post.sync(
+        cda_client.api.column_values.column_values_endpoint_column_values_column_post.sync(
             
             client=query_api_instance,
-            columnname=column,
-            system=data_source,
-            count=True,
-            total_count=True,
+            column=column,
+            data_source=data_source,
             limit=records_per_page,
-            offset=starting_offset,
+            offset=starting_offset
         )
     )
 
@@ -1076,15 +1074,13 @@ def column_values(
 
         paged_response_data_object = (
             
-            cda_client.api.unique_values.unique_values_endpoint_unique_values_columnname_post.sync(
+            cda_client.api.column_values.column_values_endpoint_column_values_column_post.sync(
                 
                 client=query_api_instance,
-                columnname=column,
-                system=data_source,
-                count=True,
-                total_count=True,
+                column=column,
+                data_source=data_source,
                 limit=records_per_page,
-                offset=incremented_offset,
+                offset=incremented_offset
             )
         )
 
