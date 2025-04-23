@@ -16,7 +16,7 @@ from cdapython.validation import normalize_to_list, validate_and_transform_match
 from cda_client.errors import UnexpectedStatus
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
-from cda_client.models.q_node import QNode
+from cda_client.models.summary_request_body import SummaryRequestBody
 from cda_client.api.summary import file_summary_endpoint_summary_file_post as summary_file_endpoint
 from cda_client.api.summary import subject_summary_endpoint_summary_subject_post as summary_subject_endpoint
 
@@ -762,7 +762,7 @@ def summarize(
     #############################################################################################################################
     # Build an object to represent our upcoming API query.
 
-    query_object = QNode()
+    query_object = SummaryRequestBody()
     query_object.match_all = queries_for_match_all
     query_object.match_some = queries_for_match_any
     query_object.add_columns = columns_to_add

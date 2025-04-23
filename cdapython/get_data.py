@@ -14,7 +14,7 @@ from cda_client.api.data import file_fetch_rows_endpoint_data_file_post as file_
 from cda_client.api.data import subject_fetch_rows_endpoint_data_subject_post as subject_data_endpoint
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
-from cda_client.models.q_node import QNode
+from cda_client.models.data_request_body import DataRequestBody
 
 
 #############################################################################################################################
@@ -668,7 +668,7 @@ def get_data(
     #############################################################################################################################
     # Build an object to represent our upcoming API query.
 
-    query_object = QNode()
+    query_object = DataRequestBody()
     query_object.match_all = queries_for_match_all
     query_object.match_some = queries_for_match_any
     query_object.add_columns = columns_to_add
