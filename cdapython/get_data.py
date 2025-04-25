@@ -731,6 +731,7 @@ def get_data(
     #             "subject_data_at_cds": false,
     #             "subject_data_at_pdc": true,
     #             "subject_data_at_icdc": false,
+    #             "subject_data_source_count": 3,
     #             "sex": [
     #                 "female"
     #             ]
@@ -752,6 +753,7 @@ def get_data(
     #             "subject_data_at_cds": false,
     #             "subject_data_at_pdc": true,
     #             "subject_data_at_icdc": false,
+    #             "subject_data_source_count": 3,
     #             "sex": [
     #                 "female"
     #             ]
@@ -845,7 +847,7 @@ def get_data(
         
         if column != 'data_source':
             
-            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None:
+            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None:
                 columns_to_suppress.append( column )
 
             elif column not in source_table_columns_in_order:
