@@ -1014,8 +1014,6 @@ def get_data(
                     log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
                     return
 
-    return result_dataframe
-
     #############################################################################################################################
     # Return our response to the user.
     #############################################################################################################################
