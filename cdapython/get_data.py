@@ -906,12 +906,19 @@ def get_data(
         # Make a new column called 'provenance', populated with DataFrames.
         result_dataframe['provenance'] = [ pd.DataFrame( { provenance_column : [] for provenance_column in provenance_columns } ) for _ in range( len( result_dataframe ) ) ]
 
+        provenance_data_by_column = dict()
+
         for row_index, result_record in result_dataframe.iterrows():
             for identifier_record in result_record[ 'upstream_identifiers_columns' ]:
                 for provenance_column in provenance_columns:
-                    result_dataframe['provenance'].iloc[row_index][provenance_column].loc[len( result_dataframe['provenance'].iloc[row_index] )] = 'thing'
-                    #print(result_dataframe['provenance'].iloc[row_index])
-                    #result_dataframe['provenance'].iloc[row_index] = pd.concat( [ result_dataframe['provenance'].iloc[row_index], pd.DataFrame.from_dict( identifier_record, orient='index' ).reset_index() ] )
+                    if provenance_column not in provenance_data_by_column:
+                        provenance_data_by_column[provenance_column] = list()
+                    provenance_data_by_column[provenance_column].append( identifier_record[provenance_column] )
+
+            result_dataframe['provenance'].iloc[row_index] = pd.DataFrame.from_dict( { provenance_column : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns } )
+            #[provenance_column].loc[len( result_dataframe['provenance'].iloc[row_index] ), provenance_column] = 'thing'
+            #print(result_dataframe['provenance'].iloc[row_index])
+            #result_dataframe['provenance'].iloc[row_index] = pd.concat( [ result_dataframe['provenance'].iloc[row_index], pd.DataFrame.from_dict( identifier_record, orient='index' ).reset_index() ] )
 
     return result_dataframe
 
