@@ -907,11 +907,10 @@ def get_data(
         result_dataframe['provenance'] = [ pd.DataFrame( { provenance_column : [] for provenance_column in provenance_columns } ) for _ in range( len( result_dataframe ) ) ]
 
         for row_index, result_record in result_dataframe.iterrows():
-            provenance_df_index = 1
+            provenance_df_index = 0
             for identifier_record in result_record[ 'upstream_identifiers_columns' ]:
                 for provenance_column in provenance_columns:
-                    print( result_dataframe['provenance'].iloc[row_index] )
-                    #result_dataframe['provenance'].iloc[row_index].iloc[provenance_df_index][provenance_column] = identifier_record[provenance_column]
+                    result_dataframe['provenance'].iloc[row_index].[provenance_column].iloc[provenance_df_index] = identifier_record[provenance_column]
                 provenance_df_index = provenance_df_index + 1
 
     return result_dataframe
