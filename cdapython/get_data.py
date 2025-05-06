@@ -915,7 +915,7 @@ def get_data(
                         provenance_data_by_column[provenance_column] = list()
                     provenance_data_by_column[provenance_column].append( identifier_record[provenance_column] )
 
-            result_dataframe.loc( row_index, 'provenance' ) = pd.DataFrame.from_dict( { provenance_column : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns }, orient='columns' )
+            result_dataframe.loc( result_dataframe.iloc[0:len(result_dataframe)], 'provenance' ) = pd.DataFrame.from_dict( { provenance_column : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns }, orient='columns' )
 
     return result_dataframe
 
