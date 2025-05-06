@@ -941,9 +941,19 @@ def get_data(
             if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None:
                 columns_to_suppress.append( column )
 
-            # TO DO: handle this better
+            # Remove raw versions of aggregated result sets from foreign tables
+            # and replace them with DataFrames or column-wise lists of unique values,
+            # depending on whether or not `expand_results` is set to True.
+
             elif re.search( r'_columns$', column ) is not None:
+                
                 columns_to_suppress.append( column )
+
+                if column != 'upstream_identifiers_columns':
+                    
+                    foreign_table_name = re.search( r'^(.*)_columns$', column ).groups( 0 )
+
+                    print( foreign_table_name )
 
             elif column not in source_table_columns_in_order:
                 added_columns.append( column )
@@ -1002,8 +1012,6 @@ def get_data(
 
                     result_dataframe[column] = result_dataframe[column].apply( lambda cell_val: [ numpy.int64( round( element_val ) ) if ( element_val is not None and element_val == element_val ) else '<NA>' for element_val in cell_val ] if isinstance( cell_val, list ) else numpy.int64( round( cell_val ) ) if ( cell_val is not None and cell_val == cell_val ) else '<NA>' )
 
-                    # result_dataframe[column] = result_dataframe[column].apply( lambda cell_val: [ numpy.int64( round( element_val ) ) if element_val is not None else '<NA>' for element_val in cell_val ] if isinstance( cell_val, list ) else numpy.int64( round( cell_val ) ) if cell_val is not None else '<NA>' )
-
                 elif column_data_types[column] in { 'text', 'boolean' }:
                     
                     # Replace values that are None (== null) with '<NA>' (to match what we['re forced to] use
@@ -1061,8 +1069,6 @@ def get_data(
                     print( *row_data, sep='\t', file=OUT )
 
             return
-            #result_dataframe.to_csv( output_file, sep='\t', index=False )
-            #return
 
         except Exception as error:
             log.error( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
