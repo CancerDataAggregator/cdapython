@@ -294,6 +294,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 #       or a list of valid upstream data source labels (for `called_function` in [ 'get_data', 'summarize' ])
 #     * `add_columns` or `exclude_columns` contain invalid CDA column names
 #     * `provenance` isn't a boolean value or None, depending on `called_function`
+#     * `expand_results` isn't a boolean value or None, depending on `called_function`
 #     * `return_data_as` isn't one of the allowable types for `called_function`
 #     * The value of `output_file` isn't consistent with the directive in `return_data_as` for `called_function`
 #
@@ -309,6 +310,7 @@ def validate_parameter_values(
     add_columns,
     exclude_columns,
     provenance,
+    expand_results,
     return_data_as,
     output_file,
     log
@@ -387,13 +389,18 @@ def validate_parameter_values(
             raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names. You specified '{column_name}', which is not that." )
 
     # Check that `provenance` is a boolean (for get_data) or None (for column_values, summarize) and that `called_function` has an expected value.
+    # Same for `expand_results`.
 
     if called_function == 'get_data':
         if provenance != True and provenance != False:
             raise RuntimeError( f"The `provenance` parameter must be set to True or False; you specified '{provenance}', which is neither." )
+        if expand_results != True and expand_results != False:
+            raise RuntimeError( f"The `expand_results` parameter must be set to True or False; you specified '{expand_results}', which is neither." )
     elif called_function == 'summarize' or called_function == 'column_values':
         if provenance is not None:
             raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom provenance values in summarize() calls; please notify the CDA devs of this event." )
+        if expand_results is not None:
+            raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom expand_results values in summarize() calls; please notify the CDA devs of this event." )
     else:
         raise RuntimeError( f"`called_function` must be one of [ 'column_values', 'get_data', 'summarize' ] -- '{called_function}' is none of those. Please notify the CDA devs of this event." )
 

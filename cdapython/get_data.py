@@ -41,7 +41,7 @@ def get_file_data(
     data_source=None,
     add_columns=None,
     exclude_columns=None,
-    provenance=False,
+    expand_results=False,
     return_data_as='dataframe',
     output_file=''
 ):
@@ -77,10 +77,12 @@ def get_file_data(
         exclude_columns ( string or list of strings; optional ):
             One or more columns to remove from result data.
 
-        provenance ( boolean; optional ):
-            If True, attach cross-reference information to each result row
-            identifying that row in the context of the upstream data source(s)
-            from which it was derived.
+        expand_results ( boolean; optional ):
+            If True: for each result file, include a DataFrame collating
+            results linked to that file from each non-file table that was
+            queried. Otherwise, for each result file, include a list of
+            unique values associated with that file from each non-file
+            column that was queried.
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
             Specify how to return results: as a pandas DataFrame,
@@ -139,7 +141,7 @@ def get_file_data(
 
     """
 
-    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=provenance, return_data_as=return_data_as, output_file=output_file )
+    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=False, expand_results=expand_results, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -156,6 +158,7 @@ def get_subject_data(
     add_columns=None,
     exclude_columns=None,
     provenance=False,
+    expand_results=False,
     return_data_as='dataframe',
     output_file=''
 ):
@@ -195,6 +198,13 @@ def get_subject_data(
             If True, attach cross-reference information to each result row
             identifying that row in the context of the upstream data source(s)
             from which it was derived.
+
+        expand_results ( boolean; optional ):
+            If True: for each result subject, include a DataFrame collating
+            results linked to that subject from each non-subject table that was
+            queried. Otherwise, for each result subject, include a list of
+            unique values associated with that subject from each non-subject
+            column that was queried.
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
             Specify how to return results: as a pandas DataFrame,
@@ -253,7 +263,7 @@ def get_subject_data(
 
     """
 
-    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=provenance, return_data_as=return_data_as, output_file=output_file )
+    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=provenance, expand_results=expand_results, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -271,6 +281,7 @@ def get_data(
     add_columns=None,
     exclude_columns=None,
     provenance=False,
+    expand_results=False,
     return_data_as='dataframe',
     output_file=''
 ):
@@ -313,6 +324,13 @@ def get_data(
             If True, get_data() will attach cross-reference information
             to each result row identifying that row in the context of
             the upstream data source(s) from which it was derived.
+
+        expand_results ( boolean; optional ):
+            If True: for each result row, include a DataFrame collating
+            results linked to that row from each foreign table that was
+            queried. Otherwise, for each result row, include a list of
+            unique values associated with that row from each foreign
+            column that was queried.
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
             Specify how get_data() should return results: as a pandas DataFrame,
@@ -372,10 +390,6 @@ def get_data(
         OR returns nothing, but writes results to a user-specified TSV file.
 
     """
-
-    # TO DO: Make this a parameter.
-
-    expand_results = False
 
     log = get_logger()
 
@@ -443,6 +457,7 @@ def get_data(
             add_columns=add_columns,
             exclude_columns=exclude_columns,
             provenance=provenance,
+            expand_results=expand_results,
             return_data_as=return_data_as,
             output_file=output_file,
             log=log
