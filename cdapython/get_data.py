@@ -972,10 +972,6 @@ def get_data(
     for added_column in added_columns:
         final_column_order.append( added_column )
 
-    return result_dataframe
-
-    """
-
     if len( result_dataframe.columns ) > 0:
         
         result_dataframe = result_dataframe[ final_column_order ]
@@ -1017,6 +1013,10 @@ def get_data(
                     # This isn't anticipated. Yell if we get something unexpected.
                     log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
                     return
+
+    return result_dataframe
+
+    """
 
     #############################################################################################################################
     # Return our response to the user.
