@@ -903,19 +903,22 @@ def get_data(
 
     if provenance == True:
         
-        # Make a new column called 'provenance', populated with DataFrames.
-        result_dataframe['provenance'] = [ pd.DataFrame( { provenance_column : [] for provenance_column in provenance_columns } ) for _ in range( len( result_dataframe ) ) ]
-
-        provenance_data_by_column = dict()
+        provenance_df_list = list()
 
         for row_index, result_record in result_dataframe.iterrows():
+            
+            provenance_data_by_column = dict()
+
             for identifier_record in result_record[ 'upstream_identifiers_columns' ]:
                 for provenance_column in provenance_columns:
                     if provenance_column not in provenance_data_by_column:
                         provenance_data_by_column[provenance_column] = list()
                     provenance_data_by_column[provenance_column].append( identifier_record[provenance_column] )
 
-            result_dataframe.loc( result_dataframe.iloc[0:len(result_dataframe)], 'provenance' ) = pd.DataFrame.from_dict( { provenance_column : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns }, orient='columns' )
+            provenance_df_list.append( pd.DataFrame.from_dict( { provenance_column : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns }, orient='columns' ) )
+
+        # Make a new column called 'provenance', populated with DataFrames.
+        result_dataframe['provenance'] = provenance_df_list
 
     return result_dataframe
 
