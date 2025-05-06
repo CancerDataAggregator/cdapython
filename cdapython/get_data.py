@@ -928,7 +928,7 @@ def get_data(
                 columns_to_suppress.append( column )
 
             # TO DO: handle this better
-            elif re.search( r'_columns$', column is not None:
+            elif re.search( r'_columns$', column ) is not None:
                 columns_to_suppress.append( column )
 
             elif column not in source_table_columns_in_order:
