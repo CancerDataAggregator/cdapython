@@ -911,6 +911,7 @@ def get_data(
             for identifier_record in result_record[ 'upstream_identifiers_columns' ]:
                 for provenance_column in provenance_columns:
                     result_dataframe['provenance'].iloc[row_index].iloc[provenance_df_index][provenance_column] = identifier_record[provenance_column]
+                provenance_df_index = provenance_df_index + 1
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
