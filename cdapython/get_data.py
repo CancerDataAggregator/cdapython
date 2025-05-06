@@ -951,7 +951,7 @@ def get_data(
 
                 if column != 'upstream_identifiers_columns':
                     
-                    foreign_table_name = re.search( r'^(.*)_columns$', column ).group[ 0 ]
+                    foreign_table_name = re.search( r'^(.*)_columns$', column ).group(0)
 
                     print( foreign_table_name )
 
