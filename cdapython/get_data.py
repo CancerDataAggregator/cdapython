@@ -997,9 +997,7 @@ def get_data(
                         
                         result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
 
-                    else:
-                        
-                        result_dataframe[column] = result_dataframe[column].apply( lambda cell_val: [ numpy.int64( round( element_val ) ) if element_val is not None else '<NA>' for element_val in cell_val ] if isinstance( cell_val, list ) else numpy.int64( round( cell_val ) ) if cell_val is not None else '<NA>' )
+                    result_dataframe[column] = result_dataframe[column].apply( lambda cell_val: [ numpy.int64( round( element_val ) ) if element_val is not None else '<NA>' for element_val in cell_val ] if isinstance( cell_val, list ) else numpy.int64( round( cell_val ) ) if cell_val is not None else '<NA>' )
 
                 elif column_data_types[column] in { 'text', 'boolean' }:
                     
