@@ -909,7 +909,7 @@ def get_data(
         for row_index, result_record in result_dataframe.iterrows():
             for identifier_record in result_record[ 'upstream_identifiers_columns' ]:
                 for provenance_column in provenance_columns:
-                    result_dataframe['provenance'].iloc[row_index][provenance_column].iloc[len( result_dataframe['provenance'].iloc[row_index] )] = 'thing'
+                    result_dataframe['provenance'].iloc[row_index][provenance_column].loc[len( result_dataframe['provenance'].iloc[row_index] )] = 'thing'
                     print(result_dataframe['provenance'].iloc[row_index])
                     #result_dataframe['provenance'].iloc[row_index] = pd.concat( [ result_dataframe['provenance'].iloc[row_index], pd.DataFrame.from_dict( identifier_record, orient='index' ).reset_index() ] )
 
