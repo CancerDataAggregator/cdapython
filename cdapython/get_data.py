@@ -915,7 +915,7 @@ def get_data(
                         provenance_data_by_column[provenance_column] = list()
                     provenance_data_by_column[provenance_column].append( identifier_record[provenance_column] )
 
-            result_dataframe['provenance'].iloc[row_index] = pd.DataFrame.from_dict( { provenance_column : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns } )
+            result_dataframe['provenance'].iloc[row_index] = pd.DataFrame.from_dict( { provenance_column : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns }, orient='columns' )
             #[provenance_column].loc[len( result_dataframe['provenance'].iloc[row_index] ), provenance_column] = 'thing'
             #print(result_dataframe['provenance'].iloc[row_index])
             #result_dataframe['provenance'].iloc[row_index] = pd.concat( [ result_dataframe['provenance'].iloc[row_index], pd.DataFrame.from_dict( identifier_record, orient='index' ).reset_index() ] )
