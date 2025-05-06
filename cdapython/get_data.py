@@ -980,7 +980,6 @@ def get_data(
 
         result_column_names = result_dataframe.columns.to_list()
 
-        """
         for column in result_column_names:
             
             if column != 'data_source' and column != 'provenance':
@@ -1014,8 +1013,6 @@ def get_data(
                     # This isn't anticipated. Yell if we get something unexpected.
                     log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
                     return
-
-        """
 
     return result_dataframe
 
