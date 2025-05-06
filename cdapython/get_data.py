@@ -936,7 +936,7 @@ def get_data(
 
     for column in result_dataframe:
         
-        if column != 'data_source':
+        if column != 'data_source' and column != 'provenance':
             
             if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None:
                 columns_to_suppress.append( column )
