@@ -908,7 +908,7 @@ def get_data(
 
         for row_index, result_record in result_dataframe.iterrows():
             for identifier_record in result_record[ 'upstream_identifiers_columns' ]:
-                result_dataframe['provenance'].iloc[row_index] = pd.concat( [ result_dataframe['provenance'].iloc[row_index], pd.DataFrame.from_dict( identifier_record ) ], ignore_index=True )
+                result_dataframe['provenance'].iloc[row_index] = pd.concat( [ result_dataframe['provenance'].iloc[row_index], pd.DataFrame.from_dict( identifier_record, orient='index' ).reset_index() ] )
 
     return result_dataframe
 
