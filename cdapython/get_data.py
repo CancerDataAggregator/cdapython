@@ -953,7 +953,34 @@ def get_data(
                     
                     foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
-                    print( foreign_table_name )
+
+                    # TO DO: HANDLE False
+                    if expand_results == True or expand_results == False:
+                        
+                        # Our result DataFrame's cells in a column named for `foreign_table_name` will
+                        # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
+                        # all data from that table associated with with each top-level row's main entity record.
+
+                        foreign_df_list = list()
+
+                        for row_index, result_record in result_dataframe.iterrows():
+                            
+                            foreign_table_data_by_column = dict()
+
+                            for foreign_table_record in result_record[column]:
+                                
+                                for foreign_table_column in foreign_table_record:
+                                    
+                                    if foreign_table_column not in foreign_table_data_by_column:
+                                        
+                                        foreign_table_data_by_column[foreign_table_column] = list()
+
+                                    foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+
+                            foreign_df_list.append( pd.DataFrame.from_dict( { foreign_table_column : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_data_by_column }, orient='columns' ) )
+
+                        # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
+                        result_dataframe[f"{foreign_table_name}_data"] = foreign_df_list
 
             elif column not in source_table_columns_in_order:
                 added_columns.append( column )
