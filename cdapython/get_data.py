@@ -953,6 +953,7 @@ def get_data(
                     
                     foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
+                    print( foreign_table_name )
 
                     # TO DO: HANDLE False
                     if expand_results == True or expand_results == False:
