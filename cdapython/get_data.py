@@ -972,6 +972,10 @@ def get_data(
     for added_column in added_columns:
         final_column_order.append( added_column )
 
+    return result_dataframe
+
+    """
+
     if len( result_dataframe.columns ) > 0:
         
         result_dataframe = result_dataframe[ final_column_order ]
@@ -1039,6 +1043,8 @@ def get_data(
 
     log.critical( 'Something has gone unexpectedly and disastrously wrong with result-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
     return
+
+    """
 
 #############################################################################################################################
 #
