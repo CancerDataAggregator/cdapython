@@ -901,10 +901,16 @@ def get_data(
 
     # Collate upstream provenance metadata, if requested.
 
-    if provenance:
+    if provenance == True:
         
         # Make a new column called 'provenance', populated with DataFrames.
         result_dataframe['provenance'] = [ pd.DataFrame( { provenance_column : [] for provenance_column in provenance_columns } ) for _ in range( len( result_dataframe ) ) ]
+
+        for row_index, result_record in result_dataframe.iterrows():
+            provenance_df_index = 0
+            for identifier_record in result_record[ 'upstream_identifiers_columns' ]:
+                for provenance_column in provenance_columns:
+                    result_dataframe['provenance'].iloc[row_index].iloc[provenance_df_index][provenance_column] = identifier_record[provenance_column]
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
@@ -919,6 +925,10 @@ def get_data(
         if column != 'data_source':
             
             if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None:
+                columns_to_suppress.append( column )
+
+            # TO DO: handle this better
+            elif re.search( r'_columns$', column is not None:
                 columns_to_suppress.append( column )
 
             elif column not in source_table_columns_in_order:
@@ -940,6 +950,10 @@ def get_data(
     if not suppress_data_source_results:
         final_column_order.append( 'data_source' )
 
+    # Then our provenance metadata, if it was requested.
+    if provenance == True:
+        final_column_order.append( 'provenance' )
+
     # Then the fields from other tables that the user added.
     for added_column in added_columns:
         final_column_order.append( added_column )
@@ -954,7 +968,7 @@ def get_data(
 
         for column in result_column_names:
             
-            if column != 'data_source':
+            if column != 'data_source' and column != 'provenance':
                 
                 # CDA has no float values. Cast all numeric data to integers.
 
