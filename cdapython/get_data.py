@@ -934,6 +934,8 @@ def get_data(
     added_columns = list()
     columns_to_suppress = list()
 
+    df_columns_to_add = dict()
+
     for column in result_dataframe:
         
         if column != 'data_source' and column != 'provenance':
@@ -952,8 +954,6 @@ def get_data(
                 if column != 'upstream_identifiers_columns':
                     
                     foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
-
-                    print( foreign_table_name )
 
                     # TO DO: HANDLE False
                     if expand_results == True or expand_results == False:
@@ -981,10 +981,13 @@ def get_data(
                             foreign_df_list.append( pd.DataFrame.from_dict( { foreign_table_column : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_data_by_column }, orient='columns' ) )
 
                         # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
-                        result_dataframe[f"{foreign_table_name}_data"] = foreign_df_list
+                        df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
 
             elif column not in source_table_columns_in_order:
                 added_columns.append( column )
+
+    for column in df_columns_to_add:
+        result_dataframe[column] = df_columns_to_add[column]
 
     if len( columns_to_suppress ) > 0:
         log.debug( f"Filtering API columns: {columns_to_suppress}" )
@@ -1008,6 +1011,9 @@ def get_data(
 
     # Then the fields from other tables that the user added.
     for added_column in added_columns:
+        final_column_order.append( added_column )
+
+    for added_column in df_columns_to_add:
         final_column_order.append( added_column )
 
     if len( result_dataframe.columns ) > 0:
