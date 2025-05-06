@@ -949,6 +949,8 @@ def get_data(
     added_columns = list()
     columns_to_suppress = list()
 
+    virtual_columns_to_add = dict()
+
     df_columns_to_add = dict()
 
     for column in result_dataframe:
@@ -968,16 +970,42 @@ def get_data(
 
                 if column in { 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
                     
-                    # TO DO
-                    # 
-                    # If we're getting file data, we want these transparently included as virtual file columns containing list values.
-                    # 
-                    # If we're getting subject data, then depending on the value of the `expand_results` parameter, we either
-                    # want these added to 'file_data' DataFrames as columns containing list values, or with each rendered individually
-                    # as a foreign-result column containing lists of unique values assigned to all matching files associated with
-                    # each result row's subject.
+                    output_column_name = re.search( r'^file_(.*)_columns$', column ).group(1)
+                    
+                    if table == 'file':
+                        
+                        # If we're getting file data, we always want these transparently included as virtual file columns containing list values.
+                        
+                        virtual_column_list = list()
 
-                    pass
+                        for row_index, result_record in result_dataframe.iterrows():
+                            
+                            if result_record[column] is not None:
+                                
+                                observed_value_set = set()
+
+                                for value_record in result_record[column]:
+                                    
+                                    observed_value_set.add( value_record[output_column_name] )
+
+                                virtual_column_list.append( sorted( observed_value_set ) )
+
+                            else:
+                                
+                                virtual_column_list.append( None )
+
+                        virtual_columns_to_add[output_column_name] = virtual_column_list
+
+                    elif table == 'subject':
+                        
+                        # TO DO
+
+                        # If we're getting subject data, then depending on the value of the `expand_results` parameter, we either
+                        # want these added to 'file_data' DataFrames as columns containing list values, or with each rendered individually
+                        # as a foreign-result column containing lists of unique values assigned to all matching files associated with
+                        # each result row's subject.
+
+                        pass
 
 
 
@@ -1043,6 +1071,9 @@ def get_data(
 
             elif column not in source_table_columns_in_order:
                 added_columns.append( column )
+
+    for column in virtual_columns_to_add:
+        result_dataframe[column] = virtual_columns_to_add[column]
 
     for column in df_columns_to_add:
         result_dataframe[column] = df_columns_to_add[column]
