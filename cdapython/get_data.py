@@ -1026,7 +1026,7 @@ def get_data(
 
         for column in result_column_names:
             
-            if column != 'data_source' and column != 'provenance':
+            if column != 'data_source' and column != 'provenance' and column not in df_columns_to_add:
                 
                 # CDA has no float values. Cast all numeric data to integers.
 
