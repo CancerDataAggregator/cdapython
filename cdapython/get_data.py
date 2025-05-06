@@ -899,9 +899,6 @@ def get_data(
                 if result_record[ f"{table}_data_at_{upstream_data_source.lower()}" ] == True:
                     result_dataframe['data_source'].iloc[row_index].append( upstream_data_source )
 
-    return result_dataframe
-
-    """
     # Collate upstream provenance metadata, if requested.
 
     if provenance == True:
@@ -913,9 +910,13 @@ def get_data(
             provenance_df_index = 1
             for identifier_record in result_record[ 'upstream_identifiers_columns' ]:
                 for provenance_column in provenance_columns:
-                    result_dataframe['provenance'].iloc[row_index].iloc[provenance_df_index][provenance_column] = identifier_record[provenance_column]
+                    print( result_dataframe['provenance'].iloc[row_index].iloc[provenance_df_index][provenance_column] )
+                    #result_dataframe['provenance'].iloc[row_index].iloc[provenance_df_index][provenance_column] = identifier_record[provenance_column]
                 provenance_df_index = provenance_df_index + 1
 
+    return result_dataframe
+
+    """
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
     # metadata for `table` rows) has been requested. Also make sure non-user-facing columns
