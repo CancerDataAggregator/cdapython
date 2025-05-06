@@ -985,15 +985,23 @@ def get_data(
 
                             for foreign_table_record in result_record[column]:
                                 
-                                for foreign_table_column in foreign_table_record:
+                                if foreign_table_record is not None:
                                     
-                                    if foreign_table_column not in foreign_table_data_by_column:
+                                    for foreign_table_column in foreign_table_record:
                                         
-                                        foreign_table_data_by_column[foreign_table_column] = list()
+                                        if foreign_table_column not in foreign_table_data_by_column:
+                                            
+                                            foreign_table_data_by_column[foreign_table_column] = list()
 
-                                    foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+                                        foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
 
-                            foreign_df_list.append( pd.DataFrame.from_dict( { foreign_table_column : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_data_by_column }, orient='columns' ) )
+                            if len( foreign_table_data_by_column ) > 0:
+                                
+                                foreign_df_list.append( pd.DataFrame.from_dict( { foreign_table_column : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_data_by_column }, orient='columns' ) )
+
+                            else:
+                                
+                                foreign_df_list.append( None )
 
                         # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
                         df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
