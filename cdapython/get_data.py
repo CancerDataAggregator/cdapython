@@ -974,11 +974,11 @@ def get_data(
 
     if len( result_dataframe.columns ) > 0:
         
-        result_dataframe = result_dataframe[ final_column_order ]
+        #result_dataframe = result_dataframe[ final_column_order ]
 
         log.debug( 'Handling missing values...' )
 
-        result_column_names = result_dataframe.columns.to_list()
+        #result_column_names = result_dataframe.columns.to_list()
 
         """
         for column in result_column_names:
