@@ -1115,7 +1115,7 @@ def get_data(
                             
                             row_data.append( result_record[column].to_dict( orient='records' ) )
 
-                        elif isinstance( result_record[column], str ) and result_record[column] == '<NA>':
+                        elif result_record[column] is None or ( isinstance( result_record[column], str ) and result_record[column] == '<NA>' ):
                             
                             row_data.append( '' )
 
