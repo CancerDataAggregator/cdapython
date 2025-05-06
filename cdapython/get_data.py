@@ -1030,7 +1030,9 @@ def get_data(
         # Write results to a user-specified TSV.
 
         try:
-            # We can't use DataFrame.to_csv() because it doesn't handle nested DataFrames well enough.
+            
+            # We can't use DataFrame.to_csv() because it doesn't handle nested DataFrames the way we want.
+
             with open( output_file, 'w' ) as OUT:
                 
                 print( *result_dataframe.columns.to_list(), sep='\t', file=OUT )
@@ -1044,6 +1046,10 @@ def get_data(
                         if isinstance( result_record[column], pd.DataFrame ):
                             
                             row_data.append( result_record[column].to_dict( orient='records' ) )
+
+                        elif result_record[column] == '<NA>':
+                            
+                            row_data.append( '' )
 
                         else:
                             
