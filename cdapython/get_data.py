@@ -968,6 +968,8 @@ def get_data(
 
                 if column in { 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
                     
+                    pass
+
                     # Always collapse these to lists. No, wait.
                     # If we're getting file data, we want them included as virtual columns containing list values.
                     # If we're getting subject data, we want these added to 'file_data' DataFrames as columns with list values,
