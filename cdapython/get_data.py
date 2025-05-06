@@ -968,12 +968,23 @@ def get_data(
 
                 if column in { 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
                     
+                    # TO DO
+                    # 
+                    # If we're getting file data, we want these transparently included as virtual file columns containing list values.
+                    # 
+                    # If we're getting subject data, then depending on the value of the `expand_results` parameter, we either
+                    # want these added to 'file_data' DataFrames as columns containing list values, or with each rendered individually
+                    # as a foreign-result column containing lists of unique values assigned to all matching files associated with
+                    # each result row's subject.
+
                     pass
 
-                    # Always collapse these to lists. No, wait.
-                    # If we're getting file data, we want them included as virtual columns containing list values.
-                    # If we're getting subject data, we want these added to 'file_data' DataFrames as columns with list values,
-                    # or rendered individually as unique-value lists, depending on the value of the `expand_results` parameter.
+
+
+
+
+
+
 
 
 
