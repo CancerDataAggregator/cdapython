@@ -983,9 +983,9 @@ def get_data(
                             
                             foreign_table_data_by_column = dict()
 
-                            for foreign_table_record in result_record[column]:
+                            if result_record[column] is not None:
                                 
-                                if foreign_table_record is not None:
+                                for foreign_table_record in result_record[column]:
                                     
                                     for foreign_table_column in foreign_table_record:
                                         
