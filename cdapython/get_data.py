@@ -966,7 +966,19 @@ def get_data(
                 
                 columns_to_suppress.append( column )
 
-                if column != 'upstream_identifiers_columns':
+                if column in { 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
+                    
+                    # Always collapse these to lists. No, wait.
+                    # If we're getting file data, we want them included as virtual columns containing list values.
+                    # If we're getting subject data, we want these added to 'file_data' DataFrames as columns with list values,
+                    # or rendered individually as unique-value lists, depending on the value of the `expand_results` parameter.
+
+
+
+
+
+
+                elif column != 'upstream_identifiers_columns':
                     
                     foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
