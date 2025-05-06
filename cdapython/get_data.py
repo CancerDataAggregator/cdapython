@@ -1007,7 +1007,17 @@ def get_data(
                                             
                                             foreign_table_data_by_column[foreign_table_column] = list()
 
-                                        foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+                                        # Encode nulls as ''.
+                                        # (float) NaN != NaN
+                                        # Testing values for None will miss NaN values, so we use the above truth to test for those too.
+
+                                        if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
+                                            
+                                            foreign_table_data_by_column[foreign_table_column].append( '' )
+
+                                        else:
+                                            
+                                            foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
 
                             if len( foreign_table_data_by_column ) > 0:
                                 
