@@ -1030,8 +1030,30 @@ def get_data(
         # Write results to a user-specified TSV.
 
         try:
-            result_dataframe.to_csv( output_file, sep='\t', index=False )
+            # We can't use DataFrame.to_csv() because it doesn't handle nested DataFrames well enough.
+            with open( output_file, 'w' ) as OUT:
+                
+                print( *result_dataframe.columns.to_list(), sep='\t', file=OUT )
+
+                for row_index, result_record in result_dataframe.iterrows():
+                    
+                    row_data = list()
+
+                    for column in result_dataframe.columns.to_list():
+                        
+                        if isinstance( result_record[column], pd.DataFrame ):
+                            
+                            row_data.append( result_record[column].to_dict( orient='records' ) )
+
+                        else:
+                            
+                            row_data.append( result_record[column] )
+
+                    print( *row_data, sep='\t', file=OUT )
+
             return
+            #result_dataframe.to_csv( output_file, sep='\t', index=False )
+            #return
 
         except Exception as error:
             log.error( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
