@@ -899,6 +899,9 @@ def get_data(
                 if result_record[ f"{table}_data_at_{upstream_data_source.lower()}" ] == True:
                     result_dataframe['data_source'].iloc[row_index].append( upstream_data_source )
 
+    return result_dataframe
+
+    """
     # Collate upstream provenance metadata, if requested.
 
     if provenance == True:
@@ -1026,7 +1029,7 @@ def get_data(
 
     log.critical( 'Something has gone unexpectedly and disastrously wrong with result-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
     return
-
+    """
 #############################################################################################################################
 #
 # END get_data
