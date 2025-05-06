@@ -668,6 +668,12 @@ def get_data(
         'data_source_id_value'
     ]
 
+    user_facing_provenance_column = {
+        'upstream_identifiers_data_source': 'data_source',
+        'data_source_id_field_name': 'id_field_name',
+        'data_source_id_value': 'id_value'
+    }
+
     if provenance == True:
         
         # The user is prevented by the validation logic from asking for these directly because they're not exposed by columns(),
@@ -915,7 +921,7 @@ def get_data(
                         provenance_data_by_column[provenance_column] = list()
                     provenance_data_by_column[provenance_column].append( identifier_record[provenance_column] )
 
-            provenance_df_list.append( pd.DataFrame.from_dict( { provenance_column : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns }, orient='columns' ) )
+            provenance_df_list.append( pd.DataFrame.from_dict( { user_facing_provenance_column[provenance_column] : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns }, orient='columns' ) )
 
         # Make a new column called 'provenance', populated with DataFrames.
         result_dataframe['provenance'] = provenance_df_list
