@@ -373,7 +373,9 @@ def get_data(
 
     """
 
-    # TO DO: re-enable provenance parameter
+    # TO DO: Make this a parameter.
+
+    expand_results = False
 
     log = get_logger()
 
@@ -639,14 +641,6 @@ def get_data(
         if column_to_add not in source_table_columns_in_order and column_to_add not in columns_to_add:
             columns_to_add.append( column_to_add )
     
-    # Make sure to retrieve the columns we need for data source summary output (whether or not
-    # the data_source filter was used by the user, we summarize upstream data sources by default).
-    # These columns are not returned by default from the API.
-
-    for upstream_data_source in valid_data_sources:
-        if f"{table}_data_at_{upstream_data_source.lower()}" not in columns_to_add:
-            columns_to_add.append( f"{table}_data_at_{upstream_data_source.lower()}" )
-
     columns_to_exclude = list()
 
     suppress_data_source_results = False
@@ -666,6 +660,24 @@ def get_data(
             columns_to_exclude.append( column_to_exclude )
 
     #############################################################################################################################
+    # Process the `provenance` flag: if True, ask the API to include data from the `upstream_identifiers` table.
+
+    provenance_columns = [
+        'upstream_identifiers_data_source',
+        'data_source_id_field_name',
+        'data_source_id_value'
+    ]
+
+    if provenance == True:
+        
+        # The user is prevented by the validation logic from asking for these directly because they're not exposed by columns(),
+        # but the API will process them if asked to do so.
+
+        for provenance_column in provenance_columns:
+            
+            columns_to_add.append( provenance_column )
+
+    #############################################################################################################################
     # Build an object to represent our upcoming API query.
 
     query_object = DataRequestBody()
@@ -673,6 +685,19 @@ def get_data(
     query_object.match_some = queries_for_match_any
     query_object.add_columns = columns_to_add
     query_object.exclude_columns = columns_to_exclude
+
+    # Two ways to activate this:
+    #     1. The user asked for it via the `expand_results` parameter, and
+    #     2. the user set `provenance` to True, in which case we need results grouped by row so we can properly combine
+    #        upstream identifier records.
+
+    if expand_results == True or provenance == True:
+        
+        query_object.expand_results = True
+
+    else:
+        
+        query_object.expand_results = False
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -713,7 +738,13 @@ def get_data(
     # Make a Pandas DataFrame out of the first batch of results.
     #
     # The API returns responses in JSON format: convert that JSON into a DataFrame
-    # using pandas' json_normalize() function. Example JSON response ( Note not all of these columns are returned by default: some were requested, others induced by a non-null `data_source` parameter):
+    # using pandas' json_normalize() function. Example JSON responses ( note that
+    # not all of these columns are returned by default: some were requested; others
+    # induced by a non-null `data_source` parameter; still others included in response
+    # to the user setting the `provenance` parameter to True; note also that this is
+    # a cut/paste job from several responses, don't check it too hard for internal
+    # consistency -- it's just meant to let readers know what to expect in terms of
+    # field names and nesting structures):
     #
     # {
     #     "result": [
@@ -734,30 +765,63 @@ def get_data(
     #             "subject_data_source_count": 3,
     #             "sex": [
     #                 "female"
+    #             ],
+    #             "upstream_identifiers_columns": [
+    #                 {
+    #                     "upstream_identifiers_data_source": "CDS",
+    #                     "data_source_id_field_name": "participant.participant_id",
+    #                     "data_source_id_value": "C3L-00447"
+    #                 },
+    #                 {
+    #                     "upstream_identifiers_data_source": "CDS",
+    #                     "data_source_id_field_name": "participant.uuid",
+    #                     "data_source_id_value": "c238af7c-b7c2-52b8-83a4-fd66939db40b"
+    #                 },
+    #                 {
+    #                     "upstream_identifiers_data_source": "GDC",
+    #                     "data_source_id_field_name": "case.case_id",
+    #                     "data_source_id_value": "8220be9e-ca4d-4a48-b48a-06c0b223700e"
+    #                 },
+    #                 {
+    #                     "upstream_identifiers_data_source": "GDC",
+    #                     "data_source_id_field_name": "case.submitter_id",
+    #                     "data_source_id_value": "C3L-00447"
+    #                 },
+    #                 {
+    #                     "upstream_identifiers_data_source": "IDC",
+    #                     "data_source_id_field_name": "auxiliary_metadata.submitter_case_id",
+    #                     "data_source_id_value": "C3L-00447"
+    #                 },
+    #                 {
+    #                     "upstream_identifiers_data_source": "IDC",
+    #                     "data_source_id_field_name": "dicom_all.PatientID",
+    #                     "data_source_id_value": "C3L-00447"
+    #                 },
+    #                 {
+    #                     "upstream_identifiers_data_source": "IDC",
+    #                     "data_source_id_field_name": "dicom_all.idc_case_id",
+    #                     "data_source_id_value": "23035925-a4b7-4093-887c-bfdeb6df251e"
+    #                 },
+    #                 {
+    #                     "upstream_identifiers_data_source": "PDC",
+    #                     "data_source_id_field_name": "Case.case_id",
+    #                     "data_source_id_value": "c5f8631d-1fb8-11e9-b7f8-0a80fada099c"
+    #                 },
+    #                 {
+    #                     "upstream_identifiers_data_source": "PDC",
+    #                     "data_source_id_field_name": "Case.case_submitter_id",
+    #                     "data_source_id_value": "C3L-00447"
+    #                 },
+    #                 {
+    #                     "upstream_identifiers_data_source": "CDS",
+    #                     "data_source_id_field_name": "participant.dbGaP_subject_id",
+    #                     "data_source_id_value": "2125680"
+    #                 }
     #             ]
     #         },
     #         
     #         ...
     #         
-    #         {
-    #             "subject_id": "TCGA.TCGA-BH-A18N",
-    #             "subject_crdc_id": null,
-    #             "species": "human",
-    #             "year_of_birth": 1913,
-    #             "year_of_death": 2004,
-    #             "cause_of_death": null,
-    #             "race": "White",
-    #             "ethnicity": "Non-Hispanic",
-    #             "subject_data_at_gdc": true,
-    #             "subject_data_at_idc": true,
-    #             "subject_data_at_cds": false,
-    #             "subject_data_at_pdc": true,
-    #             "subject_data_at_icdc": false,
-    #             "subject_data_source_count": 3,
-    #             "sex": [
-    #                 "female"
-    #             ]
-    #         }
     #     ],
     #     "query_sql": "WITH subject_preselect AS (SELECT subject.id_alias AS id_alias FROM subject WHERE (EXISTS (SELECT 1 FROM observation WHERE subject.id_alias = observation.subject_alias AND coalesce(upper(observation.sex), :coalesce_2) = upper(:upper_1))) AND subject.year_of_birth < :year_of_birth_1 AND subject.data_at_gdc = true), observation_subject_columns AS (SELECT array_remove(array_agg(DISTINCT observation.sex), NULL) AS sex, observation.subject_alias AS subject_alias FROM observation WHERE observation.subject_alias IN (SELECT subject_preselect.id_alias FROM subject_preselect) GROUP BY observation.subject_alias) SELECT row_to_json(json_result) AS row_to_json_1 FROM (SELECT subject.id AS subject_id, subject.crdc_id AS subject_crdc_id, subject.species AS species, subject.year_of_birth AS year_of_birth, subject.year_of_death AS year_of_death, subject.cause_of_death AS cause_of_death, subject.race AS race, subject.ethnicity AS ethnicity, subject.year_of_birth AS year_of_birth, subject.data_at_gdc AS subject_data_at_gdc, subject.data_at_idc AS subject_data_at_idc, subject.data_at_cds AS subject_data_at_cds, subject.data_at_pdc AS subject_data_at_pdc, subject.data_at_gdc AS subject_data_at_gdc, subject.data_at_icdc AS subject_data_at_icdc, coalesce(observation_subject_columns.sex, :coalesce_1) AS sex FROM subject LEFT OUTER JOIN observation_subject_columns ON observation_subject_columns.subject_alias = subject.id_alias WHERE subject.id_alias IN (SELECT subject_preselect.id_alias FROM subject_preselect)) AS json_result",
     #     "total_row_count": 9,
@@ -834,6 +898,13 @@ def get_data(
             for upstream_data_source in valid_data_sources:
                 if result_record[ f"{table}_data_at_{upstream_data_source.lower()}" ] == True:
                     result_dataframe['data_source'].iloc[row_index].append( upstream_data_source )
+
+    # Collate upstream provenance metadata, if requested.
+
+    if provenance:
+        
+        # Make a new column called 'provenance', populated with DataFrames.
+        result_dataframe['provenance'] = [ pd.DataFrame( { provenance_column : [] for provenance_column in provenance_columns } ) for _ in range( len( result_dataframe ) ) ]
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
