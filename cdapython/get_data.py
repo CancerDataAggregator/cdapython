@@ -670,7 +670,7 @@ def get_data(
 
     user_facing_provenance_column = {
         'upstream_identifiers_data_source': 'data_source',
-        'data_source_id_field_name': 'id_field_name',
+        'data_source_id_field_name': 'id_name',
         'data_source_id_value': 'id_value'
     }
 
@@ -926,9 +926,6 @@ def get_data(
         # Make a new column called 'provenance', populated with DataFrames.
         result_dataframe['provenance'] = provenance_df_list
 
-    return result_dataframe
-
-    """
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (from other tables, or provenance
     # metadata for `table` rows) has been requested. Also make sure non-user-facing columns
@@ -1042,7 +1039,7 @@ def get_data(
 
     log.critical( 'Something has gone unexpectedly and disastrously wrong with result-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
     return
-    """
+
 #############################################################################################################################
 #
 # END get_data
