@@ -1045,8 +1045,6 @@ def get_data(
     log.critical( 'Something has gone unexpectedly and disastrously wrong with result-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
     return
 
-    """
-
 #############################################################################################################################
 #
 # END get_data
