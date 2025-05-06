@@ -992,7 +992,7 @@ def get_data(
 
                             else:
                                 
-                                virtual_column_list.append( None )
+                                virtual_column_list.append( [] )
 
                         virtual_columns_to_add[output_column_name] = virtual_column_list
 
