@@ -1,5 +1,7 @@
 import re
 
+from cdapython.discover import tables
+
 #############################################################################################################################
 #
 # normalize_to_list( parameter_name, user_supplied_parameter_value, value_type ):
