@@ -1038,6 +1038,7 @@ def get_data(
                     added_columns.append( output_column_name )
 
     df_columns_to_add = dict()
+    single_foreign_columns_to_add = dict()
 
     for column in result_dataframe:
         
@@ -1056,8 +1057,7 @@ def get_data(
 
                 foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
-                # TO DO: HANDLE False
-                if expand_results == True or expand_results == False:
+                if expand_results == True:
                     
                     # Our result DataFrame's cells in a column named for `foreign_table_name` will
                     # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
@@ -1078,13 +1078,13 @@ def get_data(
                                     if foreign_table_column not in foreign_table_data_by_column:
                                         foreign_table_data_by_column[foreign_table_column] = list()
 
-                                    # Encode nulls as ''.
+                                    # Encode nulls as '<NA>'.
                                     # (float) NaN != NaN
                                     # Testing values for None will miss NaN values, so we use the above truth to test for those too.
 
                                     if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
                                         
-                                        foreign_table_data_by_column[foreign_table_column].append( '' )
+                                        foreign_table_data_by_column[foreign_table_column].append( '<NA>' )
 
                                     else:
                                         
@@ -1112,6 +1112,51 @@ def get_data(
                     # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
                     df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
 
+                else:
+                    
+                    # `expand_results` == False : include results from foreign columns in `result_dataframe` one at a time, as sets of unique values.
+
+                    foreign_column_lists = dict()
+
+                    for row_index, result_record in result_dataframe.iterrows():
+                        
+                        if result_record[column] is not None:
+                            
+                            observed_value_sets = dict()
+
+                            for foreign_table_record in result_record[column]:
+                                
+                                for foreign_table_column in foreign_table_record:
+                                    
+                                    if foreign_table_column not in observed_value_sets:
+                                        observed_value_sets[foreign_table_column] = set()
+
+                                    if foreign_table_column not in foreign_column_lists:
+                                        foreign_column_lists[foreign_table_column] = list()
+
+                                    # Ignore null values; if no non-null values are observed, we'll return <NA> instead of a list.
+                                    # (float) NaN != NaN
+                                    # Testing values for None will miss NaN values, so we use the above truth to test for those too.
+
+                                    if foreign_table_record[foreign_table_column] is not None and foreign_table_record[foreign_table_column] == foreign_table_record[foreign_table_column]:
+                                        
+                                        observed_value_sets[foreign_table_column].add( foreign_table_record[foreign_table_column] )
+
+                            for foreign_table_column in observed_value_sets:
+                                
+                                if len( observed_value_sets[foreign_table_column] ) > 0:
+                                    
+                                    foreign_column_lists[foreign_table_column].append( sorted( observed_value_sets[foreign_table_column] ) )
+
+                                else:
+                                    
+                                    foreign_column_lists[foreign_table_column].append( '<NA>' )
+
+                    for foreign_table_column in foreign_column_lists:
+                        
+                        single_foreign_columns_to_add[foreign_table_column] = foreign_column_lists[foreign_table_column]
+                        added_columns.append( foreign_table_column )
+
             elif column not in source_table_columns_in_order:
                 added_columns.append( column )
 
@@ -1120,6 +1165,9 @@ def get_data(
 
     for column in df_columns_to_add:
         result_dataframe[column] = df_columns_to_add[column]
+
+    for column in single_foreign_columns_columns_to_add:
+        result_dataframe[column] = single_foreign_columns_columns_to_add[column]
 
     if len( columns_to_suppress ) > 0:
         log.debug( f"Filtering API columns: {columns_to_suppress}" )
