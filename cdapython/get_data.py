@@ -677,26 +677,9 @@ def get_data(
     #############################################################################################################################
     # Process the `provenance` flag: if True, ask the API to include data from the `upstream_identifiers` table.
 
-    provenance_columns = [
-        'upstream_identifiers_data_source',
-        'data_source_id_field_name',
-        'data_source_id_value'
-    ]
-
-    user_facing_provenance_column = {
-        'upstream_identifiers_data_source': 'data_source',
-        'data_source_id_field_name': 'id_name',
-        'data_source_id_value': 'id_value'
-    }
-
     if provenance == True:
         
-        # The user is prevented by the validation logic from asking for these directly because they're not exposed by columns(),
-        # but the API will process them if asked to do so.
-
-        for provenance_column in provenance_columns:
-            
-            columns_to_add.append( provenance_column )
+        columns_to_add.append( f"{table}_identifier" )
 
     #############################################################################################################################
     # Build an object to represent our upcoming API query.
@@ -706,19 +689,7 @@ def get_data(
     query_object.match_some = queries_for_match_any
     query_object.add_columns = columns_to_add
     query_object.exclude_columns = columns_to_exclude
-
-    # Two ways to activate this:
-    #     1. The user asked for it via the `expand_results` parameter, and
-    #     2. the user set `provenance` to True, in which case we need results grouped by row so we can properly combine
-    #        upstream identifier records.
-
-    if expand_results == True or provenance == True:
-        
-        query_object.expand_results = True
-
-    else:
-        
-        query_object.expand_results = False
+    query_object.expand_results = expand_results
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -787,56 +758,26 @@ def get_data(
     #             "sex": [
     #                 "female"
     #             ],
-    #             "upstream_identifiers_columns": [
+    #             "subject_identifiers": [
     #                 {
-    #                     "upstream_identifiers_data_source": "CDS",
-    #                     "data_source_id_field_name": "participant.participant_id",
-    #                     "data_source_id_value": "C3L-00447"
+    #                     "data_source": "CDS",
+    #                     "participant.participant_id": "PBBZWS"
     #                 },
     #                 {
-    #                     "upstream_identifiers_data_source": "CDS",
-    #                     "data_source_id_field_name": "participant.uuid",
-    #                     "data_source_id_value": "c238af7c-b7c2-52b8-83a4-fd66939db40b"
+    #                     "data_source": "CDS",
+    #                     "participant.uuid": "6e823aea-1b00-5df8-ae1c-a02919bb81c4"
     #                 },
     #                 {
-    #                     "upstream_identifiers_data_source": "GDC",
-    #                     "data_source_id_field_name": "case.case_id",
-    #                     "data_source_id_value": "8220be9e-ca4d-4a48-b48a-06c0b223700e"
+    #                     "data_source": "IDC",
+    #                     "auxiliary_metadata.submitter_case_id": "PBBZWS"
     #                 },
     #                 {
-    #                     "upstream_identifiers_data_source": "GDC",
-    #                     "data_source_id_field_name": "case.submitter_id",
-    #                     "data_source_id_value": "C3L-00447"
+    #                     "data_source": "IDC",
+    #                     "dicom_all.PatientID": "PBBZWS"
     #                 },
     #                 {
-    #                     "upstream_identifiers_data_source": "IDC",
-    #                     "data_source_id_field_name": "auxiliary_metadata.submitter_case_id",
-    #                     "data_source_id_value": "C3L-00447"
-    #                 },
-    #                 {
-    #                     "upstream_identifiers_data_source": "IDC",
-    #                     "data_source_id_field_name": "dicom_all.PatientID",
-    #                     "data_source_id_value": "C3L-00447"
-    #                 },
-    #                 {
-    #                     "upstream_identifiers_data_source": "IDC",
-    #                     "data_source_id_field_name": "dicom_all.idc_case_id",
-    #                     "data_source_id_value": "23035925-a4b7-4093-887c-bfdeb6df251e"
-    #                 },
-    #                 {
-    #                     "upstream_identifiers_data_source": "PDC",
-    #                     "data_source_id_field_name": "Case.case_id",
-    #                     "data_source_id_value": "c5f8631d-1fb8-11e9-b7f8-0a80fada099c"
-    #                 },
-    #                 {
-    #                     "upstream_identifiers_data_source": "PDC",
-    #                     "data_source_id_field_name": "Case.case_submitter_id",
-    #                     "data_source_id_value": "C3L-00447"
-    #                 },
-    #                 {
-    #                     "upstream_identifiers_data_source": "CDS",
-    #                     "data_source_id_field_name": "participant.dbGaP_subject_id",
-    #                     "data_source_id_value": "2125680"
+    #                     "data_source": "IDC",
+    #                     "dicom_all.idc_case_id": "358ecd7c-2685-4f20-93b8-da6e7cbe9d0b"
     #                 }
     #             ]
     #         },
@@ -928,13 +869,20 @@ def get_data(
 
         for row_index, result_record in result_dataframe.iterrows():
             
-            provenance_data_by_column = dict()
+            provenance_data_by_column = {
+                'data_source' : [],
+                'id_name' : [],
+                'id_value' : []
+            }
 
-            for identifier_record in result_record[ 'upstream_identifiers_columns' ]:
-                for provenance_column in provenance_columns:
-                    if provenance_column not in provenance_data_by_column:
-                        provenance_data_by_column[provenance_column] = list()
-                    provenance_data_by_column[provenance_column].append( identifier_record[provenance_column] )
+            for identifier_record in result_record[ f"{table}_identifiers" ]:
+                provenance_data_by_column['data_source'].append( identifier_record['data_source'] )
+                for provenance_column in identifier_record:
+                    if provenance_column == 'data_source':
+                        provenance_data_by_column[provenance_column].append( identifier_record[provenance_column] )
+                    else:
+                        provenance_data_by_column['id_name'].append( provenance_column )
+                        provenance_data_by_column['id_value'].append( identifier_record[provenance_column] )
 
             provenance_df_list.append( pd.DataFrame.from_dict( { user_facing_provenance_column[provenance_column] : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns }, orient='columns' ) )
 
