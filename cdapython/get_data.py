@@ -883,7 +883,7 @@ def get_data(
                         provenance_data_by_column['id_name'].append( provenance_column )
                         provenance_data_by_column['id_value'].append( identifier_record[provenance_column] )
 
-            provenance_df_list.append( pd.DataFrame.from_dict( { user_facing_provenance_column[provenance_column] : provenance_data_by_column[provenance_column] for provenance_column in provenance_columns }, orient='columns' ) )
+            provenance_df_list.append( pd.DataFrame.from_dict( provenance_data_by_column, orient='columns' ) )
 
         # Make a new column called 'provenance', populated with DataFrames.
         result_dataframe['provenance'] = provenance_df_list
