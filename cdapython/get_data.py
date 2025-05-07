@@ -1156,19 +1156,23 @@ def get_data(
                                 
                                 for foreign_table_column in foreign_table_record:
                                     
-                                    if foreign_table_column not in observed_value_sets:
-                                        observed_value_sets[foreign_table_column] = set()
+                                    match_result = re.search( r'^' + re.escape( foreign_table_name ) + r'_data_at_(.+)$', foreign_table_column )
 
-                                    if foreign_table_column not in foreign_column_lists:
-                                        foreign_column_lists[foreign_table_column] = list()
-
-                                    # Ignore null values; if no non-null values are observed, we'll return <NA> instead of a list.
-                                    # (float) NaN != NaN
-                                    # Testing values for None will miss NaN values, so we use the above truth to test for those too.
-
-                                    if foreign_table_record[foreign_table_column] is not None and foreign_table_record[foreign_table_column] == foreign_table_record[foreign_table_column]:
+                                    if match_result is None and re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None:
                                         
-                                        observed_value_sets[foreign_table_column].add( foreign_table_record[foreign_table_column] )
+                                        if foreign_table_column not in observed_value_sets:
+                                            observed_value_sets[foreign_table_column] = set()
+
+                                        if foreign_table_column not in foreign_column_lists:
+                                            foreign_column_lists[foreign_table_column] = list()
+
+                                        # Ignore null values; if no non-null values are observed, we'll return <NA> instead of a list.
+                                        # (float) NaN != NaN
+                                        # Testing values for None will miss NaN values, so we use the above truth to test for those too.
+
+                                        if foreign_table_record[foreign_table_column] is not None and foreign_table_record[foreign_table_column] == foreign_table_record[foreign_table_column]:
+                                            
+                                            observed_value_sets[foreign_table_column].add( foreign_table_record[foreign_table_column] )
 
                             for foreign_table_column in observed_value_sets:
                                 
