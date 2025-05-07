@@ -1329,6 +1329,7 @@ def get_data(
 
                             row_data.append( dict_with_empty_string_nulls[key] )
 
+                            print("DING!")
                         elif result_record[column] is None or ( isinstance( result_record[column], str ) and result_record[column] == '<NA>' ):
                             
                             row_data.append( '' )
