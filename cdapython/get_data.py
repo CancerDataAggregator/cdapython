@@ -1287,7 +1287,7 @@ def get_data(
                 #   aggregated "X_columns" structure and not added to `added_columns`
                 # 
                 # * THEREFORE, each cell's data is (by design) either
-                #   - a nonzero-length list of unique observed values, or
+                #   - a list of unique observed values, or
                 #   - the string '<NA>'
 
                 # Handle missing values atom-wise, building a new column as we go, then swap the result into `result_dataframe`.
@@ -1301,6 +1301,12 @@ def get_data(
                     if current_cell_value == '<NA>':
                         
                         processed_column_data.append( current_cell_value )
+
+                    elif len( current_cell_value ) == 0:
+                        
+                        # An empty list.
+
+                        processed_column_data.append( '<NA>' )
 
                     else:
                         
