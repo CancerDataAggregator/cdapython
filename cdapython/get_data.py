@@ -1319,9 +1319,9 @@ def get_data(
 
                             for key in dict_with_na_nulls:
                                 
+                                print("DING!")
                                 if dict_with_na_nulls[key] == '<NA>':
                                     
-                                    print("DING!")
                                     dict_with_empty_string_nulls[key] = ''
 
                                 else:
