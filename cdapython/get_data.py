@@ -1166,8 +1166,8 @@ def get_data(
     for column in df_columns_to_add:
         result_dataframe[column] = df_columns_to_add[column]
 
-    for column in single_foreign_columns_columns_to_add:
-        result_dataframe[column] = single_foreign_columns_columns_to_add[column]
+    for column in single_foreign_columns_to_add:
+        result_dataframe[column] = single_foreign_columns_to_add[column]
 
     if len( columns_to_suppress ) > 0:
         log.debug( f"Filtering API columns: {columns_to_suppress}" )
