@@ -875,7 +875,6 @@ def get_data(
             }
 
             for identifier_record in result_record[ f"{table}_identifiers" ]:
-                provenance_data_by_column['data_source'].append( identifier_record['data_source'] )
                 for provenance_column in identifier_record:
                     if provenance_column == 'data_source':
                         provenance_data_by_column[provenance_column].append( identifier_record[provenance_column] )
