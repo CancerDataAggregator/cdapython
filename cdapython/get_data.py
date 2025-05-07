@@ -1322,12 +1322,12 @@ def get_data(
                                 if dict_with_na_nulls[key] == '<NA>':
                                     
                                     dict_with_empty_string_nulls[key] = ''
+                                    print("DING!")
 
                                 else:
                                     
                                     dict_with_empty_string_nulls[key] = dict_with_na_nulls[key]
 
-                            print("DING!")
                             row_data.append( dict_with_empty_string_nulls[key] )
 
                         elif result_record[column] is None or ( isinstance( result_record[column], str ) and result_record[column] == '<NA>' ):
