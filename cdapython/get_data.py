@@ -1107,7 +1107,7 @@ def get_data(
 
                         else:
                             
-                            foreign_df_list.append( None )
+                            foreign_df_list.append( '<NA>' )
 
                     # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
                     df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
@@ -1117,6 +1117,8 @@ def get_data(
                     # `expand_results` == False : include results from foreign columns in `result_dataframe` one at a time, as sets of unique values.
 
                     foreign_column_lists = dict()
+
+                    null_indices = set()
 
                     for row_index, result_record in result_dataframe.iterrows():
                         
@@ -1154,7 +1156,41 @@ def get_data(
 
                         else:
                             
-                            print( f"DING! {column}" )
+                            # No foreign table records existed for this result.
+
+                            null_indices.add( row_index )
+
+                    # Stitch null-result records into our value lists.
+
+                    if len( null_indices ) > 0:
+                        
+                        new_foreign_column_lists = dict()
+
+                        for foreign_table_column in foreign_column_lists:
+                            
+                            null_offset = 0
+
+                            new_foreign_column_lists[foreign_table_column] = list()
+
+                            for original_index in range( 0, len( foreign_column_lists[foreign_table_column] ) ):
+                                
+                                actual_index = original_index + null_offset
+
+                                if actual_index in null_indices:
+                                    
+                                    # Insert a null-result record for this column into the final list.
+
+                                    new_foreign_column_lists[foreign_table_column].append( '<NA>' )
+
+                                    null_offset = null_offset + 1
+
+                                else:
+                                    
+                                    # Copy the non-null result record for this column into the final list.
+
+                                    new_foreign_column_lists[foreign_table_column].append( foreign_column_lists[foreign_table_column][original_index] )
+
+                        foreign_column_lists = new_foreign_column_lists
 
                     for foreign_table_column in foreign_column_lists:
                         
