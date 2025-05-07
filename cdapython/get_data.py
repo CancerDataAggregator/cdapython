@@ -947,6 +947,8 @@ def get_data(
     # (e.g. `subject_data_at_gdc`) are not passed through to the user unprocessed.
 
     columns_to_suppress = list()
+    added_columns = list()
+
     virtual_columns_to_add = dict()
     file_data_columns_to_add = dict()
 
@@ -963,7 +965,7 @@ def get_data(
             output_column_name = re.search( r'^file_(.*)_columns$', column ).group(1)
             
             if table == 'file':
-                
+
                 # If we're getting file data, we always want these transparently included as virtual file columns containing list values.
                 
                 virtual_column_list = list()
@@ -982,7 +984,7 @@ def get_data(
 
                     else:
                         
-                        virtual_column_list.append( None )
+                        virtual_column_list.append( '<NA>' )
 
                 virtual_columns_to_add[output_column_name] = virtual_column_list
 
@@ -1005,23 +1007,36 @@ def get_data(
                             observed_value_set = set()
 
                             for value_record in result_record[column]:
-                                
                                 observed_value_set.add( value_record[output_column_name] )
 
                             add_to_file_data_dataframes.append( sorted( observed_value_set ) )
 
                         else:
-                            
                             add_to_file_data_dataframes.append( '<NA>' )
 
                     file_data_columns_to_add[output_column_name] = add_to_file_data_dataframes
 
                 else:
                     
-                    # TO DO
-                    pass
+                    virtual_column_list = list()
 
-    added_columns = list()
+                    for row_index, result_record in result_dataframe.iterrows():
+                        
+                        if result_record[column] is not None:
+                            
+                            observed_value_set = set()
+
+                            for value_record in result_record[column]:
+                                observed_value_set.add( value_record[output_column_name] )
+
+                            virtual_column_list.append( sorted( observed_value_set ) )
+
+                        else:
+                            virtual_column_list.append( '<NA>' )
+
+                    virtual_columns_to_add[output_column_name] = virtual_column_list
+                    added_columns.append( output_column_name )
+
     df_columns_to_add = dict()
 
     for column in result_dataframe:
