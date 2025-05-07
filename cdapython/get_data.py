@@ -946,16 +946,87 @@ def get_data(
     # metadata for `table` rows) has been requested. Also make sure non-user-facing columns
     # (e.g. `subject_data_at_gdc`) are not passed through to the user unprocessed.
 
-    added_columns = list()
     columns_to_suppress = list()
-
     virtual_columns_to_add = dict()
+    file_data_columns_to_add = dict()
 
+    # Remove raw versions of virtual list data attached to the file table
+    # and replace them with DataFrames or column-wise lists of unique values,
+    # depending on whether or not `expand_results` is set to True.
+
+    for column in { 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
+        
+        if column in result_dataframe:
+            
+            columns_to_suppress.append( column )
+
+        output_column_name = re.search( r'^file_(.*)_columns$', column ).group(1)
+        
+        if table == 'file':
+            
+            # If we're getting file data, we always want these transparently included as virtual file columns containing list values.
+            
+            virtual_column_list = list()
+
+            for row_index, result_record in result_dataframe.iterrows():
+                
+                if result_record[column] is not None:
+                    
+                    observed_value_set = set()
+
+                    for value_record in result_record[column]:
+                        
+                        observed_value_set.add( value_record[output_column_name] )
+
+                    virtual_column_list.append( sorted( observed_value_set ) )
+
+                else:
+                    
+                    virtual_column_list.append( None )
+
+            virtual_columns_to_add[output_column_name] = virtual_column_list
+
+        elif table == 'subject':
+            
+            # If we're getting subject data, then depending on the value of the `expand_results` parameter, we either
+            # want this information incorporated (as list values) into `result_dataframe['file_data']`, a column of
+            # DataFrames column containing tuples of linked file metadata, or instead rendered individually
+            # as a foreign-result column containing lists of unique values assigned to all matching files associated with
+            # each `result_dataframe` row's subject record.
+
+            if expand_results == True:
+                
+                add_to_file_data_dataframes = list()
+
+                for row_index, result_record in result_dataframe.iterrows():
+                    
+                    if result_record[column] is not None:
+                        
+                        observed_value_set = set()
+
+                        for value_record in result_record[column]:
+                            
+                            observed_value_set.add( value_record[output_column_name] )
+
+                        add_to_file_data_dataframes.append( sorted( observed_value_set ) )
+
+                    else:
+                        
+                        add_to_file_data_dataframes.append( '<NA>' )
+
+                file_data_columns_to_add[output_column_name] = add_to_file_data_dataframes
+
+            else:
+                
+                # TO DO
+                pass
+
+    added_columns = list()
     df_columns_to_add = dict()
 
     for column in result_dataframe:
         
-        if column != 'data_source' and column != 'provenance':
+        if column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns', 'upstream_identifiers_columns' }:
             
             if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None:
                 columns_to_suppress.append( column )
@@ -968,106 +1039,63 @@ def get_data(
                 
                 columns_to_suppress.append( column )
 
-                if column in { 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
-                    
-                    output_column_name = re.search( r'^file_(.*)_columns$', column ).group(1)
-                    
-                    if table == 'file':
-                        
-                        # If we're getting file data, we always want these transparently included as virtual file columns containing list values.
-                        
-                        virtual_column_list = list()
+                foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
-                        for row_index, result_record in result_dataframe.iterrows():
+                # TO DO: HANDLE False
+                if expand_results == True or expand_results == False:
+                    
+                    # Our result DataFrame's cells in a column named for `foreign_table_name` will
+                    # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
+                    # all data from that table associated with with each top-level row's main entity record.
+
+                    foreign_df_list = list()
+
+                    for row_index, result_record in result_dataframe.iterrows():
+                        
+                        foreign_table_data_by_column = dict()
+
+                        if result_record[column] is not None:
                             
-                            if result_record[column] is not None:
+                            for foreign_table_record in result_record[column]:
                                 
-                                observed_value_set = set()
-
-                                for value_record in result_record[column]:
+                                for foreign_table_column in foreign_table_record:
                                     
-                                    observed_value_set.add( value_record[output_column_name] )
-
-                                virtual_column_list.append( sorted( observed_value_set ) )
-
-                            else:
-                                
-                                virtual_column_list.append( None )
-
-                        virtual_columns_to_add[output_column_name] = virtual_column_list
-
-                    elif table == 'subject':
-                        
-                        # TO DO
-
-                        # If we're getting subject data, then depending on the value of the `expand_results` parameter, we either
-                        # want these added to 'file_data' DataFrames as columns containing list values, or with each rendered individually
-                        # as a foreign-result column containing lists of unique values assigned to all matching files associated with
-                        # each result row's subject.
-
-                        pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-                elif column != 'upstream_identifiers_columns':
-                    
-                    foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
-
-                    # TO DO: HANDLE False
-                    if expand_results == True or expand_results == False:
-                        
-                        # Our result DataFrame's cells in a column named for `foreign_table_name` will
-                        # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
-                        # all data from that table associated with with each top-level row's main entity record.
-
-                        foreign_df_list = list()
-
-                        for row_index, result_record in result_dataframe.iterrows():
-                            
-                            foreign_table_data_by_column = dict()
-
-                            if result_record[column] is not None:
-                                
-                                for foreign_table_record in result_record[column]:
-                                    
-                                    for foreign_table_column in foreign_table_record:
+                                    if foreign_table_column not in foreign_table_data_by_column:
                                         
-                                        if foreign_table_column not in foreign_table_data_by_column:
-                                            
-                                            foreign_table_data_by_column[foreign_table_column] = list()
+                                        foreign_table_data_by_column[foreign_table_column] = list()
 
-                                        # Encode nulls as ''.
-                                        # (float) NaN != NaN
-                                        # Testing values for None will miss NaN values, so we use the above truth to test for those too.
+                                    # Encode nulls as ''.
+                                    # (float) NaN != NaN
+                                    # Testing values for None will miss NaN values, so we use the above truth to test for those too.
 
-                                        if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
-                                            
-                                            foreign_table_data_by_column[foreign_table_column].append( '' )
+                                    if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
+                                        
+                                        foreign_table_data_by_column[foreign_table_column].append( '' )
 
-                                        else:
-                                            
-                                            foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+                                    else:
+                                        
+                                        foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
 
-                            if len( foreign_table_data_by_column ) > 0:
-                                
-                                foreign_df_list.append( pd.DataFrame.from_dict( { foreign_table_column : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_data_by_column }, orient='columns' ) )
+                                # Stitch in virtual file columns, processed in the previous block.
+                                if foreign_table_name == 'file' and len( file_data_columns_to_add ) > 0:
+                                    
+                                    for virtual_file_column_name in file_data_columns_to_add:
+                                        
+                                        if virtual_file_column_name not in foreign_table_data_by_column:
+                                            foreign_table_data_by_column[virtual_file_column_name] = list()
 
-                            else:
-                                
-                                foreign_df_list.append( None )
+                                        foreign_table_data_by_column[virtual_file_column_name].append( file_data_columns_to_add[virtual_file_column_name][row_index]
 
-                        # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
-                        df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
+                        if len( foreign_table_data_by_column ) > 0:
+                            
+                            foreign_df_list.append( pd.DataFrame.from_dict( { foreign_table_column : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_data_by_column }, orient='columns' ) )
+
+                        else:
+                            
+                            foreign_df_list.append( None )
+
+                    # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
+                    df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
 
             elif column not in source_table_columns_in_order:
                 added_columns.append( column )
@@ -1179,7 +1207,23 @@ def get_data(
                         
                         if isinstance( result_record[column], pd.DataFrame ):
                             
-                            row_data.append( result_record[column].to_dict( orient='records' ) )
+                            dict_with_na_nulls = result_record[column].to_dict( orient='records' )
+
+                            dict_with_empty_string_nulls = dict()
+
+                            # This assumes 2D DataFrames, which is safe at time of writing (2025-05-07).
+
+                            for key in dict_with_na_nulls:
+                                
+                                if dict_with_na_nulls[key] == '<NA>':
+                                    
+                                    dict_with_empty_string_nulls[key] = ''
+
+                                else:
+                                    
+                                    dict_with_empty_string_nulls[key] = dict_with_na_nulls[key]
+
+                            row_data.append( dict_with_empty_string_nulls[key] )
 
                         elif result_record[column] is None or ( isinstance( result_record[column], str ) and result_record[column] == '<NA>' ):
                             
