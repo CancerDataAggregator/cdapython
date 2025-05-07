@@ -1154,7 +1154,7 @@ def get_data(
 
                         else:
                             
-                            print("DING!")
+                            print( f"DING! {column}" )
 
                     for foreign_table_column in foreign_column_lists:
                         
