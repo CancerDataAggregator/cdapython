@@ -1176,7 +1176,7 @@ def get_data(
                                 
                                 actual_index = original_index + null_offset
 
-                                if actual_index in null_indices:
+                                while actual_index in null_indices:
                                     
                                     # Insert a null-result record for this column into the final list.
 
@@ -1184,11 +1184,11 @@ def get_data(
 
                                     null_offset = null_offset + 1
 
-                                else:
-                                    
-                                    # Copy the non-null result record for this column into the final list.
+                                    actual_index = original_index + null_offset
 
-                                    new_foreign_column_lists[foreign_table_column].append( foreign_column_lists[foreign_table_column][original_index] )
+                                # Copy the non-null result record for this column into the final list.
+
+                                new_foreign_column_lists[foreign_table_column].append( foreign_column_lists[foreign_table_column][original_index] )
 
                         foreign_column_lists = new_foreign_column_lists
 
