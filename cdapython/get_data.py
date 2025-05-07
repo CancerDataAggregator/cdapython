@@ -1310,6 +1310,7 @@ def get_data(
                         
                         if isinstance( result_record[column], pd.DataFrame ):
                             
+                            print("DING!")
                             dict_with_na_nulls = result_record[column].to_dict( orient='records' )
 
                             dict_with_empty_string_nulls = dict()
