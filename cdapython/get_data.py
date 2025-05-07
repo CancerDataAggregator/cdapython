@@ -1317,9 +1317,9 @@ def get_data(
 
                             # This assumes 2D DataFrames, which is safe at time of writing (2025-05-07).
 
+                            print(dict_with_na_nulls)
                             for key in dict_with_na_nulls:
                                 
-                                print("DING!")
                                 if dict_with_na_nulls[key] == '<NA>':
                                     
                                     dict_with_empty_string_nulls[key] = ''
