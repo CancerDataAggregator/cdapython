@@ -1308,16 +1308,17 @@ def get_data(
 
                     for column in result_dataframe.columns.to_list():
                         
+                        print( column )
                         if isinstance( result_record[column], pd.DataFrame ):
                             
                             print("DING!")
                             dict_with_na_nulls = result_record[column].to_dict( orient='records' )
+                            print(dict_with_na_nulls)
 
                             dict_with_empty_string_nulls = dict()
 
                             # This assumes 2D DataFrames, which is safe at time of writing (2025-05-07).
 
-                            print(dict_with_na_nulls)
                             for key in dict_with_na_nulls:
                                 
                                 if dict_with_na_nulls[key] == '<NA>':
