@@ -1246,7 +1246,7 @@ def get_data(
 
         for column in result_column_names:
             
-            if column != 'data_source' and column != 'provenance' and column not in df_columns_to_add:
+            if column != 'data_source' and column != 'provenance' and column not in df_columns_to_add and column not in added_columns:
                 
                 # CDA has no float values. Cast all numeric data to integers.
 
@@ -1278,6 +1278,57 @@ def get_data(
                     # This isn't anticipated. Yell if we get something unexpected.
                     log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
                     return
+
+            elif column in added_columns:
+                
+                # * this column is from a foreign table: if it were a native column, it would never have been added to `added_columns`
+                # 
+                # * `expand_results` is False: if it were True, this data would've been kept in the context of its containing
+                #   aggregated "X_columns" structure and not added to `added_columns`
+                # 
+                # * THEREFORE, each cell's data is (by design) either
+                #   - a nonzero-length list of unique observed values, or
+                #   - the string '<NA>'
+
+                # Handle missing values atom-wise, building a new column as we go, then swap the result into `result_dataframe`.
+
+                processed_column_data = list()
+
+                for row_index, result_record in result_dataframe.iterrows():
+                    
+                    current_cell_value = result_record[column]
+
+                    if current_cell_value == '<NA>':
+                        
+                        processed_column_data.append( current_cell_value )
+
+                    else:
+                        
+                        # We have a nonzero-length list of non-null data values.
+
+                        processed_cell_value = list()
+
+                        for list_element in current_cell_value:
+                            
+                            processed_list_element = list_element
+
+                            if column_data_types[column] in { 'integer', 'bigint' }:
+                                
+                                # CDA has no float values. Cast all numeric data to integers.
+
+                                processed_list_element = numpy.int64( round( processed_list_element ) )
+
+                            elif column_data_types[column] not in { 'text', 'boolean' }:
+                                
+                                # This isn't anticipated. Yell if we get something unexpected.
+                                log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
+                                return
+
+                            processed_cell_value.append( processed_list_element )
+
+                        processed_column_data.append( processed_cell_value )
+
+                result_dataframe[column] = processed_column_data
 
     #############################################################################################################################
     # Return our response to the user.
