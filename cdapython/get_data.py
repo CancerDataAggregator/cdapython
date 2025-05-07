@@ -1079,6 +1079,7 @@ def get_data(
                                 # Stitch in virtual file columns, processed in the previous block.
                                 if foreign_table_name == 'file' and len( file_data_columns_to_add ) > 0:
                                     
+                                    print( 'ding' )
                                     for virtual_file_column_name in file_data_columns_to_add:
                                         
                                         if virtual_file_column_name not in foreign_table_data_by_column:
