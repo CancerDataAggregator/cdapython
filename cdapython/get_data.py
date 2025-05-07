@@ -1069,26 +1069,52 @@ def get_data(
                         
                         foreign_table_data_by_column = dict()
 
+                        # Summarize (row-wise) 'data_source' values as we do for top-level result rows.
+
+                        foreign_table_data_by_column['data_source'] = list()
+
                         if result_record[column] is not None:
                             
                             for foreign_table_record in result_record[column]:
                                 
+                                upstream_data_source = ''
+
                                 for foreign_table_column in foreign_table_record:
                                     
-                                    if foreign_table_column not in foreign_table_data_by_column:
-                                        foreign_table_data_by_column[foreign_table_column] = list()
+                                    match_result = re.search( r'^' + re.escape( foreign_table_name ) + r'_data_at_(.+)$', foreign_table_column )
 
-                                    # Encode nulls as '<NA>'.
-                                    # (float) NaN != NaN
-                                    # Testing values for None will miss NaN values, so we use the above truth to test for those too.
-
-                                    if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
+                                    if match_result is not None:
                                         
-                                        foreign_table_data_by_column[foreign_table_column].append( '<NA>' )
+                                        if foreign_table_record[foreign_table_column] == True:
+                                            
+                                            # There should only ever be one of these.
+                                            detected_data_source = match_result.group(1).upper()
+
+                                            if upstream_data_source == '':
+                                                upstream_data_source = detected_data_source
+
+                                            elif upstream_data_source != detected_data_source:
+                                                log.error( f"Upstream data source clash: {detected_data_source} != {upstream_data_source}; {foreign_table_name} (partial) record: \"{foreign_table_record}\"; please notify the CDA devs of this event." )
+                                                return
 
                                     else:
                                         
-                                        foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+                                        if foreign_table_column not in foreign_table_data_by_column:
+                                            foreign_table_data_by_column[foreign_table_column] = list()
+
+                                        # Encode nulls as '<NA>'.
+                                        # (float) NaN != NaN
+                                        # Testing values for None will miss NaN values, so we use the above truth to test for those too.
+
+                                        if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
+                                            
+                                            foreign_table_data_by_column[foreign_table_column].append( '<NA>' )
+
+                                        else:
+                                            
+                                            foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+
+                                foreign_table_data_by_column['data_source'].append( upstream_data_source )
 
                                 # Stitch in virtual file columns, processed in the previous block.
 
