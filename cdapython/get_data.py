@@ -1313,7 +1313,6 @@ def get_data(
                             print("DING!")
                             dict_with_na_nulls = result_record[column].to_dict( orient='records' )
 
-                            print("DING!")
                             dict_with_empty_string_nulls = dict()
 
                             # This assumes 2D DataFrames, which is safe at time of writing (2025-05-07).
@@ -1328,6 +1327,7 @@ def get_data(
                                     
                                     dict_with_empty_string_nulls[key] = dict_with_na_nulls[key]
 
+                            print("DING!")
                             row_data.append( dict_with_empty_string_nulls[key] )
 
                         elif result_record[column] is None or ( isinstance( result_record[column], str ) and result_record[column] == '<NA>' ):
