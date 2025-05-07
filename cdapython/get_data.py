@@ -678,8 +678,7 @@ def get_data(
     # Process the `provenance` flag: if True, ask the API to include data from the `upstream_identifiers` table.
 
     if provenance == True:
-        
-        columns_to_add.append( f"{table}_identifier" )
+        columns_to_add.append( f"{table}_identifiers" )
 
     #############################################################################################################################
     # Build an object to represent our upcoming API query.
@@ -990,9 +989,9 @@ def get_data(
 
     for column in result_dataframe:
         
-        if column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns', 'upstream_identifiers_columns' }:
+        if column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
             
-            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None:
+            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or column == f"{table}_identifiers":
                 columns_to_suppress.append( column )
 
             # Remove raw versions of aggregated result sets from foreign tables
