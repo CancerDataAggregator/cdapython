@@ -1084,7 +1084,7 @@ def get_data(
                                         if virtual_file_column_name not in foreign_table_data_by_column:
                                             foreign_table_data_by_column[virtual_file_column_name] = list()
 
-                                        foreign_table_data_by_column[virtual_file_column_name].append( file_data_columns_to_add[virtual_file_column_name][row_index]
+                                        foreign_table_data_by_column[virtual_file_column_name].append( file_data_columns_to_add[virtual_file_column_name][row_index] )
 
                         if len( foreign_table_data_by_column ) > 0:
                             
