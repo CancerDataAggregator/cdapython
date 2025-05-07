@@ -655,7 +655,7 @@ def get_data(
         # Ignore requests for columns that are already present by default, and don't add columns twice.
         if column_to_add not in source_table_columns_in_order and column_to_add not in columns_to_add:
             columns_to_add.append( column_to_add )
-    
+
     columns_to_exclude = list()
 
     suppress_data_source_results = False
@@ -1151,6 +1151,10 @@ def get_data(
                                 else:
                                     
                                     foreign_column_lists[foreign_table_column].append( '<NA>' )
+
+                        else:
+                            
+                            print("DING!")
 
                     for foreign_table_column in foreign_column_lists:
                         
