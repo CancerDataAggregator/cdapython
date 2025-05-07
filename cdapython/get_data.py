@@ -960,43 +960,13 @@ def get_data(
             
             columns_to_suppress.append( column )
 
-        output_column_name = re.search( r'^file_(.*)_columns$', column ).group(1)
-        
-        if table == 'file':
+            output_column_name = re.search( r'^file_(.*)_columns$', column ).group(1)
             
-            # If we're getting file data, we always want these transparently included as virtual file columns containing list values.
-            
-            virtual_column_list = list()
-
-            for row_index, result_record in result_dataframe.iterrows():
+            if table == 'file':
                 
-                if result_record[column] is not None:
-                    
-                    observed_value_set = set()
-
-                    for value_record in result_record[column]:
-                        
-                        observed_value_set.add( value_record[output_column_name] )
-
-                    virtual_column_list.append( sorted( observed_value_set ) )
-
-                else:
-                    
-                    virtual_column_list.append( None )
-
-            virtual_columns_to_add[output_column_name] = virtual_column_list
-
-        elif table == 'subject':
-            
-            # If we're getting subject data, then depending on the value of the `expand_results` parameter, we either
-            # want this information incorporated (as list values) into `result_dataframe['file_data']`, a column of
-            # DataFrames column containing tuples of linked file metadata, or instead rendered individually
-            # as a foreign-result column containing lists of unique values assigned to all matching files associated with
-            # each `result_dataframe` row's subject record.
-
-            if expand_results == True:
+                # If we're getting file data, we always want these transparently included as virtual file columns containing list values.
                 
-                add_to_file_data_dataframes = list()
+                virtual_column_list = list()
 
                 for row_index, result_record in result_dataframe.iterrows():
                     
@@ -1008,18 +978,48 @@ def get_data(
                             
                             observed_value_set.add( value_record[output_column_name] )
 
-                        add_to_file_data_dataframes.append( sorted( observed_value_set ) )
+                        virtual_column_list.append( sorted( observed_value_set ) )
 
                     else:
                         
-                        add_to_file_data_dataframes.append( '<NA>' )
+                        virtual_column_list.append( None )
 
-                file_data_columns_to_add[output_column_name] = add_to_file_data_dataframes
+                virtual_columns_to_add[output_column_name] = virtual_column_list
 
-            else:
+            elif table == 'subject':
                 
-                # TO DO
-                pass
+                # If we're getting subject data, then depending on the value of the `expand_results` parameter, we either
+                # want this information incorporated (as list values) into `result_dataframe['file_data']`, a column of
+                # DataFrames column containing tuples of linked file metadata, or instead rendered individually
+                # as a foreign-result column containing lists of unique values assigned to all matching files associated with
+                # each `result_dataframe` row's subject record.
+
+                if expand_results == True:
+                    
+                    add_to_file_data_dataframes = list()
+
+                    for row_index, result_record in result_dataframe.iterrows():
+                        
+                        if result_record[column] is not None:
+                            
+                            observed_value_set = set()
+
+                            for value_record in result_record[column]:
+                                
+                                observed_value_set.add( value_record[output_column_name] )
+
+                            add_to_file_data_dataframes.append( sorted( observed_value_set ) )
+
+                        else:
+                            
+                            add_to_file_data_dataframes.append( '<NA>' )
+
+                    file_data_columns_to_add[output_column_name] = add_to_file_data_dataframes
+
+                else:
+                    
+                    # TO DO
+                    pass
 
     added_columns = list()
     df_columns_to_add = dict()
