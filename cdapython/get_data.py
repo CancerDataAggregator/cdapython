@@ -1097,7 +1097,7 @@ def get_data(
                                                 log.error( f"Upstream data source clash: {detected_data_source} != {upstream_data_source}; {foreign_table_name} (partial) record: \"{foreign_table_record}\"; please notify the CDA devs of this event." )
                                                 return
 
-                                    else:
+                                    elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None:
                                         
                                         if foreign_table_column not in foreign_table_data_by_column:
                                             foreign_table_data_by_column[foreign_table_column] = list()
