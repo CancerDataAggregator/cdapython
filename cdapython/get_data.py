@@ -1322,7 +1322,7 @@ def get_data(
                                 
                                 # CDA has no float values. Cast all numeric data to integers.
 
-                                processed_list_element = numpy.int64( round( processed_list_element ) )
+                                processed_list_element = round( processed_list_element )
 
                             elif column_data_types[column] not in { 'text', 'boolean' }:
                                 
