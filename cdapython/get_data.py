@@ -1419,7 +1419,13 @@ def get_data(
 
                                 list_of_dicts_with_empty_string_nulls.append( dict_with_empty_string_nulls )
 
-                            row_data.append( list_of_dicts_with_empty_string_nulls )
+                            if len( list_of_dicts_with_empty_string_nulls ) > 0:
+                                
+                                row_data.append( list_of_dicts_with_empty_string_nulls )
+
+                            else:
+                                
+                                row_data.append( '' )
 
                         elif result_record[column] is None or ( isinstance( result_record[column], str ) and result_record[column] == '<NA>' ):
                             
