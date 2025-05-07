@@ -1321,8 +1321,8 @@ def get_data(
                                 
                                 if dict_with_na_nulls[key] == '<NA>':
                                     
-                                    dict_with_empty_string_nulls[key] = ''
                                     print("DING!")
+                                    dict_with_empty_string_nulls[key] = ''
 
                                 else:
                                     
