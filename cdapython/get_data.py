@@ -1312,7 +1312,7 @@ def get_data(
                             
                             list_of_dicts_with_na_nulls = result_record[column].to_dict( orient='records' )
 
-                            list_of_dicts_with_empty_string_nulls = dict()
+                            list_of_dicts_with_empty_string_nulls = list()
 
                             # This assumes 2D DataFrames, which is safe at time of writing (2025-05-07).
 
