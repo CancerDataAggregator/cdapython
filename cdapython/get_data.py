@@ -990,7 +990,7 @@ def get_data(
         
         if column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
             
-            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or re.search( r'_id_alias$', column ) is not None or column == f"{table}_identifiers":
+            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or column == f"{table}_id_alias" or column == f"{table}_identifiers":
                 columns_to_suppress.append( column )
 
             # Remove raw versions of aggregated result sets from foreign tables
@@ -1043,7 +1043,7 @@ def get_data(
                                                 log.error( f"Upstream data source clash: {detected_data_source} != {upstream_data_source}; {foreign_table_name} (partial) record: \"{foreign_table_record}\"; please notify the CDA devs of this event." )
                                                 return
 
-                                    elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None:
+                                    elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None and re.search( r'^' + re.escape( foreign_table_name ) + r'_id_alias$', foreign_table_column ) is None:
                                         
                                         if foreign_table_column not in foreign_table_data_by_column:
                                             foreign_table_data_by_column[foreign_table_column] = list()
