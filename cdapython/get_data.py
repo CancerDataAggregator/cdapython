@@ -1061,7 +1061,6 @@ def get_data(
                                 for foreign_table_column in foreign_table_record:
                                     
                                     if foreign_table_column not in foreign_table_data_by_column:
-                                        
                                         foreign_table_data_by_column[foreign_table_column] = list()
 
                                     # Encode nulls as ''.
@@ -1077,9 +1076,9 @@ def get_data(
                                         foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
 
                                 # Stitch in virtual file columns, processed in the previous block.
+
                                 if foreign_table_name == 'file' and len( file_data_columns_to_add ) > 0:
                                     
-                                    print( 'ding' )
                                     for virtual_file_column_name in file_data_columns_to_add:
                                         
                                         if virtual_file_column_name not in foreign_table_data_by_column:
