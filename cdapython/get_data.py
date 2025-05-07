@@ -1311,6 +1311,7 @@ def get_data(
                         print( column )
                         if isinstance( result_record[column], pd.DataFrame ):
                             
+                            print( result_record[column] )
                             print("DING!")
                             dict_with_na_nulls = result_record[column].to_dict( orient='records' )
                             print(dict_with_na_nulls)
