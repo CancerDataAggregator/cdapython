@@ -1075,7 +1075,13 @@ def get_data(
 
                         if len( foreign_table_data_by_column ) > 0:
                             
-                            foreign_df_list.append( pd.DataFrame.from_dict( { foreign_table_column : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_data_by_column }, orient='columns' ) )
+                            foreign_table_column_ordering = [ 'data_source' ]
+
+                            for foreign_table_column in cached_column_metadata.query( f"table == '{foreign_table_name}'" ).column.to_list():
+                                if foreign_table_column in foreign_table_data_by_column:
+                                    foreign_table_column_ordering.append( foreign_table_column )
+
+                            foreign_df_list.append( pd.DataFrame.from_dict( { foreign_table_column : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_column_ordering }, orient='columns' ) )
 
                         else:
                             
