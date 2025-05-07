@@ -292,7 +292,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 #       that exists
 #     * `data_source` isn't a single valid upstream data source label (for `called_function`=='column_values')
 #       or a list of valid upstream data source labels (for `called_function` in [ 'get_data', 'summarize' ])
-#     * `add_columns` or `exclude_columns` contain invalid CDA column names
+#     * `add_columns` or `exclude_columns` contain invalid CDA column names ("{table}.*" macros are allowed)
 #     * `provenance` isn't a boolean value or None, depending on `called_function`
 #     * `expand_results` isn't a boolean value or None, depending on `called_function`
 #     * `return_data_as` isn't one of the allowable types for `called_function`
@@ -379,8 +379,14 @@ def validate_parameter_values(
     # Make sure CDA columns named in `add_columns` exist.
 
     for column_name in add_columns:
-        if column_name not in cached_column_metadata['column'].unique():
-            raise RuntimeError( f"'add_columns' can only contain valid CDA column names. You specified '{column_name}', which is not that." )
+        match_result = re.search( r'^(.+)\.\*$', column_name )
+
+        if match_result is not None:
+            foreign_table = match_result.group(1)
+            if foreign_table not in tables():
+                raise RuntimeError( f"'add_columns' can only contain valid CDA column names, or macros for whole tables like 'treatment.*'. You specified '{column_name}', which is neither." )
+        elif column_name not in cached_column_metadata['column'].unique():
+            raise RuntimeError( f"'add_columns' can only contain valid CDA column names, or macros for whole tables like 'treatment.*'. You specified '{column_name}', which is neither." )
 
     # Make sure CDA columns named in `exclude_columns` exist.
 
