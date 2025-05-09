@@ -479,6 +479,10 @@ def columns(
     for banned_column in banned_columns:
         result_dataframe = result_dataframe.loc[ result_dataframe['column'] != banned_column ]
 
+    # Add a virtual 'upstream_id' column to the subject table to support search and simplify data access.
+    subject_upstream_id_row = pd.DataFrame( { 'table': [ 'subject' ], 'column': [ 'upstream_id' ], 'data_type': [ 'text' ],  'nullable': [ False ], 'description': [ 'One or more IDs for this subject as published by CDA\'s upstream data sources.' ] } )
+    result_dataframe = pd.concat( [ result_dataframe, subject_upstream_id_row ], ignore_index = True )
+
     log.debug( 'Created result DataFrame' )
 
     #############################################################################################################################

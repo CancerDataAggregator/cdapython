@@ -359,8 +359,11 @@ def validate_parameter_values(
             if match_from_file['cda_column_to_match'] != '' or match_from_file['input_file'] != '':
                 raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
 
-    if match_from_file['input_file'] != '' and  match_from_file['input_file'] == output_file:
+    if match_from_file['input_file'] != '' and match_from_file['input_file'] == output_file:
         raise RuntimeError( f"You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different." )
+
+
+
 
     # Check that `data_source` is a single valid upstream data source label (for `called_function`=='column_values')
     # or a list of valid upstream data source labels (for `called_function` in [ 'get_data', 'summarize' ]).
