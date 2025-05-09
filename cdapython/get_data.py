@@ -847,6 +847,10 @@ def get_data(
 
     log.debug( 'Organizing result data...' )
 
+    # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
+    if 'data_source_id_value' in result_dataframe:
+        result_dataframe = result_dataframe.rename( { 'data_source_id_value': 'upstream_id' } )
+
     # Collect data source information and populate our user-facing `data_source` result column summary,
     # unless its been repressed via exclude_columns=['data_source'].
 
@@ -1286,11 +1290,6 @@ def get_data(
 
                 processed_column_data = list()
 
-                # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
-                check_column = column
-                if column == 'data_source_id_value':
-                    check_column = 'upstream_id'
-
                 for row_index, result_record in result_dataframe.iterrows():
                     
                     current_cell_value = result_record[column]
@@ -1315,16 +1314,16 @@ def get_data(
                             
                             processed_list_element = list_element
 
-                            if column_data_types[check_column] in { 'integer', 'bigint' }:
+                            if column_data_types[column] in { 'integer', 'bigint' }:
                                 
                                 # CDA has no float values. Cast all numeric data to integers.
 
                                 processed_list_element = round( processed_list_element )
 
-                            elif column_data_types[check_column] not in { 'text', 'boolean' }:
+                            elif column_data_types[column] not in { 'text', 'boolean' }:
                                 
                                 # This isn't anticipated. Yell if we get something unexpected.
-                                log.critical( f"Unexpected data type `{column_data_types[check_column]}` received; aborting. Please report this event to the CDA development team." )
+                                log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
                                 return
 
                             processed_cell_value.append( processed_list_element )
