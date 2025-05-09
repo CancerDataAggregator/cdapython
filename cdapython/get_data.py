@@ -1282,6 +1282,10 @@ def get_data(
                 #   - a list of unique observed values, or
                 #   - the string '<NA>'
 
+                # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
+                if column == 'data_source_id_value':
+                    column = 'upstream_id'
+
                 # Handle missing values atom-wise, building a new column as we go, then swap the result into `result_dataframe`.
 
                 processed_column_data = list()
