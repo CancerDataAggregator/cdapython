@@ -998,7 +998,7 @@ def get_data(
     for column in result_dataframe:
         
         if column == 'data_source_id_value':
-            sys.exit("WHAT!")
+            raise RuntimeError("WHAT!")
 
         elif column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
             
