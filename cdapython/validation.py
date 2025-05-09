@@ -265,6 +265,10 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
             filter_value = 'null'
 
+        # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
+        if filter_column_name == 'upstream_id':
+            filter_column_name = 'data_source_id_value'
+
         normalized_filter_expression = filter_column_name + ' ' + filter_operator + ' ' + filter_value
 
         normalized_match_statement_list.append( normalized_filter_expression )
