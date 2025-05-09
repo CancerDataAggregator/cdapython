@@ -1026,7 +1026,6 @@ def get_data(
                                 upstream_data_source = ''
 
                                 if foreign_table_name == 'subject':
-                                    
                                     # subject records can have multiple upstream data sources.
                                     upstream_data_source = set()
 
@@ -1067,6 +1066,9 @@ def get_data(
                                         else:
                                             
                                             foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+
+                                if foreign_table_name == 'subject':
+                                    upstream_data_source = sorted( upstream_data_source )
 
                                 foreign_table_data_by_column['data_source'].append( upstream_data_source )
 
