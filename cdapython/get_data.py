@@ -900,8 +900,7 @@ def get_data(
 
     # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
     if 'data_source_id_value' in result_dataframe:
-        print("WHAAAAAAT!")
-        result_dataframe = result_dataframe.rename( { 'data_source_id_value': 'upstream_id' } )
+        result_dataframe = result_dataframe.rename( columns={ 'data_source_id_value': 'upstream_id' } )
 
 
 
