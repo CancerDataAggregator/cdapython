@@ -674,11 +674,12 @@ def get_data(
 
         if column_to_exclude.lower() == 'upstream_id':
             suppress_upstream_id_results = True
+            columns_to_exclude.append( 'data_source_id_value' )
 
         # Ignore requests to exclude columns that are already excluded. Let the API sort out
         # what to do if a user requests to both add and exclude a column.
 
-        if column_to_exclude not in columns_to_exclude:
+        if column_to_exclude not in columns_to_exclude and column_to_exclude.lower() not in { 'upstream_id' }:
             columns_to_exclude.append( column_to_exclude )
 
     # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
