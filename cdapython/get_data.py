@@ -1025,6 +1025,11 @@ def get_data(
                                 
                                 upstream_data_source = ''
 
+                                if foreign_table_name == 'subject':
+                                    
+                                    # subject records can have multiple upstream data sources.
+                                    upstream_data_source = set()
+
                                 for foreign_table_column in foreign_table_record:
                                     
                                     match_result = re.search( r'^' + re.escape( foreign_table_name ) + r'_data_at_(.+)$', foreign_table_column )
@@ -1033,13 +1038,16 @@ def get_data(
                                         
                                         if foreign_table_record[foreign_table_column] == True:
                                             
-                                            # There should only ever be one of these.
                                             detected_data_source = match_result.group(1).upper()
 
-                                            if upstream_data_source == '':
+                                            if foreign_table_name == 'subject':
+                                                upstream_data_source.add( detected_data_source )
+
+                                            elif upstream_data_source == '':
                                                 upstream_data_source = detected_data_source
 
                                             elif upstream_data_source != detected_data_source:
+                                                # There should only ever be one of these for non-subject records.
                                                 log.error( f"Upstream data source clash: {detected_data_source} != {upstream_data_source}; {foreign_table_name} (partial) record: \"{foreign_table_record}\"; please notify the CDA devs of this event." )
                                                 return
 
