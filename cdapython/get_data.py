@@ -1025,8 +1025,8 @@ def get_data(
                                 
                                 upstream_data_source = ''
 
-                                if foreign_table_name == 'subject':
-                                    # subject records can have multiple upstream data sources.
+                                if foreign_table_name in [ 'project', 'subject' ]:
+                                    # project and subject records can have multiple upstream data sources.
                                     upstream_data_source = set()
 
                                 for foreign_table_column in foreign_table_record:
@@ -1039,7 +1039,7 @@ def get_data(
                                             
                                             detected_data_source = match_result.group(1).upper()
 
-                                            if foreign_table_name == 'subject':
+                                            if foreign_table_name in [ 'project', 'subject' ]:
                                                 upstream_data_source.add( detected_data_source )
 
                                             elif upstream_data_source == '':
@@ -1067,7 +1067,7 @@ def get_data(
                                             
                                             foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
 
-                                if foreign_table_name == 'subject':
+                                if foreign_table_name in ['project', 'subject' ]:
                                     upstream_data_source = sorted( upstream_data_source )
 
                                 foreign_table_data_by_column['data_source'].append( upstream_data_source )
