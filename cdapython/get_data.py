@@ -902,11 +902,6 @@ def get_data(
     if 'data_source_id_value' in result_dataframe:
         result_dataframe = result_dataframe.rename( columns={ 'data_source_id_value': 'upstream_id' } )
 
-
-
-
-
-
     # Remove raw versions of virtual list data attached to the file table
     # and replace them with DataFrames or column-wise lists of unique values,
     # depending on whether or not `expand_results` is set to True.
@@ -997,10 +992,7 @@ def get_data(
 
     for column in result_dataframe:
         
-        if column == 'data_source_id_value':
-            raise RuntimeError("WHAT!")
-
-        elif column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
+        if column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
             
             if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or column == f"{table}_id_alias" or column == f"{table}_identifiers":
                 columns_to_suppress.append( column )
