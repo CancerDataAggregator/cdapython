@@ -659,6 +659,7 @@ def get_data(
     columns_to_exclude = list()
 
     suppress_data_source_results = False
+    suppress_upstream_id_results = False
 
     for column_to_exclude in exclude_columns:
         
@@ -668,11 +669,26 @@ def get_data(
         if column_to_exclude.lower() == 'data_source':
             suppress_data_source_results = True
 
+        # Handle 'upstream_id' explicitly; it's a user-facing summary column the API neither knows
+        # nor needs to care about.
+
+        if column_to_exclude.lower() == 'upstream_id':
+            suppress_upstream_id_results = True
+
         # Ignore requests to exclude columns that are already excluded. Let the API sort out
         # what to do if a user requests to both add and exclude a column.
 
         if column_to_exclude not in columns_to_exclude:
             columns_to_exclude.append( column_to_exclude )
+
+    # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
+    # If this is a subject query and the virtual 'upstream_id' column has not been explicitly excluded, fetch the appropriate ID data for the virtual column.
+
+    if table != 'subject':
+        suppress_upstream_id_results = True
+
+    if not suppress_upstream_id_results and 'data_source_id_value' not in columns_to_add:
+        columns_to_add.append( 'data_source_id_value' )
 
     #############################################################################################################################
     # Process the `provenance` flag: if True, ask the API to include data from the `upstream_identifiers` table.
@@ -756,6 +772,12 @@ def get_data(
     #             "subject_data_source_count": 3,
     #             "sex": [
     #                 "female"
+    #             ],
+    #             "upstream_identifiers_columns": [
+    #                 {
+    #                     "data_source_id_value": "C3L-00001",
+    #                     ...
+    #                 }
     #             ],
     #             "subject_identifiers": [
     #                 {
@@ -848,7 +870,7 @@ def get_data(
     log.debug( 'Organizing result data...' )
 
     # Collect data source information and populate our user-facing `data_source` result column summary,
-    # unless its been repressed via exclude_columns=['data_source'].
+    # unless it's been suppressed via exclude_columns=['data_source'].
 
     if not suppress_data_source_results:
         
@@ -860,7 +882,52 @@ def get_data(
                 if result_record[ f"{table}_data_at_{upstream_data_source.lower()}" ] == True:
                     result_dataframe['data_source'].iloc[row_index].append( upstream_data_source )
 
-    # Collate upstream provenance metadata, if requested.
+    # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
+    # For subject queries, collect upstream ID information and populate our user-facing `upstream_id` result column summary,
+    # unless it's been suppressed via exclude_columns=['upstream_id'].
+
+    if 'data_source_id_value' in result_dataframe:
+        
+        # expand_results == False (or this information would instead appear inside an 'upstream_identifiers_columns' list of dicts)
+
+        if not suppress_upstream_id_results:
+            
+            result_dataframe = result_dataframe.rename( columns={ 'data_source_id_value': 'upstream_id' } )
+
+            # What we get is a nonredundant list of values. Sort to be safe.
+
+            sorted_column_data = list()
+
+            for row_index, result_record in result_dataframe.iterrows():
+                sorted_column_data.append( sorted( result_record['upstream_id'] ) )
+
+            result_dataframe['upstream_id'] = sorted_column_data
+
+        else:
+            
+            result_dataframe = result_dataframe.drop( columns=['data_source_id_value'] )
+
+    elif 'upstream_identifiers_columns' in result_dataframe:
+        
+        # expand_results == True: collect and uniquify ID data.
+
+        if not suppress_upstream_id_results:
+            
+            sorted_column_data = list()
+
+            for row_index, result_record in result_dataframe.iterrows():
+                id_results = set()
+                for identifier_record in result_record['upstream_identifiers_columns']:
+                    id_results.add( identifier_record['data_source_id_value'] )
+                sorted_column_data.append( sorted( id_results ) )
+
+            result_dataframe['upstream_id'] = sorted_column_data
+
+        # Remove this column whether or not we built a processed version of it.
+
+        result_dataframe = result_dataframe.drop( columns=['upstream_identifiers_columns'] )
+
+    # Collate full upstream provenance metadata, if requested.
 
     if provenance == True:
         
@@ -897,10 +964,6 @@ def get_data(
 
     virtual_columns_to_add = dict()
     file_data_columns_to_add = dict()
-
-    # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
-    if 'data_source_id_value' in result_dataframe:
-        result_dataframe = result_dataframe.rename( columns={ 'data_source_id_value': 'upstream_id' } )
 
     # Remove raw versions of virtual list data attached to the file table
     # and replace them with DataFrames or column-wise lists of unique values,
