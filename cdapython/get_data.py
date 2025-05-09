@@ -847,10 +847,6 @@ def get_data(
 
     log.debug( 'Organizing result data...' )
 
-    # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
-    if 'data_source_id_value' in result_dataframe:
-        result_dataframe = result_dataframe.rename( { 'data_source_id_value': 'upstream_id' } )
-
     # Collect data source information and populate our user-facing `data_source` result column summary,
     # unless its been repressed via exclude_columns=['data_source'].
 
@@ -901,6 +897,15 @@ def get_data(
 
     virtual_columns_to_add = dict()
     file_data_columns_to_add = dict()
+
+    # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
+    if 'data_source_id_value' in result_dataframe:
+        result_dataframe = result_dataframe.rename( { 'data_source_id_value': 'upstream_id' } )
+
+
+
+
+
 
     # Remove raw versions of virtual list data attached to the file table
     # and replace them with DataFrames or column-wise lists of unique values,
@@ -992,7 +997,10 @@ def get_data(
 
     for column in result_dataframe:
         
-        if column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
+        if column == 'data_source_id_value':
+            sys.exit("WHAT!")
+
+        elif column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
             
             if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or column == f"{table}_id_alias" or column == f"{table}_identifiers":
                 columns_to_suppress.append( column )
