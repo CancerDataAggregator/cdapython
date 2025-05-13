@@ -8,7 +8,7 @@ import cda_client
 from cdapython.application_utilities import get_api_url
 from cdapython.discover import columns, release_metadata
 from cdapython.logging_wrappers import get_logger
-from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list, validate_parameter_values
+from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list, validate_and_transform_match_from_file_values, validate_parameter_values
 
 from cda_client.api.data import file_fetch_rows_endpoint_data_file_post as file_data_endpoint
 from cda_client.api.data import subject_fetch_rows_endpoint_data_subject_post as subject_data_endpoint
