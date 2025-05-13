@@ -6,7 +6,8 @@ from cdapython.discover import tables
 #
 # normalize_to_list( parameter_name, user_supplied_parameter_value, value_type ):
 # 
-# Covert single bare values to one-element lists to support strong downstream assumptions about parameter structures.
+# Covert single bare values to one-element lists, and convert all values to lowercase, to support
+# strong downstream assumptions about parameter structures.
 # 
 # Fail if:
 #
@@ -20,7 +21,8 @@ def normalize_to_list( parameter_name, user_supplied_parameter_value, value_type
     for a parameter that can in general take multiple concurrent values,
     convert that data into a one-element list, so we don't have to care
     downstream about whether the parameter value was receievd as a
-    single bare value or as a list of values.
+    single bare value or as a list of values. Also convert all values to
+    lowercase.
 
     Arguments:
         parameter_name ( string; required ):
@@ -45,9 +47,11 @@ def normalize_to_list( parameter_name, user_supplied_parameter_value, value_type
         list_to_return = []
 
     elif isinstance( user_supplied_parameter_value, value_type ):
-        
         # We have a single value of the correct type. Convert it into a one-element list to return.
-        list_to_return = [ user_supplied_parameter_value ]
+        if value_type == str:
+            list_to_return = [ user_supplied_parameter_value.lower() ]
+        else:
+            list_to_return = [ user_supplied_parameter_value ]
 
     elif not isinstance( user_supplied_parameter_value, list ):
         
@@ -59,7 +63,10 @@ def normalize_to_list( parameter_name, user_supplied_parameter_value, value_type
         # We have a list, but not all of its elements are of the expected type: can't continue.
         raise RuntimeError( f"User-supplied parameter '{parameter_name}' was assigned a list containing elements of unexpected type '{type(user_supplied_parameter_value)}'; elements should all be '{value_type}'. Please fix." )
 
-    return list_to_return
+    if value_type == str:
+        return [ element.lower() for element in list_to_return ]
+    else:
+        return list_to_return
 
 #############################################################################################################################
 #
@@ -276,8 +283,76 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
     return normalized_match_statement_list
 
 #############################################################################################################################
-#
+# 
 # END validate_and_transform_match_filter_list
+# 
+#############################################################################################################################
+
+#############################################################################################################################
+# 
+# validate_and_transform_match_from_file_values( target_data_type, input_values ):
+# 
+# Parse `match_from_file` filter values: complain if
+#
+#     * filter values don't match the data types of the columns they're paired with
+#     * wildcards appear anywhere (they're not compatible with the IN keyword, and we don't currently support the construction of per-value LIKE filters)
+#
+# ...strip apostrophes, and save parse results as a processed set of valid values.
+# 
+#############################################################################################################################
+
+def validate_and_transform_match_from_file_values( cda_column_to_match, target_data_type, input_values ):
+    
+    processed_values = set()
+
+    boolean_alias = {
+        'true': 'true',
+        't': 'true',
+        'false': 'false',
+        'f': 'false'
+    }
+
+    for target_value in input_values:
+            
+        # Validate value types and test for wildcards.
+
+        if target_data_type == 'boolean':
+            
+            # If we're supposed to be in a boolean column, make sure we've got a true/false value.
+            if target_value.lower() not in boolean_alias:
+                log.error( f"match_from_file: requested column {cda_column_to_match} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither." )
+                return
+
+            else:
+                target_value = boolean_alias[target_value]
+
+        elif target_data_type in ['bigint', 'integer', 'numeric']:
+            
+            # If we're supposed to be in a numeric column, make sure we've got a number.
+            if re.search( r'^[-+]?\d+(\.\d+)?$', target_value ) is None:
+                log.error( f"match_from_file: requested column {cda_column_to_match} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not." )
+                return
+
+        elif target_data_type == 'text':
+            
+            # Check for wildcards: if found, vomit.
+            if re.search(r'\*', target_value) is not None:
+                log.error( f"match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); value '{target_value}' is noncompliant. Please fix." )
+                return
+
+        else:
+            
+            # Just to be safe. Types change.
+            log.critical( f"match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
+            return
+
+        processed_values.add( re.sub( r"'", r'', target_value ) )
+
+    return processed_values
+
+#############################################################################################################################
+#
+# END validate_and_transform_match_from_file_values
 # 
 #############################################################################################################################
 

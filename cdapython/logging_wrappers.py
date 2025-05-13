@@ -164,10 +164,12 @@ def set_log_level( level=None ):
 #
 #############################################################################################################################
 
-def get_log_level( level=None ):
+def get_log_level():
     """
     Returns the current user-specified log level, if set, or the default log level, if not.
     """
+
+    level = None
 
     if '__CDA_LOG_LEVEL' in os.environ:
         
