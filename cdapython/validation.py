@@ -320,8 +320,7 @@ def validate_and_transform_match_from_file_values( cda_column_to_match, target_d
             
             # If we're supposed to be in a boolean column, make sure we've got a true/false value.
             if target_value.lower() not in boolean_alias:
-                log.error( f"match_from_file: requested column {cda_column_to_match} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither." )
-                return
+                raise RuntimeError( f"match_from_file: requested column {cda_column_to_match} has data type 'boolean', requiring a true/false value; you specified '{target_value}', which is neither." )
 
             else:
                 target_value = boolean_alias[target_value]
@@ -330,21 +329,18 @@ def validate_and_transform_match_from_file_values( cda_column_to_match, target_d
             
             # If we're supposed to be in a numeric column, make sure we've got a number.
             if re.search( r'^[-+]?\d+(\.\d+)?$', target_value ) is None:
-                log.error( f"match_from_file: requested column {cda_column_to_match} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not." )
-                return
+                raise RuntimeError( f"match_from_file: requested column {cda_column_to_match} has data type '{target_data_type}', requiring a number value; you specified '{target_value}', which is not." )
 
         elif target_data_type == 'text':
             
             # Check for wildcards: if found, vomit.
             if re.search(r'\*', target_value) is not None:
-                log.error( f"match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); value '{target_value}' is noncompliant. Please fix." )
-                return
+                raise RuntimeError( f"match_from_file: wildcards (*) are disallowed here (only exact matches are supported for this option); value '{target_value}' is noncompliant. Please fix." )
 
         else:
             
             # Just to be safe. Types change.
-            log.critical( f"match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
-            return
+            raise RuntimeError( f"match_from_file: unanticipated `target_data_type` '{target_data_type}', cannot continue. Please report this event to CDA developers." )
 
         processed_values.add( re.sub( r"'", r'', target_value ) )
 

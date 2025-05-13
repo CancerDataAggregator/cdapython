@@ -548,7 +548,6 @@ def get_data(
         match_from_file_nulls_allowed = False
 
         try:
-            
             with open( match_from_file['input_file'] ) as IN:
                 
                 column_names = next( IN ).rstrip( '\n' ).split( '\t' )
@@ -556,19 +555,14 @@ def get_data(
                 for next_line in IN:
                     
                     record = dict( zip( column_names, next_line.rstrip( '\n' ).split( '\t' ) ) )
-
                     target_value = record[match_from_file['input_column']]
 
                     if target_value is None or target_value == '' or target_value == '<NA>':
-                        
                         match_from_file_nulls_allowed = True
-
                     else:
-                        
                         match_from_file_target_values.add( target_value )
 
         except Exception as error:
-            
             log.error( f"Couldn't load data from requested column '{match_from_file['input_column']}' from requested TSV file '{match_from_file['input_file']}': got error of type '{type( error )}', with error message '{error}'.")
             return
 
@@ -579,18 +573,20 @@ def get_data(
         #
         # ...strip apostrophes, and save parse results as a processed set of valid values.
 
-        processed_target_values = validate_and_transform_match_from_file_values( match_from_file_target_column, match_from_file_target_data_type, match_from_file_target_values )
+        try:
+            processed_target_values = validate_and_transform_match_from_file_values( match_from_file_target_column, match_from_file_target_data_type, match_from_file_target_values )
+        except Exception as e:
+            log.error( e )
+            return
 
-        # Parse and normalize `match_from_file` filter data.
+        # Create API filter strings from processed `match_from_file` input data.
 
         match_from_file_filter_strings = set()
 
         if match_from_file_nulls_allowed:
-            
             match_from_file_filter_strings.add( f"{match_from_file_target_column} is null" )
 
         if match_from_file_target_data_type == 'text' and len( processed_target_values ) > 0:
-            
             match_from_file_filter_strings.add( f"{match_from_file_target_column} in [ '" + "', '".join( processed_target_values ) + "' ]" )
 
         # Add results to the queries_for_match_any list.
