@@ -262,11 +262,10 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
         else:
             
-            # API expects these operators with opaquely specific case.
             if filter_operator == '=':
-                filter_operator = 'IS'
+                filter_operator = 'is'
             elif filter_operator == '!=':
-                filter_operator = 'IS not'
+                filter_operator = 'is not'
             else:
                 raise RuntimeError( f"Unexpected operator encountered for NULL: '{filter_operator}' (from '{filter_expression}') -- please use = or != instead." )
 
