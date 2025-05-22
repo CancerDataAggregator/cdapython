@@ -1008,7 +1008,7 @@ def get_data(
         
         if column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
             
-            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or column == f"{table}_id_alias" or column == f"{table}_identifiers":
+            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or re.search( r'_id_alias$', column ) is not None or column == f"{table}_identifiers":
                 columns_to_suppress.append( column )
 
             # Remove raw versions of aggregated result sets from foreign tables
