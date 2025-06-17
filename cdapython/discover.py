@@ -462,8 +462,11 @@ def columns(
     result_dataframe = pd.DataFrame.from_records( columns_response_data_object.to_dict()['result'], columns=[ 'table', 'column', 'data_type', 'nullable', 'description' ] )
 
     # Remove `table`_data_source_count and *_alias columns from output.
+    # 
+    # TO DO: Maybe put this list somewhere easier to find.
 
     banned_column_name_patterns = {
+        r'_crdc_id$',
         r'^[^_]+_data_source_count$',
         r'^[^_]+_data_at_[^_]+$',
         r'_alias$'
