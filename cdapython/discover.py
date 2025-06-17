@@ -519,7 +519,7 @@ def columns(
         # Remove the 'zzz' characters we temporarily prepended to 'upstream_id'
         # to force the sorting algorithm to place it last among the `subject` columns.
 
-        result_dataframe = result_dataframe.replace( to_replace=r'^zzzupstream_id$', r'upstream_id', regex=True )
+        result_dataframe = result_dataframe.replace( to_replace=r'^zzzupstream_id$', value=r'upstream_id', regex=True )
 
     else:
         
