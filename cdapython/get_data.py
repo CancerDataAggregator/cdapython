@@ -1008,7 +1008,9 @@ def get_data(
         
         if column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
             
-            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or re.search( r'_id_alias$', column ) is not None or column == f"{table}_identifiers":
+            # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see below in this block for more explicit filters.
+
+            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or re.search( r'_id_alias$', column ) is not None or column == f"{table}_identifiers" or re.search( r'crdc_id$', column ) is not None:
                 columns_to_suppress.append( column )
 
             # Remove raw versions of aggregated result sets from foreign tables
@@ -1068,7 +1070,11 @@ def get_data(
                                                 log.error( f"Upstream data source clash: {detected_data_source} != {upstream_data_source}; {foreign_table_name} (partial) record: \"{foreign_table_record}\"; please notify the CDA devs of this event." )
                                                 return
 
-                                    elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None and re.search( r'^' + re.escape( foreign_table_name ) + r'_id_alias$', foreign_table_column ) is None:
+                                    # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see above and below in this general block for more explicit filters.
+
+                                    elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None \
+                                        and re.search( r'^' + re.escape( foreign_table_name ) + r'_id_alias$', foreign_table_column ) is None \
+                                        and re.search( r'crdc_id$', foreign_table_column ) is None:
                                         
                                         if foreign_table_column not in foreign_table_data_by_column:
                                             foreign_table_data_by_column[foreign_table_column] = list()
@@ -1136,9 +1142,12 @@ def get_data(
                                 
                                 for foreign_table_column in foreign_table_record:
                                     
-                                    match_result = re.search( r'^' + re.escape( foreign_table_name ) + r'_data_at_(.+)$', foreign_table_column )
+                                    # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see above in this general block for more explicit filters.
 
-                                    if match_result is None and re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None:
+                                    if re.search( r'^' + re.escape( foreign_table_name ) + r'_data_at_(.+)$', foreign_table_column ) is None \
+                                        and re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None \
+                                        and re.search( r'_id_alias$', foreign_table_column ) is None \
+                                        and re.search( r'crdc_id$', foreign_table_column ) is None:
                                         
                                         if foreign_table_column not in observed_value_sets:
                                             observed_value_sets[foreign_table_column] = set()
