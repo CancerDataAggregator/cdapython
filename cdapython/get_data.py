@@ -1312,7 +1312,6 @@ def get_data(
                 # Handle missing values atom-wise, building a new column as we go, then swap the result into `result_dataframe`.
 
                 processed_column_data = list()
-                print(f"{column}")
 
                 for row_index, result_record in result_dataframe.iterrows():
                     
