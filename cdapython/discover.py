@@ -848,10 +848,8 @@ def column_values(
 
     expensive_columns = {
         'file_id',
-        'file_crdc_id',
         'description',
         'drs_uri',
-        'file_crdc_id',
         'file_name',
         'size',
         'case_id',
@@ -873,8 +871,7 @@ def column_values(
         'tumor_seq_allele1',
         'tumor_seq_allele2',
         'tumor_submitter_uuid',
-        'subject_id',
-        'subject_crdc_id'
+        'subject_id'
     }
 
     # Warn the user if an override hasn't been requested.
