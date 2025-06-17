@@ -502,6 +502,10 @@ def columns(
 
         result_dataframe = result_dataframe.replace( to_replace=r'^([^_]+_id)$', value=r'.\1', regex=True )
 
+        # Temporarily prepend a 'zzz' to 'upstream_id', as we have been asked to move it to the end.
+
+        result_dataframe = result_dataframe.replace( to_replace=r'^\.(upstream_id)$', value=r'zzz\1', regex=True )
+
         # Sort all column records, first on table and then on column name.
 
         result_dataframe = result_dataframe.sort_values( by=['table', 'column'], ascending=[True, True] )
@@ -510,7 +514,12 @@ def columns(
         # to force the sorting algorithm to place all such columns first within each
         # table's group of column records.
 
-        result_dataframe = result_dataframe.replace( to_replace=r'^\.(.*)$', value=r'\1', regex=True)
+        result_dataframe = result_dataframe.replace( to_replace=r'^\.(.*)$', value=r'\1', regex=True )
+
+        # Remove the 'zzz' characters we temporarily prepended to 'upstream_id'
+        # to force the sorting algorithm to place it last among the `subject` columns.
+
+        result_dataframe = result_dataframe.replace( to_replace=r'^zzzupstream_id$', r'upstream_id', regex=True )
 
     else:
         
