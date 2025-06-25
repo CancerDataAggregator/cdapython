@@ -689,7 +689,7 @@ def get_data(
             offset=starting_offset
         )
     except UnexpectedStatus as error:
-        log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {error.content}" )
+        log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {json.loads( error.content )['message']}" )
         return
     except Exception as error:
         log.error( f"{type(error)}: {error}" )
@@ -800,8 +800,11 @@ def get_data(
                 offset=incremented_offset,
                 limit=rows_per_page
             )
+        except UnexpectedStatus as error:
+            log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {json.loads( error.content )['message']}" )
+            return
         except Exception as error:
-            log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+            log.error( f"{type(error)}: {error}" )
             return
 
         # Forward error types known to be returned by the API.

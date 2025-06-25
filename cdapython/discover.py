@@ -437,8 +437,11 @@ def columns(
 
     try:
         columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync( client=query_api_instance )
+    except UnexpectedStatus as error:
+        log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {json.loads( error.content )['message']}" )
+        return
     except Exception as error:
-        log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+        log.error( f"{type(error)}: {error}" )
         return
 
     #############################################################################################################################
@@ -1032,8 +1035,11 @@ def column_values(
                 offset=starting_offset
             )
         )
+    except UnexpectedStatus as error:
+        log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {json.loads( error.content )['message']}" )
+        return
     except Exception as error:
-        log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+        log.error( f"{type(error)}: {error}" )
         return
 
     log.debug( f"Sending query to API:\n{json.dumps( { 'columnname': column, 'system': data_source, 'count': True, 'total_count': True, 'limit': records_per_page, 'offset': starting_offset }, indent=4 )}\n" )
@@ -1101,8 +1107,11 @@ def column_values(
                     offset=incremented_offset
                 )
             )
+        except UnexpectedStatus as error:
+            log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {json.loads( error.content )['message']}" )
+            return
         except Exception as error:
-            log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+            log.error( f"{type(error)}: {error}" )
             return
 
         next_result_batch = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
@@ -1396,8 +1405,10 @@ def release_metadata():
 
     try:
         release_metadata_response_data_object = cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get.sync( client=query_api_instance )
+    except UnexpectedStatus as error:
+        raise RuntimeError( f"UnexpectedStatus error from API, status code {error.status_code}: {json.loads( error.content )['message']}" )
     except Exception as error:
-        raise RuntimeError( f"Something went wrong trying to fetch data from the /release_metadata API endpoint: got error of type '{type(error)}', with error message '{error}'." )
+        raise RuntimeError( f"{type(error)}: {error}" )
 
     return release_metadata_response_data_object.to_dict()['result']
 
