@@ -736,7 +736,7 @@ def summarize(
 
     log.debug( f"Sending query to API '/summary/{table}' endpoint:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
     
-    query_api_instance = cda_client.Client( base_url=get_api_url() )
+    query_api_instance = cda_client.Client( base_url=get_api_url(), raise_on_unexpected_status=True )
 
     try:
         api_response_object = query_selector[table].sync(
