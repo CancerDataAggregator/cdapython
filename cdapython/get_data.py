@@ -681,12 +681,16 @@ def get_data(
     
     query_api_instance = cda_client.Client( base_url=get_api_url(), raise_on_unexpected_status=True )
 
-    api_response_object = query_selector[table].sync(
-        client=query_api_instance,
-        body=query_object,
-        limit=rows_per_page,
-        offset=starting_offset
-    )
+    try:
+        api_response_object = query_selector[table].sync(
+            client=query_api_instance,
+            body=query_object,
+            limit=rows_per_page,
+            offset=starting_offset
+        )
+    except Exception as error:
+        log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+        return
 
     # Forward error types known to be returned by the API.
     if isinstance( api_response_object, ClientError ) or isinstance( api_response_object, InternalError ):
@@ -786,12 +790,16 @@ def get_data(
         
         log.debug( f"Pulling next paged result from API with an offset of {incremented_offset} and a max page size of {rows_per_page}")
 
-        api_response_object = query_selector[table].sync(
-            client=query_api_instance,
-            body=query_object,
-            offset=incremented_offset,
-            limit=rows_per_page
-        )
+        try:
+            api_response_object = query_selector[table].sync(
+                client=query_api_instance,
+                body=query_object,
+                offset=incremented_offset,
+                limit=rows_per_page
+            )
+        except Exception as error:
+            log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+            return
 
         # Forward error types known to be returned by the API.
         if isinstance( api_response_object, ClientError ) or isinstance( api_response_object, InternalError ):

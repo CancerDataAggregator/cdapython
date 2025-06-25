@@ -435,7 +435,11 @@ def columns(
 
     # Ask the columns endpoint for information. (It has no parameters.)
 
-    columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync( client=query_api_instance )
+    try:
+        columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync( client=query_api_instance )
+    except Exception as error:
+        log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+        return
 
     #############################################################################################################################
     # Postprocess API result data.
@@ -1018,17 +1022,19 @@ def column_values(
     starting_offset = 0
     records_per_page = 500000
 
-    paged_response_data_object = (
-        
-        cda_client.api.column_values.column_values_endpoint_column_values_column_post.sync(
-            
-            client=query_api_instance,
-            column=column,
-            data_source=data_source,
-            limit=records_per_page,
-            offset=starting_offset
+    try:
+        paged_response_data_object = (
+            cda_client.api.column_values.column_values_endpoint_column_values_column_post.sync(
+                client=query_api_instance,
+                column=column,
+                data_source=data_source,
+                limit=records_per_page,
+                offset=starting_offset
+            )
         )
-    )
+    except Exception as error:
+        log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+        return
 
     log.debug( f"Sending query to API:\n{json.dumps( { 'columnname': column, 'system': data_source, 'count': True, 'total_count': True, 'limit': records_per_page, 'offset': starting_offset }, indent=4 )}\n" )
 
@@ -1085,17 +1091,19 @@ def column_values(
         
         log.debug( f"   ...fetching {paged_response_data_object.next_url}..." )
 
-        paged_response_data_object = (
-            
-            cda_client.api.column_values.column_values_endpoint_column_values_column_post.sync(
-                
-                client=query_api_instance,
-                column=column,
-                data_source=data_source,
-                limit=records_per_page,
-                offset=incremented_offset
+        try:
+            paged_response_data_object = (
+                cda_client.api.column_values.column_values_endpoint_column_values_column_post.sync(
+                    client=query_api_instance,
+                    column=column,
+                    data_source=data_source,
+                    limit=records_per_page,
+                    offset=incremented_offset
+                )
             )
-        )
+        except Exception as error:
+            log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+            return
 
         next_result_batch = pd.json_normalize( paged_response_data_object.to_dict()['result'] )
 
