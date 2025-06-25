@@ -13,13 +13,12 @@ from cdapython.discover import columns, release_metadata, tables
 from cdapython.logging_wrappers import get_logger
 from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list, validate_and_transform_match_from_file_values, validate_parameter_values
 
+from cda_client.api.summary import file_summary_endpoint_summary_file_post as summary_file_endpoint
+from cda_client.api.summary import subject_summary_endpoint_summary_subject_post as summary_subject_endpoint
 from cda_client.errors import UnexpectedStatus
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
 from cda_client.models.summary_request_body import SummaryRequestBody
-from cda_client.api.summary import file_summary_endpoint_summary_file_post as summary_file_endpoint
-from cda_client.api.summary import subject_summary_endpoint_summary_subject_post as summary_subject_endpoint
-
 
 #############################################################################################################################
 #############################################################################################################################

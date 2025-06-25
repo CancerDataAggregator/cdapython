@@ -8,9 +8,9 @@ import cda_client.api.columns.columns_endpoint_columns_get
 import cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get
 import cda_client.api.column_values.column_values_endpoint_column_values_column_post
 
-from cdapython.logging_wrappers import get_logger
 from cdapython.application_utilities import get_api_url
-
+from cda_client.errors import UnexpectedStatus
+from cdapython.logging_wrappers import get_logger
 
 #############################################################################################################################
 #############################################################################################################################
