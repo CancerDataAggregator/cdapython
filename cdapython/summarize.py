@@ -744,7 +744,7 @@ def summarize(
             body=query_object
         )
     except UnexpectedStatus as error:
-        log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {error.content}" )
+        log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {error.messsage}" )
         return
     except Exception as error:
         log.error( f"{type(error)}: {error}" )
