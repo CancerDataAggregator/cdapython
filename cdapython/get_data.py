@@ -12,10 +12,10 @@ from cdapython.validation import normalize_to_list, validate_and_transform_match
 
 from cda_client.api.data import file_fetch_rows_endpoint_data_file_post as file_data_endpoint
 from cda_client.api.data import subject_fetch_rows_endpoint_data_subject_post as subject_data_endpoint
+from cda_client.errors import UnexpectedStatus
 from cda_client.models.client_error import ClientError
 from cda_client.models.internal_error import InternalError
 from cda_client.models.data_request_body import DataRequestBody
-
 
 #############################################################################################################################
 #############################################################################################################################
@@ -688,8 +688,11 @@ def get_data(
             limit=rows_per_page,
             offset=starting_offset
         )
+    except UnexpectedStatus as error:
+        log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {error.content}" )
+        return
     except Exception as error:
-        log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+        log.error( f"{type(error)}: {error}" )
         return
 
     # Forward error types known to be returned by the API.
