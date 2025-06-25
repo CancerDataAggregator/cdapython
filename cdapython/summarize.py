@@ -736,8 +736,7 @@ def summarize(
 
     log.debug( f"Sending query to API '/summary/{table}' endpoint:\n{json.dumps( query_object.to_dict(), indent=4 )}\n" )
     
-    #query_api_instance = cda_client.Client( base_url=get_api_url(), raise_on_unexpected_status=True )
-    query_api_instance = cda_client.Client( base_url=get_api_url() )
+    query_api_instance = cda_client.Client( base_url=get_api_url(), raise_on_unexpected_status=True )
 
     try:
         api_response_object = query_selector[table].sync(
@@ -747,8 +746,6 @@ def summarize(
     except Exception as error:
         log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
         return
-
-    print( type( api_response_object ) )
 
     # Forward error types known to be returned by the API.
     if isinstance( api_response_object, ClientError ) or isinstance( api_response_object, InternalError ):
