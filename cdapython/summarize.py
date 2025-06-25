@@ -747,6 +747,8 @@ def summarize(
         log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
         return
 
+    print( type( api_response_object ) )
+
     # Forward error types known to be returned by the API.
     if isinstance( api_response_object, ClientError ) or isinstance( api_response_object, InternalError ):
         log.error( f"{api_response_object.error_type}: {api_response_object.message}" )
