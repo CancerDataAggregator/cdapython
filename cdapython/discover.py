@@ -722,7 +722,7 @@ def columns(
             return
 
         except Exception as error:
-            raise RuntimeException( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
+            raise RuntimeError( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
 
 #############################################################################################################################
 #
@@ -1369,7 +1369,7 @@ def column_values(
             return
 
         except Exception as error:
-            raise RuntimeException( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
+            raise RuntimeError( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
 
 #############################################################################################################################
 #
@@ -1397,7 +1397,7 @@ def release_metadata():
     try:
         release_metadata_response_data_object = cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get.sync( client=query_api_instance )
     except Exception as error:
-        raise RuntimeException( f"Something went wrong trying to fetch data from the /release_metadata API endpoint: got error of type '{type(error)}', with error message '{error}'." )
+        raise RuntimeError( f"Something went wrong trying to fetch data from the /release_metadata API endpoint: got error of type '{type(error)}', with error message '{error}'." )
 
     return release_metadata_response_data_object.to_dict()['result']
 
