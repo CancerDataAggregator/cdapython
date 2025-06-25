@@ -743,8 +743,11 @@ def summarize(
             client=query_api_instance,
             body=query_object
         )
+    except UnexpectedStatus as error:
+        log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {error.content}" )
+        return
     except Exception as error:
-        log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+        log.error( f"{type(error)}: {error}" )
         return
 
     # Forward error types known to be returned by the API.
