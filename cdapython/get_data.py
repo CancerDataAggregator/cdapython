@@ -434,7 +434,11 @@ def get_data(
     #     'data_source_null_count': 407714
     # }
 
-    cached_release_metadata = release_metadata()
+    try:
+        cached_release_metadata = release_metadata()
+    except Exception as e:
+        log.critical( e )
+        return
 
     valid_data_sources = set()
 
