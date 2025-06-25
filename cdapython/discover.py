@@ -431,7 +431,7 @@ def columns(
     #############################################################################################################################
     # Fetch data from the API.
 
-    query_api_instance = cda_client.Client( base_url=get_api_url() )
+    query_api_instance = cda_client.Client( base_url=get_api_url(), raise_on_unexpected_status=True )
 
     # Ask the columns endpoint for information. (It has no parameters.)
 
@@ -1013,7 +1013,7 @@ def column_values(
     #############################################################################################################################
     # Fetch data from the API.
 
-    query_api_instance = cda_client.Client( base_url=get_api_url() )
+    query_api_instance = cda_client.Client( base_url=get_api_url(), raise_on_unexpected_status=True )
     
     starting_offset = 0
     records_per_page = 500000
@@ -1384,7 +1384,7 @@ def release_metadata():
 
     log.debug( 'Querying /release_metadata endpoint' )
 
-    query_api_instance = cda_client.Client( base_url=get_api_url() )
+    query_api_instance = cda_client.Client( base_url=get_api_url(), raise_on_unexpected_status=True )
 
     try:
         release_metadata_response_data_object = cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get.sync( client=query_api_instance )
