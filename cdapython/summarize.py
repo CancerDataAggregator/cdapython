@@ -738,10 +738,14 @@ def summarize(
     
     query_api_instance = cda_client.Client( base_url=get_api_url() )
 
-    api_response_object = query_selector[table].sync(
-        client=query_api_instance,
-        body=query_object
-    )
+    try:
+        api_response_object = query_selector[table].sync(
+            client=query_api_instance,
+            body=query_object
+        )
+    except Exception as error:
+        log.error( f"Got error of type '{type(error)}', with error message '{error}'." )
+        return
 
     # Forward error types known to be returned by the API.
     if isinstance( api_response_object, ClientError ) or isinstance( api_response_object, InternalError ):
