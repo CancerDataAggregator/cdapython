@@ -187,6 +187,10 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         # Identify the data type in the column being filtered.
         target_data_type = filter_column_metadata['data_type'].iloc[0]
 
+        # Ensure that we recognize this data type.
+        if target_data_type not in operators_by_data_type:
+            raise RuntimeError( f"Requested column '{filter_column_name}' is of unknown data_type '{target_data_type}': cannot continue, please contact the CDA devs with a description of this event." )
+
         # See what the operator is.
         filter_operator = re.sub( r'^\S+\s+(\S+)\s.*', r'\1', filter_expression )
 
@@ -194,11 +198,9 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         if filter_operator == '==':
             filter_operator = '='
 
-        print( f'ding: {filter_expression} ({filter_operator})', file=sys.stderr )
         # Make sure the operator specified is allowed for the data type of the column being filtered.
         if filter_operator not in operators_by_data_type[target_data_type]:
-            #raise RuntimeError( f"Operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
-            raise RuntimeError( 'dingus' ) #f"Operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
+            raise RuntimeError( f"Operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
 
         # Extract the filter value/pattern.
         filter_value = re.sub( r'^\S+\s+\S+\s+(\S.*)$', r'\1', filter_expression )
