@@ -194,11 +194,12 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         if filter_operator == '==':
             filter_operator = '='
 
+        print( f'ding: {filter_expression} ({filter_operator})', file=sys.stderr )
         # Make sure the operator specified is allowed for the data type of the column being filtered.
         if filter_operator not in operators_by_data_type[target_data_type]:
-            raise RuntimeError( f"Operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
+            #raise RuntimeError( f"Operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
+            raise RuntimeError( 'dingus' ) #f"Operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
 
-        print( f'ding: {filter_expression}', file=sys.stderr )
         # Extract the filter value/pattern.
         filter_value = re.sub( r'^\S+\s+\S+\s+(\S.*)$', r'\1', filter_expression )
 
