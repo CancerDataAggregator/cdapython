@@ -99,6 +99,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         List of transformed and cleaned up match statements, or an empty list if no inputs were given
 
     """
+    print( 'ding', file=sys.stderr )
     normalized_match_statement_list = []
 
     if len( match_statement_list ) == 0:
