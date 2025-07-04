@@ -140,7 +140,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
     for filter_expression in match_statement_list:
         
-        print( 'ding', file=sys.stderr )
+        print( f'ding: {filter_expression}', file=sys.stderr )
         #############################################################################################################################
         # Enforce the simplified cdapython query syntax as described in the docs, but quietly allow synonyms if received. Map them
         # first back to the canonical operator in the simplified query syntax, then validate, then normalize for API request syntax
