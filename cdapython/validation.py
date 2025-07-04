@@ -187,7 +187,6 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         # Identify the data type in the column being filtered.
         target_data_type = filter_column_metadata['data_type'].iloc[0]
 
-        print( f'ding: {filter_expression}', file=sys.stderr )
         # See what the operator is.
         filter_operator = re.sub( r'^\S+\s+(\S+)\s.*', r'\1', filter_expression )
 
@@ -199,6 +198,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         if filter_operator not in operators_by_data_type[target_data_type]:
             raise RuntimeError( f"Operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
 
+        print( f'ding: {filter_expression}', file=sys.stderr )
         # Extract the filter value/pattern.
         filter_value = re.sub( r'^\S+\s+\S+\s+(\S.*)$', r'\1', filter_expression )
 
