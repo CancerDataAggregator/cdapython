@@ -489,10 +489,6 @@ def columns(
     for banned_column in banned_columns:
         result_dataframe = result_dataframe.loc[ result_dataframe['column'] != banned_column ]
 
-    # Add a virtual 'upstream_id' column to the subject table to support search and simplify data access.
-    subject_upstream_id_row = pd.DataFrame( { 'table': [ 'subject' ], 'column': [ 'upstream_id' ], 'data_type': [ 'text' ],  'nullable': [ False ], 'description': [ 'One or more IDs for this subject as published by CDA\'s upstream data sources.' ] } )
-    result_dataframe = pd.concat( [ result_dataframe, subject_upstream_id_row ], ignore_index = True )
-
     log.debug( 'Created result DataFrame' )
 
     #############################################################################################################################
@@ -509,10 +505,6 @@ def columns(
 
         result_dataframe = result_dataframe.replace( to_replace=r'^([^_]+_id)$', value=r'.\1', regex=True )
 
-        # Temporarily prepend a 'zzz' to 'upstream_id', as we have been asked to move it to the end.
-
-        result_dataframe = result_dataframe.replace( to_replace=r'^\.(upstream_id)$', value=r'zzz\1', regex=True )
-
         # Sort all column records, first on table and then on column name.
 
         result_dataframe = result_dataframe.sort_values( by=['table', 'column'], ascending=[True, True] )
@@ -522,11 +514,6 @@ def columns(
         # table's group of column records.
 
         result_dataframe = result_dataframe.replace( to_replace=r'^\.(.*)$', value=r'\1', regex=True )
-
-        # Remove the 'zzz' characters we temporarily prepended to 'upstream_id'
-        # to force the sorting algorithm to place it last among the `subject` columns.
-
-        result_dataframe = result_dataframe.replace( to_replace=r'^zzzupstream_id$', value=r'upstream_id', regex=True )
 
     else:
         

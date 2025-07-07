@@ -527,7 +527,6 @@ def summarize(
             data_source=data_source,
             add_columns=add_columns,
             exclude_columns=exclude_columns,
-            provenance=None,
             collate_results=None,
             return_data_as=return_data_as,
             output_file=output_file,

@@ -141,7 +141,7 @@ def get_file_data(
 
     """
 
-    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=False, collate_results=collate_results, return_data_as=return_data_as, output_file=output_file )
+    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -157,7 +157,6 @@ def get_subject_data(
     data_source=None,
     add_columns=None,
     exclude_columns=None,
-    provenance=False,
     collate_results=False,
     return_data_as='dataframe',
     output_file=''
@@ -193,11 +192,6 @@ def get_subject_data(
 
         exclude_columns ( string or list of strings; optional ):
             One or more columns to remove from result data.
-
-        provenance ( boolean; optional ):
-            If True, attach cross-reference information to each result row
-            identifying that row in the context of the upstream data source(s)
-            from which it was derived.
 
         collate_results ( boolean; optional ):
             If True: for each result subject, include a DataFrame collating
@@ -263,7 +257,7 @@ def get_subject_data(
 
     """
 
-    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=provenance, collate_results=collate_results, return_data_as=return_data_as, output_file=output_file )
+    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -280,7 +274,6 @@ def get_data(
     data_source=None,
     add_columns=None,
     exclude_columns=None,
-    provenance=False,
     collate_results=False,
     return_data_as='dataframe',
     output_file=''
@@ -319,11 +312,6 @@ def get_data(
 
         exclude_columns ( string or list of strings; optional ):
             One or more columns to remove from result data.
-
-        provenance ( boolean; optional ):
-            If True, get_data() will attach cross-reference information
-            to each result row identifying that row in the context of
-            the upstream data source(s) from which it was derived.
 
         collate_results ( boolean; optional ):
             If True: for each result row, include a DataFrame collating
@@ -460,7 +448,6 @@ def get_data(
             data_source=data_source,
             add_columns=add_columns,
             exclude_columns=exclude_columns,
-            provenance=provenance,
             collate_results=collate_results,
             return_data_as=return_data_as,
             output_file=output_file,
@@ -613,7 +600,6 @@ def get_data(
     columns_to_exclude = list()
 
     suppress_data_source_results = False
-    suppress_upstream_id_results = False
 
     for column_to_exclude in exclude_columns:
         
@@ -623,33 +609,11 @@ def get_data(
         if column_to_exclude.lower() == 'data_source':
             suppress_data_source_results = True
 
-        # Handle 'upstream_id' explicitly; it's a user-facing summary column the API neither knows
-        # nor needs to care about.
-
-        if column_to_exclude.lower() == 'upstream_id':
-            suppress_upstream_id_results = True
-            columns_to_exclude.append( 'data_source_id_value' )
-
         # Ignore requests to exclude columns that are already excluded. Let the API sort out
         # what to do if a user requests to both add and exclude a column.
 
-        if column_to_exclude not in columns_to_exclude and column_to_exclude.lower() not in { 'upstream_id' }:
+        if column_to_exclude not in columns_to_exclude:
             columns_to_exclude.append( column_to_exclude )
-
-    # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
-    # If this is a subject query and the virtual 'upstream_id' column has not been explicitly excluded, fetch the appropriate ID data for the virtual column.
-
-    if table != 'subject':
-        suppress_upstream_id_results = True
-
-    if not suppress_upstream_id_results and 'data_source_id_value' not in columns_to_add:
-        columns_to_add.append( 'data_source_id_value' )
-
-    #############################################################################################################################
-    # Process the `provenance` flag: if True, ask the API to include data from the `upstream_identifiers` table.
-
-    if provenance == True:
-        columns_to_add.append( f"{table}_identifiers" )
 
     #############################################################################################################################
     # Build an object to represent our upcoming API query.
@@ -709,8 +673,7 @@ def get_data(
     # The API returns responses in JSON format: convert that JSON into a DataFrame
     # using pandas' json_normalize() function. Example JSON responses ( note that
     # not all of these columns are returned by default: some were requested; others
-    # induced by a non-null `data_source` parameter; still others included in response
-    # to the user setting the `provenance` parameter to True; note also that this is
+    # induced by a non-null `data_source` parameter; note also that this is
     # a cut/paste job from several responses, don't check it too hard for internal
     # consistency -- it's just meant to let readers know what to expect in terms of
     # field names and nesting structures):
@@ -734,41 +697,13 @@ def get_data(
     #             "subject_data_source_count": 3,
     #             "sex": [
     #                 "female"
-    #             ],
-    #             "upstream_identifiers_columns": [
-    #                 {
-    #                     "data_source_id_value": "C3L-00001",
-    #                     ...
-    #                 }
-    #             ],
-    #             "subject_identifiers": [
-    #                 {
-    #                     "data_source": "CDS",
-    #                     "participant.participant_id": "PBBZWS"
-    #                 },
-    #                 {
-    #                     "data_source": "CDS",
-    #                     "participant.uuid": "6e823aea-1b00-5df8-ae1c-a02919bb81c4"
-    #                 },
-    #                 {
-    #                     "data_source": "IDC",
-    #                     "auxiliary_metadata.submitter_case_id": "PBBZWS"
-    #                 },
-    #                 {
-    #                     "data_source": "IDC",
-    #                     "dicom_all.PatientID": "PBBZWS"
-    #                 },
-    #                 {
-    #                     "data_source": "IDC",
-    #                     "dicom_all.idc_case_id": "358ecd7c-2685-4f20-93b8-da6e7cbe9d0b"
-    #                 }
     #             ]
     #         },
     #         
     #         ...
     #         
     #     ],
-    #     "query_sql": "WITH subject_preselect AS (SELECT subject.id_alias AS id_alias FROM subject WHERE (EXISTS (SELECT 1 FROM observation WHERE subject.id_alias = observation.subject_alias AND coalesce(upper(observation.sex), :coalesce_2) = upper(:upper_1))) AND subject.year_of_birth < :year_of_birth_1 AND subject.data_at_gdc = true), observation_subject_columns AS (SELECT array_remove(array_agg(DISTINCT observation.sex), NULL) AS sex, observation.subject_alias AS subject_alias FROM observation WHERE observation.subject_alias IN (SELECT subject_preselect.id_alias FROM subject_preselect) GROUP BY observation.subject_alias) SELECT row_to_json(json_result) AS row_to_json_1 FROM (SELECT subject.id AS subject_id, subject.crdc_id AS subject_crdc_id, subject.species AS species, subject.year_of_birth AS year_of_birth, subject.year_of_death AS year_of_death, subject.cause_of_death AS cause_of_death, subject.race AS race, subject.ethnicity AS ethnicity, subject.year_of_birth AS year_of_birth, subject.data_at_gdc AS subject_data_at_gdc, subject.data_at_idc AS subject_data_at_idc, subject.data_at_cds AS subject_data_at_cds, subject.data_at_pdc AS subject_data_at_pdc, subject.data_at_gdc AS subject_data_at_gdc, subject.data_at_icdc AS subject_data_at_icdc, coalesce(observation_subject_columns.sex, :coalesce_1) AS sex FROM subject LEFT OUTER JOIN observation_subject_columns ON observation_subject_columns.subject_alias = subject.id_alias WHERE subject.id_alias IN (SELECT subject_preselect.id_alias FROM subject_preselect)) AS json_result",
+    #     "query_sql": "WITH subject_preselect AS ( ... ) AS json_result",
     #     "total_row_count": 9,
     #     "next_url": ""
     # }
@@ -851,82 +786,10 @@ def get_data(
                 if result_record[ f"{table}_data_at_{upstream_data_source.lower()}" ] == True:
                     result_dataframe['data_source'].iloc[row_index].append( upstream_data_source )
 
-    # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
-    # For subject queries, collect upstream ID information and populate our user-facing `upstream_id` result column summary,
-    # unless it's been suppressed via exclude_columns=['upstream_id'].
-
-    if 'data_source_id_value' in result_dataframe:
-        
-        # collate_results == False (or this information would instead appear inside an 'upstream_identifiers_columns' list of dicts)
-
-        if not suppress_upstream_id_results:
-            
-            result_dataframe = result_dataframe.rename( columns={ 'data_source_id_value': 'upstream_id' } )
-
-            # What we get is a nonredundant list of values. Sort to be safe.
-
-            sorted_column_data = list()
-
-            for row_index, result_record in result_dataframe.iterrows():
-                sorted_column_data.append( sorted( result_record['upstream_id'] ) )
-
-            result_dataframe['upstream_id'] = sorted_column_data
-
-        else:
-            
-            result_dataframe = result_dataframe.drop( columns=['data_source_id_value'] )
-
-    elif 'upstream_identifiers_columns' in result_dataframe:
-        
-        # collate_results == True: collect and uniquify ID data.
-
-        if not suppress_upstream_id_results:
-            
-            sorted_column_data = list()
-
-            for row_index, result_record in result_dataframe.iterrows():
-                id_results = set()
-                for identifier_record in result_record['upstream_identifiers_columns']:
-                    id_results.add( identifier_record['data_source_id_value'] )
-                sorted_column_data.append( sorted( id_results ) )
-
-            result_dataframe['upstream_id'] = sorted_column_data
-
-        # Remove this column whether or not we built a processed version of it.
-
-        result_dataframe = result_dataframe.drop( columns=['upstream_identifiers_columns'] )
-
-    # Collate full upstream provenance metadata, if requested.
-
-    if provenance == True:
-        
-        provenance_df_list = list()
-
-        for row_index, result_record in result_dataframe.iterrows():
-            
-            provenance_data_by_column = {
-                'data_source' : [],
-                'id_name' : [],
-                'id_value' : []
-            }
-
-            for identifier_record in result_record[ f"{table}_identifiers" ]:
-                for provenance_column in identifier_record:
-                    if provenance_column == 'data_source':
-                        provenance_data_by_column[provenance_column].append( identifier_record[provenance_column] )
-                    else:
-                        provenance_data_by_column['id_name'].append( provenance_column )
-                        provenance_data_by_column['id_value'].append( identifier_record[provenance_column] )
-
-            provenance_df_list.append( pd.DataFrame.from_dict( provenance_data_by_column, orient='columns' ) )
-
-        # Make a new column called 'provenance', populated with DataFrames.
-        result_dataframe['provenance'] = provenance_df_list
-
     # Ensure the contents and ordering of the set of default columns for this endpoint
-    # is the same whether or not additional column data (from other tables, or provenance
-    # metadata for `table` rows) has been requested. Also make sure non-user-facing columns
-    # (e.g. `subject_data_at_gdc`) are not passed through to the user unprocessed.
+    # is the same whether or not additional column data (e.g. from other tables) has
+    # been requested. Also make sure non-user-facing columns (e.g. `subject_data_at_gdc`)
+    # are not passed through to the user unprocessed.
 
     columns_to_suppress = list()
     added_columns = list()
@@ -974,7 +837,7 @@ def get_data(
                 
                 # If we're getting subject data, then depending on the value of the `collate_results` parameter, we either
                 # want this information incorporated (as list values) into `result_dataframe['file_data']`, a column of
-                # DataFrames column containing tuples of linked file metadata, or instead rendered individually
+                # DataFrames containing tuples of linked file metadata, or instead rendered individually
                 # as a foreign-result column containing lists of unique values assigned to all matching files associated with
                 # each `result_dataframe` row's subject record.
 
@@ -1024,11 +887,11 @@ def get_data(
 
     for column in result_dataframe:
         
-        if column not in { 'data_source', 'provenance', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
+        if column not in { 'data_source', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
             
             # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see below in this block for more explicit filters.
 
-            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or re.search( r'_id_alias$', column ) is not None or column == f"{table}_identifiers" or re.search( r'crdc_id$', column ) is not None:
+            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or re.search( r'_id_alias$', column ) is not None or re.search( r'crdc_id$', column ) is not None:
                 columns_to_suppress.append( column )
 
             # Remove raw versions of aggregated result sets from foreign tables
@@ -1053,7 +916,7 @@ def get_data(
                         
                         foreign_table_data_by_column = dict()
 
-                        # Summarize (row-wise) 'data_source' values as we do for top-level result rows.
+                        # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing upstream_identifiers, which encodes this data differently.
 
                         foreign_table_data_by_column['data_source'] = list()
 
@@ -1129,6 +992,10 @@ def get_data(
                             
                             foreign_table_column_ordering = [ 'data_source' ]
 
+                            # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing upstream_identifiers, which encodes this data differently.
+                            if foreign_table_name == 'upstream_identifiers':
+                                foreign_table_column_ordering = []
+
                             for foreign_table_column in cached_column_metadata.query( f"table == '{foreign_table_name}'" ).column.to_list():
                                 if foreign_table_column in foreign_table_data_by_column:
                                     foreign_table_column_ordering.append( foreign_table_column )
@@ -1178,23 +1045,18 @@ def get_data(
                                         # Testing values for None will miss NaN values, so we use the above truth to test for those too.
 
                                         if foreign_table_record[foreign_table_column] is not None and foreign_table_record[foreign_table_column] == foreign_table_record[foreign_table_column]:
-                                            
                                             observed_value_sets[foreign_table_column].add( foreign_table_record[foreign_table_column] )
 
                             for foreign_table_column in observed_value_sets:
                                 
                                 if len( observed_value_sets[foreign_table_column] ) > 0:
-                                    
                                     foreign_column_lists[foreign_table_column].append( sorted( observed_value_sets[foreign_table_column] ) )
 
                                 else:
-                                    
                                     foreign_column_lists[foreign_table_column].append( '<NA>' )
 
                         else:
-                            
                             # No foreign table records existed for this result.
-
                             null_indices.add( row_index )
 
                     # Stitch null-result records into our value lists.
@@ -1262,10 +1124,6 @@ def get_data(
     if not suppress_data_source_results:
         final_column_order.append( 'data_source' )
 
-    # Then our provenance metadata, if it was requested.
-    if provenance == True:
-        final_column_order.append( 'provenance' )
-
     # Then the fields from other tables that the user added.
     for added_column in added_columns:
         final_column_order.append( added_column )
@@ -1283,7 +1141,7 @@ def get_data(
 
         for column in result_column_names:
             
-            if column != 'data_source' and column != 'provenance' and column not in df_columns_to_add and column not in added_columns:
+            if column != 'data_source' and column not in df_columns_to_add and column not in added_columns:
                 
                 # CDA has no float values. Cast all numeric data to integers.
 
@@ -1336,19 +1194,14 @@ def get_data(
                     current_cell_value = result_record[column]
 
                     if current_cell_value == '<NA>':
-                        
                         processed_column_data.append( current_cell_value )
 
                     elif len( current_cell_value ) == 0:
-                        
                         # An empty list.
-
                         processed_column_data.append( '<NA>' )
 
                     else:
-                        
                         # We have a nonzero-length list of non-null data values.
-
                         processed_cell_value = list()
 
                         for list_element in current_cell_value:
@@ -1356,13 +1209,10 @@ def get_data(
                             processed_list_element = list_element
 
                             if column_data_types[column] in { 'integer', 'bigint' }:
-                                
                                 # CDA has no float values. Cast all numeric data to integers.
-
                                 processed_list_element = round( processed_list_element )
 
                             elif column_data_types[column] not in { 'text', 'boolean' }:
-                                
                                 # This isn't anticipated. Yell if we get something unexpected.
                                 log.critical( f"Unexpected data type `{column_data_types[column]}` received; aborting. Please report this event to the CDA development team." )
                                 return

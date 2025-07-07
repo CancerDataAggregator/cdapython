@@ -55,12 +55,10 @@ def normalize_to_list( parameter_name, user_supplied_parameter_value, value_type
             list_to_return = [ user_supplied_parameter_value ]
 
     elif not isinstance( user_supplied_parameter_value, list ):
-        
         # We have neither a value of the right type nor a list: can't continue.
         raise RuntimeError( f"User-supplied parameter '{parameter_name}' was assigned a non-list value of unexpected type '{type(user_supplied_parameter_value)}'; should be '{value_type}' or 'list({value_type})'. Please fix." )
 
     elif not all( isinstance( element, value_type ) for element in user_supplied_parameter_value ):
-        
         # We have a list, but not all of its elements are of the expected type: can't continue.
         raise RuntimeError( f"User-supplied parameter '{parameter_name}' was assigned a list containing elements of unexpected type '{type(user_supplied_parameter_value)}'; elements should all be '{value_type}'. Please fix." )
 
@@ -276,10 +274,6 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
             filter_value = 'null'
 
-        # Virtualize an 'upstream_id' field on the 'subject' table, along with user-facing columns() output, to support search and simplify data access.
-        if filter_column_name == 'upstream_id':
-            filter_column_name = 'data_source_id_value'
-
         normalized_filter_expression = filter_column_name + ' ' + filter_operator + ' ' + filter_value
 
         normalized_match_statement_list.append( normalized_filter_expression )
@@ -358,7 +352,7 @@ def validate_and_transform_match_from_file_values( cda_column_to_match, target_d
 
 #############################################################################################################################
 #
-# validate_parameter_values( called_function, cached_column_metadata, valid_data_sources, table, match_from_file, data_source, add_columns, exclude_columns, provenance, return_data_as, output_file, log ):
+# validate_parameter_values( called_function, cached_column_metadata, valid_data_sources, table, match_from_file, data_source, add_columns, exclude_columns, return_data_as, output_file, log ):
 # 
 # Validate user-supplied parameters as passed to `called_function`, after first
 # having passed relevant parameters (`data_source`, `add_columns`, `exclude_columns`)
@@ -374,7 +368,6 @@ def validate_and_transform_match_from_file_values( cda_column_to_match, target_d
 #     * `data_source` isn't a single valid upstream data source label (for `called_function`=='column_values')
 #       or a list of valid upstream data source labels (for `called_function` in [ 'get_data', 'summarize' ])
 #     * `add_columns` or `exclude_columns` contain invalid CDA column names ("{table}.*" macros are allowed)
-#     * `provenance` isn't a boolean value or None, depending on `called_function`
 #     * `collate_results` isn't a boolean value or None, depending on `called_function`
 #     * `return_data_as` isn't one of the allowable types for `called_function`
 #     * The value of `output_file` isn't consistent with the directive in `return_data_as` for `called_function`
@@ -390,7 +383,6 @@ def validate_parameter_values(
     data_source,
     add_columns,
     exclude_columns,
-    provenance,
     collate_results,
     return_data_as,
     output_file,
@@ -478,17 +470,12 @@ def validate_parameter_values(
         if column_name not in cached_column_metadata['column'].unique():
             raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names. You specified '{column_name}', which is not that." )
 
-    # Check that `provenance` is a boolean (for get_data) or None (for column_values, summarize) and that `called_function` has an expected value.
-    # Same for `collate_results`.
+    # Check that `collate_results` is a boolean (for get_data) or None (for column_values, summarize) and that `called_function` has an expected value.
 
     if called_function == 'get_data':
-        if provenance != True and provenance != False:
-            raise RuntimeError( f"The `provenance` parameter must be set to True or False; you specified '{provenance}', which is neither." )
         if collate_results != True and collate_results != False:
             raise RuntimeError( f"The `collate_results` parameter must be set to True or False; you specified '{collate_results}', which is neither." )
     elif called_function == 'summarize' or called_function == 'column_values':
-        if provenance is not None:
-            raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom provenance values in summarize() calls; please notify the CDA devs of this event." )
         if collate_results is not None:
             raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom collate_results values in summarize() calls; please notify the CDA devs of this event." )
     else:
