@@ -41,7 +41,7 @@ def get_file_data(
     data_source=None,
     add_columns=None,
     exclude_columns=None,
-    expand_results=False,
+    collate_results=False,
     return_data_as='dataframe',
     output_file=''
 ):
@@ -77,7 +77,7 @@ def get_file_data(
         exclude_columns ( string or list of strings; optional ):
             One or more columns to remove from result data.
 
-        expand_results ( boolean; optional ):
+        collate_results ( boolean; optional ):
             If True: for each result file, include a DataFrame collating
             results linked to that file from each non-file table that was
             queried. Otherwise, for each result file, include a list of
@@ -141,7 +141,7 @@ def get_file_data(
 
     """
 
-    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=False, expand_results=expand_results, return_data_as=return_data_as, output_file=output_file )
+    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=False, collate_results=collate_results, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -158,7 +158,7 @@ def get_subject_data(
     add_columns=None,
     exclude_columns=None,
     provenance=False,
-    expand_results=False,
+    collate_results=False,
     return_data_as='dataframe',
     output_file=''
 ):
@@ -199,7 +199,7 @@ def get_subject_data(
             identifying that row in the context of the upstream data source(s)
             from which it was derived.
 
-        expand_results ( boolean; optional ):
+        collate_results ( boolean; optional ):
             If True: for each result subject, include a DataFrame collating
             results linked to that subject from each non-subject table that was
             queried. Otherwise, for each result subject, include a list of
@@ -263,7 +263,7 @@ def get_subject_data(
 
     """
 
-    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=provenance, expand_results=expand_results, return_data_as=return_data_as, output_file=output_file )
+    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, provenance=provenance, collate_results=collate_results, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -281,7 +281,7 @@ def get_data(
     add_columns=None,
     exclude_columns=None,
     provenance=False,
-    expand_results=False,
+    collate_results=False,
     return_data_as='dataframe',
     output_file=''
 ):
@@ -325,7 +325,7 @@ def get_data(
             to each result row identifying that row in the context of
             the upstream data source(s) from which it was derived.
 
-        expand_results ( boolean; optional ):
+        collate_results ( boolean; optional ):
             If True: for each result row, include a DataFrame collating
             results linked to that row from each foreign table that was
             queried. Otherwise, for each result row, include a list of
@@ -461,7 +461,7 @@ def get_data(
             add_columns=add_columns,
             exclude_columns=exclude_columns,
             provenance=provenance,
-            expand_results=expand_results,
+            collate_results=collate_results,
             return_data_as=return_data_as,
             output_file=output_file,
             log=log
@@ -659,7 +659,7 @@ def get_data(
     query_object.match_some = queries_for_match_any
     query_object.add_columns = columns_to_add
     query_object.exclude_columns = columns_to_exclude
-    query_object.expand_results = expand_results
+    query_object.collate_results = collate_results
 
     #############################################################################################################################
     # Fetch data from the API.
@@ -857,7 +857,7 @@ def get_data(
 
     if 'data_source_id_value' in result_dataframe:
         
-        # expand_results == False (or this information would instead appear inside an 'upstream_identifiers_columns' list of dicts)
+        # collate_results == False (or this information would instead appear inside an 'upstream_identifiers_columns' list of dicts)
 
         if not suppress_upstream_id_results:
             
@@ -878,7 +878,7 @@ def get_data(
 
     elif 'upstream_identifiers_columns' in result_dataframe:
         
-        # expand_results == True: collect and uniquify ID data.
+        # collate_results == True: collect and uniquify ID data.
 
         if not suppress_upstream_id_results:
             
@@ -936,7 +936,7 @@ def get_data(
 
     # Remove raw versions of virtual list data attached to the file table
     # and replace them with DataFrames or column-wise lists of unique values,
-    # depending on whether or not `expand_results` is set to True.
+    # depending on whether or not `collate_results` is set to True.
 
     for column in { 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
         
@@ -972,13 +972,13 @@ def get_data(
 
             elif table == 'subject':
                 
-                # If we're getting subject data, then depending on the value of the `expand_results` parameter, we either
+                # If we're getting subject data, then depending on the value of the `collate_results` parameter, we either
                 # want this information incorporated (as list values) into `result_dataframe['file_data']`, a column of
                 # DataFrames column containing tuples of linked file metadata, or instead rendered individually
                 # as a foreign-result column containing lists of unique values assigned to all matching files associated with
                 # each `result_dataframe` row's subject record.
 
-                if expand_results == True:
+                if collate_results == True:
                     
                     add_to_file_data_dataframes = list()
 
@@ -1033,7 +1033,7 @@ def get_data(
 
             # Remove raw versions of aggregated result sets from foreign tables
             # and replace them with DataFrames or column-wise lists of unique values,
-            # depending on whether or not `expand_results` is set to True.
+            # depending on whether or not `collate_results` is set to True.
 
             elif re.search( r'_columns$', column ) is not None:
                 
@@ -1041,7 +1041,7 @@ def get_data(
 
                 foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
-                if expand_results == True:
+                if collate_results == True:
                     
                     # Our result DataFrame's cells in a column named for `foreign_table_name` will
                     # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
@@ -1144,7 +1144,7 @@ def get_data(
 
                 else:
                     
-                    # `expand_results` == False : include results from foreign columns in `result_dataframe` one at a time, as sets of unique values.
+                    # `collate_results` == False : include results from foreign columns in `result_dataframe` one at a time, as sets of unique values.
 
                     foreign_column_lists = dict()
 
@@ -1320,7 +1320,7 @@ def get_data(
                 
                 # * this column is from a foreign table: if it were a native column, it would never have been added to `added_columns`
                 # 
-                # * `expand_results` is False: if it were True, this data would've been kept in the context of its containing
+                # * `collate_results` is False: if it were True, this data would've been kept in the context of its containing
                 #   aggregated "X_columns" structure and not added to `added_columns`
                 # 
                 # * THEREFORE, each cell's data is (by design) either
