@@ -919,11 +919,13 @@ def get_data(
 
                 foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
-                if collate_results == True:
+                # EXTERNAL_REFERENCE UPDATE BEGIN
+
+                if foreign_table_name == 'external_reference' or collate_results == True:
                     
                     # Our result DataFrame's cells in a column named for `foreign_table_name` will
                     # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
-                    # all data from that table associated with with each top-level row's main entity record.
+                    # all data from that table associated with each top-level row's main entity record.
 
                     foreign_df_list = list()
 
@@ -931,7 +933,9 @@ def get_data(
                         
                         foreign_table_data_by_column = dict()
 
-                        # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing upstream_identifiers, which encodes this data differently.
+                        # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing external_reference or upstream_identifiers, which encode this data differently or not at all.
+
+                        # EXTERNAL_REFERENCE UPDATE END
 
                         foreign_table_data_by_column['data_source'] = list()
 
@@ -1007,15 +1011,24 @@ def get_data(
                             
                             foreign_table_column_ordering = [ 'data_source' ]
 
-                            # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing upstream_identifiers, which encodes this data differently.
-                            if foreign_table_name == 'upstream_identifiers':
+                            # EXTERNAL_REFERENCE UPDATE BEGIN
+
+                            # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing external_reference or upstream_identifiers, which encode this data differently or not at all.
+                            if foreign_table_name in { 'external_reference', 'upstream_identifiers' }:
                                 foreign_table_column_ordering = []
 
-                            for foreign_table_column in cached_column_metadata.query( f"table == '{foreign_table_name}'" ).column.to_list():
+                            foreign_table_column_list = [ 'external_reference_type', 'external_reference_name', 'external_reference_short_name', 'last_updated', 'uri', 'external_reference_description', 'source_short_name', 'source_url' ]
+
+                            if foreign_table_name != 'external_reference':
+                                foreign_table_column_list = cached_column_metadata.query( f"table == '{foreign_table_name}'" ).column.to_list()
+                                
+                            for foreign_table_column in foreign_table_column_list:
                                 if foreign_table_column in foreign_table_data_by_column:
                                     foreign_table_column_ordering.append( foreign_table_column )
 
-                            foreign_df_list.append( pd.DataFrame.from_dict( { foreign_table_column : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_column_ordering }, orient='columns' ) )
+                            foreign_df_list.append( pd.DataFrame.from_dict( { re.sub( r'^external_reference_', r'', foreign_table_column ) : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_column_ordering }, orient='columns' ) )
+
+                            # EXTERNAL_REFERENCE UPDATE END
 
                         else:
                             
