@@ -638,7 +638,7 @@ def get_data(
     query_object.add_columns = columns_to_add
     query_object.exclude_columns = columns_to_exclude
     query_object.collate_results = collate_results
-    query_object.external_references = include_external_refs
+    query_object.external_reference = include_external_refs
 
     #############################################################################################################################
     # Fetch data from the API.
