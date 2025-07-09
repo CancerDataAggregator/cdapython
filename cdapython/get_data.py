@@ -141,7 +141,7 @@ def get_file_data(
 
     """
 
-    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, return_data_as=return_data_as, output_file=output_file )
+    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=False, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -158,6 +158,7 @@ def get_subject_data(
     add_columns=None,
     exclude_columns=None,
     collate_results=False,
+    include_external_refs=False,
     return_data_as='dataframe',
     output_file=''
 ):
@@ -198,7 +199,12 @@ def get_subject_data(
             results linked to that subject from each non-subject table that was
             queried. Otherwise, for each result subject, include a list of
             unique values associated with that subject from each non-subject
-            column that was queried.
+            column that was queried. Defaults to False.
+
+        include_external_refs ( boolean; optional ):
+            If True: for each result subject, include a DataFrame called
+            'external_reference_data' that collates references to external
+            resources containing data describing that subject. Defaults to False.
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
             Specify how to return results: as a pandas DataFrame,
@@ -257,7 +263,7 @@ def get_subject_data(
 
     """
 
-    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, return_data_as=return_data_as, output_file=output_file )
+    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=include_external_refs, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -275,6 +281,7 @@ def get_data(
     add_columns=None,
     exclude_columns=None,
     collate_results=False,
+    include_external_refs=False,
     return_data_as='dataframe',
     output_file=''
 ):
@@ -319,6 +326,12 @@ def get_data(
             queried. Otherwise, for each result row, include a list of
             unique values associated with that row from each foreign
             column that was queried.
+
+        include_external_refs ( boolean; optional ):
+            If True: for each result row, include a DataFrame called
+            'external_reference_data' that collates references to external
+            resources containing data directly associated with that
+            row. Defaults to False.
 
         return_data_as ( string; optional: 'dataframe' or 'tsv' ):
             Specify how get_data() should return results: as a pandas DataFrame,
@@ -449,6 +462,7 @@ def get_data(
             add_columns=add_columns,
             exclude_columns=exclude_columns,
             collate_results=collate_results,
+            include_external_refs=include_external_refs,
             return_data_as=return_data_as,
             output_file=output_file,
             log=log
@@ -624,6 +638,7 @@ def get_data(
     query_object.add_columns = columns_to_add
     query_object.exclude_columns = columns_to_exclude
     query_object.collate_results = collate_results
+    query_object.external_references = include_external_refs
 
     #############################################################################################################################
     # Fetch data from the API.
