@@ -613,7 +613,8 @@ def get_data(
             # home table, if we haven't yet done so.
             if collate_results:
                 # Identify this column's home table.
-                foreign_table_name = cached_column_metadata.loc[cached_column_metadata['column'] == column_to_add]['table'][0]
+                foreign_table_name = cached_column_metadata.query( f"column == '{column_to_add}'" )['table'][0]
+                #foreign_table_name = cached_column_metadata.loc[cached_column_metadata['column'] == column_to_add]['table'][0]
                 # Check to see if we're already asking for provenance info from that table: if not, do.
                 for data_source in [ source_label.lower() for source_label in sorted( valid_data_sources ) ]:
                     provenance_field = f"{foreign_table_name}_data_at_{data_source}"
