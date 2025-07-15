@@ -814,9 +814,9 @@ def get_data(
         result_dataframe['data_source'] = [ [] for _ in range( len( result_dataframe ) ) ]
 
         for row_index, result_record in result_dataframe.iterrows():
-            for upstream_data_source in valid_data_sources:
+            for upstream_data_source in sorted( valid_data_sources ):
                 if result_record[ f"{table}_data_at_{upstream_data_source.lower()}" ] == True:
-                    result_dataframe['data_source'].iloc[row_index] = sorted( set( result_dataframe['data_source'].iloc[row_index] ) | { upstream_data_source } )
+                    result_dataframe['data_source'].iloc[row_index].append( upstream_data_source )
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
     # is the same whether or not additional column data (e.g. from other tables) has
