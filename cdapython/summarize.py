@@ -29,6 +29,73 @@ from cda_client.models.summary_request_body import SummaryRequestBody
 #############################################################################################################################
 #############################################################################################################################
 
+#############################################################################################################################
+# 
+# intersect_results(): Compute the intersection of two or more result DataFrames obtained by get_data() from the same endpoint.
+# 
+# when merging row data:
+#
+#     str, int, bool :
+#         * preserve first-seen values
+#         * complain (why not?) if clashes are ever observed
+#         * home-table columns need not be present in all of the DataFrames to be merged since \
+#           all target values are guaranteed inferrable from at least one of the \
+#           other DataFrames to merge because this function computes an _intersection_ \
+#           of home-table records: every value in every column included in any of the \
+#           constitutent DataFrames is guaranteed to be available somewhere \
+#           /for all target records/ because all target records are present in all DataFrames by definition
+#
+#     list : make into sets, union, re-listify -- beware '<NA>'
+#
+#     (sub-)DataFrame :
+#         * sub-DataFrame contents can be filtered by upstream queries and so may no longer be representative of the desired data if just copied into merged results
+#           --> error if any sub-DataFrame present in one result set is missing from any of the other result sets
+#           --> error if the list of columns present in any sub-DataFrame does not match those of its same-named siblings in all other result sets
+#           potential gaps cannot be filled in either of the above cases
+#         * error for file_data, subject_data, project_data sub-DataFrames if file_id, subject_id, project_id, resp., not present
+#           cannot unambiguously reconstitute results given the potential presence of filtering
+#         * deduplicate row records and combine into union result
+# 
+# result columns can have mixed types -- e.g. ints (or any non-null values) mixed with str ('<NA>' null codes for display)
+# note in particular that set-unions for lists must allow for possible '<NA>'s
+# 
+# make it an error to filter twice on the same column via match_all
+# 
+# any number ( >= 2 ) of dataframes can be combined in one call
+# 
+# ignore_added_columns flag merges just the core-table columns if True
+# 
+# result column ordering:
+#
+#     home table default, minus any excluded columns
+#     data_source if present
+#     foreign list/int/bool/str columns
+#     all foreign sub-DataFrame columns in alphabetical order except the last two:
+#     upstream_identifiers_data if present
+#     external_reference_data if present
+#############################################################################################################################
+
+def intersect_results(
+    result_df_1,
+    result_df_2,
+    *result_dfs_3_and_up,
+    ignore_added_columns=False,
+    table=None
+):
+    """
+    Help me help you. Help text.
+    """
+    # To do: move validation to validation.py
+
+    if table is None:
+        log.error( "'table' parameter cannot be omitted." )
+        return
+    elif table not in { 'file', 'subject' }:
+        log.error( f"'table' parameter must be one of \{ 'file', 'subject' \}. You specified {table}, which is neither." )
+        return
+    elif result_df_2 is None:
+        log.error( 'At least two result DataFrames must be specified.' )
+        return
 
 #############################################################################################################################
 #
