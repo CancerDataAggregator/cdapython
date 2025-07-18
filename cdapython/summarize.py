@@ -98,6 +98,8 @@ def intersect_results(
         log.error( 'You need to specify at least two result DataFrames to be merged.' )
         return
 
+    print( *result_dfs_to_merge )
+
 #############################################################################################################################
 #
 # summarize_files(): Get a report describing columns of interest in the CDA file table, summarizing column values over
