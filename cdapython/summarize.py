@@ -94,10 +94,10 @@ def intersect_results(
         log.error( "'table' parameter cannot be omitted." )
         return
     elif table not in { 'file', 'subject' }:
-        log.error( f"'table' parameter must be one of {{ 'file', 'subject' }}. You specified {table}, which is neither." )
+        log.error( f"'table' parameter must be one of {{ 'file', 'subject' }}. You specified '{table}', which is neither." )
         return
     elif result_df_2 is None:
-        log.error( 'At least two result DataFrames must be specified.' )
+        log.error( 'You need to specify at least two result DataFrames to be merged.' )
         return
 
 #############################################################################################################################
