@@ -76,9 +76,7 @@ from cda_client.models.summary_request_body import SummaryRequestBody
 #############################################################################################################################
 
 def intersect_results(
-    result_df_1=None,
-    result_df_2=None,
-    *result_dfs_3_and_up,
+    *result_dfs_to_merge,
     ignore_added_columns=False,
     table=None
 ):
@@ -96,7 +94,7 @@ def intersect_results(
     elif table not in { 'file', 'subject' }:
         log.error( f"'table' parameter must be one of {{ 'file', 'subject' }}. You specified '{table}', which is neither." )
         return
-    elif result_df_2 is None:
+    elif len( result_dfs_to_merge ) < 2:
         log.error( 'You need to specify at least two result DataFrames to be merged.' )
         return
 
