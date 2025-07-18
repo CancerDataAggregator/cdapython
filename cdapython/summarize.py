@@ -1153,7 +1153,7 @@ def summarize(
 
                             # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
 
-                            print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and len( x ) > max_col_width ) else x )
+                            print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and not isinstance( x, bool ) and len( x ) > max_col_width ) else x )
 
                             # Put the count values first in the display.
 
