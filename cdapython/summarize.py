@@ -76,8 +76,8 @@ from cda_client.models.summary_request_body import SummaryRequestBody
 #############################################################################################################################
 
 def intersect_results(
-    result_df_1,
-    result_df_2,
+    result_df_1=None,
+    result_df_2=None,
     *result_dfs_3_and_up,
     ignore_added_columns=False,
     table=None
@@ -85,6 +85,9 @@ def intersect_results(
     """
     Help me help you. Help text.
     """
+
+    log = get_logger()
+
     # To do: move validation to validation.py
 
     if table is None:
