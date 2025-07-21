@@ -826,11 +826,102 @@ def get_data(
     columns_to_suppress = list()
     added_columns = list()
 
+    virtual_columns_to_add = dict()
+    file_data_columns_to_add = dict()
+
+    # Remove raw versions of virtual list data attached to the file table
+    # and replace them with DataFrames or column-wise lists of unique values,
+    # depending on whether or not `collate_results` is set to True.
+
+    for column in { 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
+        
+        # 2025-07-21: I don't think these ever appear, any more. This entire case may be obsolete.
+
+        if column in result_dataframe:
+            
+            columns_to_suppress.append( column )
+
+            output_column_name = re.search( r'^file_(.*)_columns$', column ).group(1)
+            
+            if table == 'file':
+                
+                # If we're getting file data, we always want these transparently included as virtual file columns containing list values.
+                
+                virtual_column_list = list()
+
+                for row_index, result_record in result_dataframe.iterrows():
+                    
+                    if result_record[column] is not None:
+                        
+                        observed_value_set = set()
+
+                        for value_record in result_record[column]:
+                            
+                            observed_value_set.add( value_record[output_column_name] )
+
+                        virtual_column_list.append( sorted( observed_value_set ) )
+
+                    else:
+                        
+                        virtual_column_list.append( '<NA>' )
+
+                virtual_columns_to_add[output_column_name] = virtual_column_list
+
+            elif table == 'subject':
+                
+                # If we're getting subject data, then depending on the value of the `collate_results` parameter, we either
+                # want this information incorporated (as list values) into `result_dataframe['file_data']`, a column of
+                # DataFrames containing tuples of linked file metadata, or instead rendered individually
+                # as a foreign-result column containing lists of unique values assigned to all matching files associated with
+                # each `result_dataframe` row's subject record.
+
+                if collate_results == True:
+                    
+                    add_to_file_data_dataframes = list()
+
+                    for row_index, result_record in result_dataframe.iterrows():
+                        
+                        if result_record[column] is not None:
+                            
+                            observed_value_set = set()
+
+                            for value_record in result_record[column]:
+                                observed_value_set.add( value_record[output_column_name] )
+
+                            add_to_file_data_dataframes.append( sorted( observed_value_set ) )
+
+                        else:
+                            add_to_file_data_dataframes.append( '<NA>' )
+
+                    file_data_columns_to_add[output_column_name] = add_to_file_data_dataframes
+
+                else:
+                    
+                    virtual_column_list = list()
+
+                    for row_index, result_record in result_dataframe.iterrows():
+                        
+                        if result_record[column] is not None:
+                            
+                            observed_value_set = set()
+
+                            for value_record in result_record[column]:
+                                observed_value_set.add( value_record[output_column_name] )
+
+                            virtual_column_list.append( sorted( observed_value_set ) )
+
+                        else:
+                            virtual_column_list.append( '<NA>' )
+
+                    virtual_columns_to_add[output_column_name] = virtual_column_list
+                    added_columns.append( output_column_name )
+
     df_columns_to_add = dict()
+    single_foreign_columns_to_add = dict()
 
     for column in result_dataframe:
         
-        if column not in { 'data_source' }:
+        if column not in { 'data_source', 'file_anatomic_site_columns', 'file_tumor_vs_normal_columns' }:
             
             # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see below in this block for more explicit filters.
 
@@ -838,119 +929,235 @@ def get_data(
                 columns_to_suppress.append( column )
 
             # Remove raw versions of aggregated result sets from foreign tables
-            # and replace them with DataFrames.
+            # and replace them with DataFrames or column-wise lists of unique values,
+            # depending on whether or not `collate_results` is set to True.
 
             elif re.search( r'_columns$', column ) is not None:
                 
-                # Note: collate_results will always be True in this case: there is no other way to get 'X_columns' lists back from the API.
-
                 columns_to_suppress.append( column )
 
                 foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
-                # Our result DataFrame's cells in a column named for `foreign_table_name` will
-                # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
-                # all data from that table associated with each top-level row's main entity record.
+                # EXTERNAL_REFERENCE UPDATE BEGIN
 
-                foreign_df_list = list()
-
-                for row_index, result_record in result_dataframe.iterrows():
+                if foreign_table_name == 'external_reference' or collate_results == True:
                     
-                    foreign_table_data_by_column = dict()
+                    # Our result DataFrame's cells in a column named for `foreign_table_name` will
+                    # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
+                    # all data from that table associated with each top-level row's main entity record.
 
-                    # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing external_reference or upstream_identifiers, which encode this data differently or not at all.
+                    foreign_df_list = list()
 
-                    foreign_table_data_by_column['data_source'] = list()
-
-                    if result_record[column] is not None:
+                    for row_index, result_record in result_dataframe.iterrows():
                         
-                        for foreign_table_record in result_record[column]:
-                            
-                            upstream_data_source = ''
-
-                            if foreign_table_name in [ 'project', 'subject' ]:
-                                # project and subject records can have multiple upstream data sources.
-                                upstream_data_source = set()
-
-                            for foreign_table_column in foreign_table_record:
-                                
-                                match_result = re.search( r'^' + re.escape( foreign_table_name ) + r'_data_at_(.+)$', foreign_table_column )
-
-                                if match_result is not None:
-                                    
-                                    if foreign_table_record[foreign_table_column] == True:
-                                        
-                                        detected_data_source = match_result.group(1).upper()
-
-                                        if foreign_table_name in [ 'project', 'subject' ]:
-                                            upstream_data_source.add( detected_data_source )
-
-                                        elif upstream_data_source == '':
-                                            upstream_data_source = detected_data_source
-
-                                        elif upstream_data_source != detected_data_source:
-                                            # There should only ever be one of these for non-subject records.
-                                            log.error( f"Upstream data source clash: {detected_data_source} != {upstream_data_source}; {foreign_table_name} (partial) record: \"{foreign_table_record}\"; please notify the CDA devs of this event." )
-                                            return
-
-                                # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see above and below in this general block for more explicit filters.
-
-                                elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None \
-                                    and re.search( r'^' + re.escape( foreign_table_name ) + r'_id_alias$', foreign_table_column ) is None \
-                                    and re.search( r'crdc_id$', foreign_table_column ) is None:
-                                    
-                                    if foreign_table_column not in foreign_table_data_by_column:
-                                        foreign_table_data_by_column[foreign_table_column] = list()
-
-                                    # Encode nulls as '<NA>'.
-                                    # (float) NaN != NaN
-                                    # Testing values for None will miss NaN values, so we use the above truth to test for those too.
-                                    # Empty list values [] will be passed along unmodified.
-
-                                    if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
-                                        
-                                        foreign_table_data_by_column[foreign_table_column].append( '<NA>' )
-
-                                    else:
-                                        
-                                        foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
-
-                            if foreign_table_name in ['project', 'subject' ]:
-                                upstream_data_source = sorted( upstream_data_source )
-
-                            foreign_table_data_by_column['data_source'].append( upstream_data_source )
-
-                    if len( foreign_table_data_by_column ) > 0:
-                        
-                        foreign_table_column_ordering = [ 'data_source' ]
+                        foreign_table_data_by_column = dict()
 
                         # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing external_reference or upstream_identifiers, which encode this data differently or not at all.
-                        if foreign_table_name in { 'external_reference', 'upstream_identifiers' }:
-                            foreign_table_column_ordering = []
 
-                        foreign_table_column_list = [ 'external_reference_type', 'external_reference_name', 'external_reference_short_name', 'last_updated', 'uri', 'external_reference_description', 'source_short_name', 'source_url' ]
+                        # EXTERNAL_REFERENCE UPDATE END
 
-                        if foreign_table_name != 'external_reference':
-                            foreign_table_column_list = cached_column_metadata.query( f"table == '{foreign_table_name}'" ).column.to_list()
+                        foreign_table_data_by_column['data_source'] = list()
+
+                        if result_record[column] is not None:
                             
-                        for foreign_table_column in foreign_table_column_list:
-                            if foreign_table_column in foreign_table_data_by_column:
-                                foreign_table_column_ordering.append( foreign_table_column )
+                            for foreign_table_record in result_record[column]:
+                                
+                                upstream_data_source = ''
 
-                        foreign_df_list.append( pd.DataFrame.from_dict( { re.sub( r'^external_reference_', r'', foreign_table_column ) : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_column_ordering }, orient='columns' ) )
+                                if foreign_table_name in [ 'project', 'subject' ]:
+                                    # project and subject records can have multiple upstream data sources.
+                                    upstream_data_source = set()
 
-                    else:
+                                for foreign_table_column in foreign_table_record:
+                                    
+                                    match_result = re.search( r'^' + re.escape( foreign_table_name ) + r'_data_at_(.+)$', foreign_table_column )
+
+                                    if match_result is not None:
+                                        
+                                        if foreign_table_record[foreign_table_column] == True:
+                                            
+                                            detected_data_source = match_result.group(1).upper()
+
+                                            if foreign_table_name in [ 'project', 'subject' ]:
+                                                upstream_data_source.add( detected_data_source )
+
+                                            elif upstream_data_source == '':
+                                                upstream_data_source = detected_data_source
+
+                                            elif upstream_data_source != detected_data_source:
+                                                # There should only ever be one of these for non-subject records.
+                                                log.error( f"Upstream data source clash: {detected_data_source} != {upstream_data_source}; {foreign_table_name} (partial) record: \"{foreign_table_record}\"; please notify the CDA devs of this event." )
+                                                return
+
+                                    # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see above and below in this general block for more explicit filters.
+
+                                    elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None \
+                                        and re.search( r'^' + re.escape( foreign_table_name ) + r'_id_alias$', foreign_table_column ) is None \
+                                        and re.search( r'crdc_id$', foreign_table_column ) is None:
+                                        
+                                        if foreign_table_column not in foreign_table_data_by_column:
+                                            foreign_table_data_by_column[foreign_table_column] = list()
+
+                                        # Encode nulls as '<NA>'.
+                                        # (float) NaN != NaN
+                                        # Testing values for None will miss NaN values, so we use the above truth to test for those too.
+
+                                        if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
+                                            
+                                            foreign_table_data_by_column[foreign_table_column].append( '<NA>' )
+
+                                        else:
+                                            
+                                            foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+
+                                if foreign_table_name in ['project', 'subject' ]:
+                                    upstream_data_source = sorted( upstream_data_source )
+
+                                foreign_table_data_by_column['data_source'].append( upstream_data_source )
+
+                                # Stitch in virtual file columns, processed in the previous block.
+
+                                if foreign_table_name == 'file' and len( file_data_columns_to_add ) > 0:
+                                    
+                                    for virtual_file_column_name in file_data_columns_to_add:
+                                        
+                                        if virtual_file_column_name not in foreign_table_data_by_column:
+                                            foreign_table_data_by_column[virtual_file_column_name] = list()
+
+                                        foreign_table_data_by_column[virtual_file_column_name].append( file_data_columns_to_add[virtual_file_column_name][row_index] )
+
+                        if len( foreign_table_data_by_column ) > 0:
+                            
+                            foreign_table_column_ordering = [ 'data_source' ]
+
+                            # EXTERNAL_REFERENCE UPDATE BEGIN
+
+                            # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing external_reference or upstream_identifiers, which encode this data differently or not at all.
+                            if foreign_table_name in { 'external_reference', 'upstream_identifiers' }:
+                                foreign_table_column_ordering = []
+
+                            foreign_table_column_list = [ 'external_reference_type', 'external_reference_name', 'external_reference_short_name', 'last_updated', 'uri', 'external_reference_description', 'source_short_name', 'source_url' ]
+
+                            if foreign_table_name != 'external_reference':
+                                foreign_table_column_list = cached_column_metadata.query( f"table == '{foreign_table_name}'" ).column.to_list()
+                                
+                            for foreign_table_column in foreign_table_column_list:
+                                if foreign_table_column in foreign_table_data_by_column:
+                                    foreign_table_column_ordering.append( foreign_table_column )
+
+                            foreign_df_list.append( pd.DataFrame.from_dict( { re.sub( r'^external_reference_', r'', foreign_table_column ) : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_column_ordering }, orient='columns' ) )
+
+                            # EXTERNAL_REFERENCE UPDATE END
+
+                        else:
+                            
+                            foreign_df_list.append( '<NA>' )
+
+                    # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
+                    df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
+
+                else:
+                    
+                    # 2025-07-21: I don't think this ever happens any more. This entire block may be obsolete.
+
+                    # `collate_results` == False : include results from foreign columns in `result_dataframe` one at a time, as sets of unique values.
+
+                    foreign_column_lists = dict()
+
+                    null_indices = set()
+
+                    for row_index, result_record in result_dataframe.iterrows():
                         
-                        foreign_df_list.append( pd.DataFrame.from_dict( {} ) )
+                        if result_record[column] is not None:
+                            
+                            observed_value_sets = dict()
 
-                # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
-                df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
+                            for foreign_table_record in result_record[column]:
+                                
+                                for foreign_table_column in foreign_table_record:
+                                    
+                                    # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see above in this general block for more explicit filters.
+
+                                    if re.search( r'^' + re.escape( foreign_table_name ) + r'_data_at_(.+)$', foreign_table_column ) is None \
+                                        and re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None \
+                                        and re.search( r'_id_alias$', foreign_table_column ) is None \
+                                        and re.search( r'crdc_id$', foreign_table_column ) is None:
+                                        
+                                        if foreign_table_column not in observed_value_sets:
+                                            observed_value_sets[foreign_table_column] = set()
+
+                                        if foreign_table_column not in foreign_column_lists:
+                                            foreign_column_lists[foreign_table_column] = list()
+
+                                        # Ignore null values; if no non-null values are observed, we'll return <NA> instead of a list.
+                                        # (float) NaN != NaN
+                                        # Testing values for None will miss NaN values, so we use the above truth to test for those too.
+
+                                        if foreign_table_record[foreign_table_column] is not None and foreign_table_record[foreign_table_column] == foreign_table_record[foreign_table_column]:
+                                            observed_value_sets[foreign_table_column].add( foreign_table_record[foreign_table_column] )
+
+                            for foreign_table_column in observed_value_sets:
+                                
+                                if len( observed_value_sets[foreign_table_column] ) > 0:
+                                    foreign_column_lists[foreign_table_column].append( sorted( observed_value_sets[foreign_table_column] ) )
+
+                                else:
+                                    foreign_column_lists[foreign_table_column].append( '<NA>' )
+
+                        else:
+                            # No foreign table records existed for this result.
+                            null_indices.add( row_index )
+
+                    # Stitch null-result records into our value lists.
+
+                    if len( null_indices ) > 0:
+                        
+                        new_foreign_column_lists = dict()
+
+                        for foreign_table_column in foreign_column_lists:
+                            
+                            null_offset = 0
+
+                            new_foreign_column_lists[foreign_table_column] = list()
+
+                            for original_index in range( 0, len( foreign_column_lists[foreign_table_column] ) ):
+                                
+                                actual_index = original_index + null_offset
+
+                                while actual_index in null_indices:
+                                    
+                                    # Insert a null-result record for this column into the final list.
+
+                                    new_foreign_column_lists[foreign_table_column].append( '<NA>' )
+
+                                    null_offset = null_offset + 1
+
+                                    actual_index = original_index + null_offset
+
+                                # Copy the non-null result record for this column into the final list.
+
+                                new_foreign_column_lists[foreign_table_column].append( foreign_column_lists[foreign_table_column][original_index] )
+
+                        foreign_column_lists = new_foreign_column_lists
+
+                    for foreign_table_column in foreign_column_lists:
+                        
+                        single_foreign_columns_to_add[foreign_table_column] = foreign_column_lists[foreign_table_column]
+                        added_columns.append( foreign_table_column )
 
             elif column not in source_table_columns_in_order:
                 added_columns.append( column )
 
+    # 2025-07-21: I think this may always be null.
+    for column in virtual_columns_to_add:
+        result_dataframe[column] = virtual_columns_to_add[column]
+
     for column in df_columns_to_add:
         result_dataframe[column] = df_columns_to_add[column]
+
+    # 2025-07-21: I think this may always be null.
+    for column in single_foreign_columns_to_add:
+        result_dataframe[column] = single_foreign_columns_to_add[column]
 
     if len( columns_to_suppress ) > 0:
         log.debug( f"Filtering API columns: {columns_to_suppress}" )
@@ -987,8 +1194,6 @@ def get_data(
             
             if column != 'data_source' and column not in df_columns_to_add and column not in added_columns:
                 
-                # Home-table columns.
-
                 # CDA has no float values. Cast all numeric data to integers.
 
                 if column_data_types[column] in { 'integer', 'bigint' }:
@@ -1010,7 +1215,7 @@ def get_data(
                 elif column_data_types[column] in { 'text', 'boolean' }:
                     
                     # Replace values that are None (== null) with '<NA>' (to match what we['re forced to] use
-                    # for null numeric values). Values that are empty lists [] will be passed along unmodified.
+                    # for null numeric values.
 
                     result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
 
@@ -1025,9 +1230,11 @@ def get_data(
                 # * this column is from a foreign table: if it were a native column, it would never have been added to `added_columns`
                 # 
                 # * `collate_results` is False: if it were True, this data would've been kept in the context of its containing
-                #   aggregated "X_data" structure and not added to `added_columns`
+                #   aggregated "X_columns" structure and not added to `added_columns`
                 # 
-                # * THEREFORE, each cell's data is (by design) a (possibly empty) list of unique observed values
+                # * THEREFORE, each cell's data is (by design) either
+                #   - a list of unique observed values, or
+                #   - the string '<NA>'
 
                 # Handle missing values atom-wise, building a new column as we go, then swap the result into `result_dataframe`.
 
@@ -1038,12 +1245,11 @@ def get_data(
                     current_cell_value = result_record[column]
 
                     if current_cell_value == '<NA>':
-                        log.critical( f"Unexpected data modification of value in result column {column} (to '<NA>'). Cannot continue: please notify the CDA developers of this event and include any information needed to replicate this message." )
-                        return
+                        processed_column_data.append( current_cell_value )
 
                     elif len( current_cell_value ) == 0:
                         # An empty list.
-                        processed_column_data.append( list() )
+                        processed_column_data.append( '<NA>' )
 
                     else:
                         # We have a nonzero-length list of non-null data values.
