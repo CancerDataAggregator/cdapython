@@ -628,6 +628,20 @@ def get_data(
 
             columns_to_add.append( column_to_add )
 
+    if collate_results:
+        # Be sure to include requests for provenance information about foreign tables
+        # included only implicitly (by filters, not by add_columns).
+
+        for filter_query in set( queries_for_match_all ) | set( queries_for_match_any ):
+            column_to_add = re.search( r'^(\S+)\s', filter_query ).group(1)
+            foreign_table_name = cached_column_metadata.query( f"column == '{column_to_add}'" )['table'].iloc[0]
+            # Check to see if we're already asking for provenance info from that table: if not, do, unless {table} is 'upstream_identifiers'.
+            if foreign_table_name != 'upstream_identifiers':
+                for data_source in [ source_label.lower() for source_label in sorted( valid_data_sources ) ]:
+                    provenance_field = f"{foreign_table_name}_data_at_{data_source}"
+                    if provenance_field not in columns_to_add:
+                        columns_to_add.append( provenance_field )
+
     columns_to_exclude = list()
 
     suppress_data_source_results = False

@@ -84,7 +84,7 @@ def normalize_to_list( parameter_name, user_supplied_parameter_value, value_type
 
 def validate_and_transform_match_filter_list( cached_column_metadata, match_statement_list ):
     """
-    Parse `match_*` filter expressions and transform for syntax alidity with the API.
+    Parse `match_*` filter expressions and transform for syntax validity with the API.
 
     Arguments:
         cached_column_metadata ( DataFrame; required ):
