@@ -606,7 +606,6 @@ def get_data(
     columns_to_add = list()
 
     for column_to_add in add_columns:
-        
         # Ignore requests for columns that are already present by default, and don't add columns twice.
         if column_to_add not in source_table_columns_in_order and column_to_add not in columns_to_add:
             # If collate == True, we'll need to ask for provenance information from this column's
@@ -934,7 +933,7 @@ def get_data(
 
                             foreign_table_data_by_column['data_source'].append( upstream_data_source )
 
-                    if len( foreign_table_data_by_column ) > 0:
+                    if len( foreign_table_data_by_column.keys() ) > 1:
                         
                         foreign_table_column_ordering = [ 'data_source' ]
 
