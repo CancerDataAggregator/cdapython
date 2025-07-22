@@ -658,6 +658,9 @@ def get_data(
 
         if column_to_exclude not in columns_to_exclude:
             columns_to_exclude.append( column_to_exclude )
+            # If we're excluding {home_table}.*, automatically suppress 'data_source' results.
+            if column_to_exclude == f"{table}.*":
+                suppress_data_source_results = True
 
     #############################################################################################################################
     # Build an object to represent our upcoming API query.
