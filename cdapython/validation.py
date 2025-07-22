@@ -435,9 +435,6 @@ def validate_parameter_values(
     if match_from_file['input_file'] != '' and match_from_file['input_file'] == output_file:
         raise RuntimeError( f"You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different." )
 
-
-
-
     # Check that `data_source` is a single valid upstream data source label (for `called_function`=='column_values')
     # or a list of valid upstream data source labels (for `called_function` in [ 'get_data', 'summarize' ]).
     # `valid_data_sources` was normalized to uppercase when it was constructed by the caller.
@@ -469,7 +466,13 @@ def validate_parameter_values(
     # Make sure CDA columns named in `exclude_columns` exist.
 
     for column_name in exclude_columns:
-        if column_name not in cached_column_metadata['column'].unique():
+        match_result = re.search( r'^(.+)\.\*$', column_name )
+
+        if match_result is not None:
+            foreign_table = match_result.group(1)
+            if foreign_table not in tables():
+                raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names, or macros for whole tables like 'treatment.*'. You specified '{column_name}', which is neither." )
+        elif column_name not in cached_column_metadata['column'].unique():
             raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names. You specified '{column_name}', which is not that." )
 
     # Check that `collate_results` is a boolean (for get_data) or None (for column_values, summarize) and that `called_function` has an expected value.
