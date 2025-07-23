@@ -280,7 +280,7 @@ def intersect_results(
                                 if len( foreign_table_df_row_data_by_column_and_id[column_name][main_id].columns ) == 0:
                                     foreign_table_df_row_data_by_column_and_id[column_name][main_id] = result_record[column_name].copy()
                                 else:
-                                    foreign_table_df_row_data_by_column_and_id[column_name][main_id] = pd.concat( foreign_table_df_row_data_by_column_and_id[column_name][main_id], result_record[column_name] ).drop_duplicates()
+                                    foreign_table_df_row_data_by_column_and_id[column_name][main_id] = pd.concat( [ foreign_table_df_row_data_by_column_and_id[column_name][main_id], result_record[column_name] ] ).drop_duplicates()
 
     if not ignore_added_columns:
         if seen_upstream_identifiers_data:
