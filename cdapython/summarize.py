@@ -228,7 +228,7 @@ def intersect_results(
         for row_index, result_record in result_df.iterrows():
             main_id = result_record[main_id_column]
             if main_id in target_record_ids:
-                for column_name in result_record:
+                for column_name in list( result_record.index ):
                     if column_name in source_table_columns_in_order:
                         # We might encounter some {table} columns that aren't in all input DataFrames.
                         # This is fine. See the discussion before this function's defline.
@@ -237,7 +237,7 @@ def intersect_results(
                             source_table_data_by_column_and_id[column_name] = dict()
                         if main_id in source_table_data_by_column_and_id[column_name]:
                             new_value = result_record[column_name]
-                            if new_value != source_table_data_by_column_and_id[column_name]:
+                            if new_value != source_table_data_by_column_and_id[column_name][main_id]:
                                 log.error( f"Unexpectedly encountered different clashing values across different input DataFrames for {table} record '{main_id}', column '{column_name}': '{source_table_data_by_column_and_id[column_name][main_id]}' vs. {new_value}'. Cannot continue." )
                                 return
                         else:
