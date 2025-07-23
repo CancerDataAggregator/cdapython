@@ -55,39 +55,41 @@ from cda_client.models.summary_request_body import SummaryRequestBody
 #               that is present in one result set is missing from any of the other result sets
 #           potential gaps cannot be filled in the above case
 #         * if no error, then iteratively and pairwise: make lists into sets, take union, re-listify
-#           --> beware '<NA>'
 #
 #     merging (sub-)DataFrames :
-#         * some sub-DataFrame contents (project_data, subject_data, file_data) can be row-filtered
-#           by upstream queries and so may no longer be representative of the merged data if just
-#           copied into merged results via union heedless of context
-#           --> error if any sub-DataFrame in { file_data, project_data, subject_data }
+#         * some sub-DataFrame contents (project_data, subject_data, file_data, external_reference_data)
+#           can be row-filtered by upstream queries and so may no longer be representative of the merged
+#           data if just copied into merged results via union heedless of context
+#           --> error if any sub-DataFrame in { file_data, project_data, subject_data, external_reference_data }
 #               that is present in one result set is missing from any of the other result sets
-#           --> error if the list of columns for any sub-DataFrame in { file_data,
-#               project_data, subject_data } of one result set does not match the list of
-#               columns for its same-named siblings in all other result sets
+#           --> error if the list of columns for ANY NONEMPTY sub-DataFrame in one result set
+#               does not match the list of columns for NONEMPTY DataFrame values in any
+#               same-named sibling column in any other result set
 #           potential gaps cannot be filled in either of the above cases
 #         * error for file_data, subject_data, project_data sub-DataFrames if file_id,
-#           subject_id, project_id, resp., not present: cannot unambiguously reconstitute
-#           results given the potential presence of row filtering and/or possibly identical
-#           sets of file/subject/project records distinguishable from one another only by ID
+#           subject_id, project_id, resp., not present in NONEMPTY DataFrame cell values:
+#           cannot unambiguously reconstitute results given the potential presence of row
+#           filtering and/or possibly identical sets of file/subject/project records
+#           distinguishable from one another only by ID
 #         * if no error, then deduplicate row records across all input DataFrames and return unioned result
+# 
+# ----------------------------------------------------------------------------------------
+# 
+# non-list, non-DataFrame result columns can have mixed types -- e.g. ints (or any non-null
+# values that aren't lists or DataFrames) mixed with str ('<NA>' null codes for display)
 #
-# result columns can have mixed types -- e.g. ints (or any non-null values) mixed with str ('<NA>' null codes for display)
-# note in particular that set-unions for lists must allow for possible '<NA>'s
-#
-# make it an (upstream) error to filter twice on the same column via match_all
+# make it an error to filter twice on the same column via match_all
 #
 # any number (>= 2) of dataframes can be combined in one call
 #
 # add ignore_added_columns flag to merge just the core-table columns
 #
-# result column ordering:
+# Result column ordering:
 #
-#     home table default, minus any excluded columns
-#     data_source if present
-#     foreign list/int/bool/str columns
-#     all foreign sub-DataFrame columns in alphabetical order except the last two:
+#     {table} default, minus any excluded columns
+#     'data_source' if present
+#     foreign list columns in first-seen order
+#     all foreign sub-DataFrame columns in first-seen order except the last two:
 #     upstream_identifiers_data if present
 #     external_reference_data if present
 # 
@@ -116,7 +118,197 @@ def intersect_results(
         log.error( 'You need to specify at least two result DataFrames to be merged.' )
         return
 
-    print( *result_dfs_to_merge )
+    # Cache CDA table and column metadata from the API for downstream reuse without further
+    # network disturbance. The data structure coming back from columns() is a DataFrame
+    # with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
+
+    cached_column_metadata = columns()
+
+    # Result column ordering:
+    #
+    #     {table} default, minus any excluded columns
+    #     'data_source' if present
+    #     foreign list columns in first-seen order
+    #     all foreign sub-DataFrame columns in first-seen order except the last two:
+    #     upstream_identifiers_data if present
+    #     external_reference_data if present
+
+    # Store the default column ordering for {table} as provided by the columns() function,
+    # so all cdapython interfaces always display the same data in the same way
+    # by default. In this case, we'll use this ordering to guide construction of
+    # the {table} portion of the output we return.
+
+    source_table_columns_in_order = list()
+
+    for row_index, column_record in cached_column_metadata.iterrows():
+        if column_record['table'] == table:
+            # Remember the order in which columns() delivered the {table}'s columns.
+            source_table_columns_in_order.append( column_record['column'] )
+    # Gracefully handle the virtual 'data_source' column generated by cdapython during
+    # its initial data fetches.
+    source_table_columns_in_order.append( 'data_source' )
+    # Track which of {table}'s columns we actually see.
+    seen_source_table_columns = set()
+
+    # For the rest of the columns we might encounter in our input DataFrames:
+
+    # * if the column name exists in cached_column_metadata, we process it
+    #   as a list of values from a foreign table (as generated according to the
+    #   user's upstream query).
+    foreign_table_value_list_order = list()
+    # Save value-list data as we go.
+    foreign_table_value_list_data_by_column_and_id = dict()
+
+    # * If the column name is unknown to cached_column_metadata, we assume it's a
+    #   DataFrame column created by cdapython containing covariant-grouped tabular
+    #   results (again, as generated according to the user's upstream query).
+    foreign_table_df_order = list()
+    # Track column lists for (nonempty) sub-DataFrame values.
+    foreign_table_df_columns = dict()
+    # Save DataFrame-row data as we go.
+    foreign_table_df_row_data_by_column_and_id = dict()
+
+    # We make sure these are always at the end of our returned results, if present.
+    seen_upstream_identifiers_data = False
+    seen_external_reference_data = False
+
+    # Make sure {table}_id is present, or we can't merge.
+    main_id_column = f"{table}_id"
+    if main_id_column not result_dfs_to_merge[0].columns:
+        log.error( f"Column '{main_id_column}' must be present in all input DataFrames." )
+        return
+
+    # Track all result columns which, if present anywhere, must be present everywhere.
+    must_see_everywhere = { main_id_column }
+
+    # Scan the list of columns in the first DataFrame the user sent, classify each,
+    # and initialize relevant trackers.
+    source_table_data_by_column_and_id = dict()
+    for column_name in result_dfs_to_merge[0].columns:
+        if column_name in source_table_columns_in_order:
+            # This is a column (or virtual column a la 'data_source') from {table}.
+            seen_source_table_columns.add( column_name )
+            source_table_data_by_column_and_id[column_name] = dict()
+        elif not ignore_added_columns:
+            if column_name in cached_column_metadata['column'].unique():
+                # This is a foreign-table value list.
+                must_see_everywhere.add( column_name )
+                foreign_table_value_list_order.append( column_name )
+                foreign_table_value_list_data_by_column_and_id[column_name] = dict()
+            else:
+                # This is a DataFrame column created by cdapython containing covariant-grouped tabular results.
+                foreign_table_df_columns[column_name] = list()
+                foreign_table_df_row_data_by_column_and_id[column_name] = dict()
+                if column_name == 'upstream_identifiers_data':
+                    seen_upstream_identifiers_data = True
+                elif column_name == 'external_reference_data':
+                    must_see_everywhere.add( column_name )
+                    seen_external_reference_data = True
+                else:
+                    foreign_table_df_order.append( column_name )
+                    if column_name in { 'external_reference_data', 'file_data', 'project_data', 'subject_data' }:
+                        must_see_everywhere.add( column_name )
+
+    target_record_ids = set( result_dfs_to_merge[0][main_id_column].unique() )
+
+    for result_df in result_dfs_to_merge:
+        target_record_ids = target_record_ids & set( result_df[main_id_column].unique() )
+
+    # Save result data as we go.
+
+    for result_df in result_dfs_to_merge:
+        for column_name in must_see_everywhere:
+            # Make sure every DataFrame has the columns we need to produce a merged result set.
+            if column_name not in result_df.columns:
+                if column_name == main_id_column:
+                    log.error( f"Column '{main_id_column}' must be present in all input DataFrames." )
+                else:
+                    log.error( f"If the optional 'ignore_added_columns' flag is not set to True, then all input DataFrames must have compatible columns. '{column_name}' is present in some but not all of your input DataFrames: cannot continue." )
+                return
+        for row_index, result_record in result_df.iterrows():
+            main_id = result_record[main_id_column]
+            if main_id in target_record_ids:
+                for column_name in result_record:
+                    if column_name in source_table_columns_in_order:
+                        # We might encounter some {table} columns that aren't in all input DataFrames.
+                        # This is fine. See the discussion before this function's defline.
+                        if column_name not in seen_source_table_columns:
+                            seen_source_table_columns.add( column_name )
+                            source_table_data_by_column_and_id[column_name] = dict()
+                        if main_id in source_table_data_by_column_and_id[column_name]:
+                            new_value = result_record[column_name]
+                            if new_value != source_table_data_by_column_and_id[column_name]:
+                                log.error( f"Unexpectedly encountered different clashing values across different input DataFrames for {table} record '{main_id}', column '{column_name}': '{source_table_data_by_column_and_id[column_name][main_id]}' vs. {new_value}'. Cannot continue." )
+                                return
+                        else:
+                            source_table_data_by_column_and_id[column_name][main_id] = result_record[column_name]
+                    elif not ignore_added_columns:
+                        if column_name in cached_column_metadata['column'].unique():
+                            # This is a foreign-table value list.
+                            if column_name not in must_see_everywhere:
+                                # We need these to be in all input DataFrames.
+                                log.error( f"If the optional 'ignore_added_columns' flag is not set to True, then all input DataFrames must have compatible columns. '{column_name}' is present in some but not all of your input DataFrames: cannot continue." )
+                                return
+                            if main_id not in foreign_table_value_list_data_by_column_and_id[column_name]:
+                                foreign_table_value_list_data_by_column_and_id[column_name][main_id] = set()
+                            foreign_table_value_list_data_by_column_and_id[column_name][main_id] = foreign_table_value_list_data_by_column_and_id[column_name][main_id] | set( result_record[column_name] )
+                        else:
+                            # This is a DataFrame column created by cdapython containing covariant-grouped tabular results.
+                            if column_name in { 'external_reference_data', 'file_data', 'project_data', 'subject_data' } and column_name not in must_see_everywhere:
+                                # We need these to be in all input DataFrames, or none.
+                                log.error( f"If the optional 'ignore_added_columns' flag is not set to True, then all input DataFrames must have compatible columns. '{column_name}' is present in some but not all of your input DataFrames: cannot continue." )
+                                return
+                            elif column_name not in foreign_table_df_columns:
+                                foreign_table_df_order.append( column_name )
+                                foreign_table_df_columns[column_name] = list()
+                                foreign_table_df_row_data_by_column_and_id[column_name] = dict()
+                            if len( foreign_table_df_columns[column_name] ) == 0 and len( result_record[column_name].columns ) > 0:
+                                for sub_column_name in list( result_record[column_name].columns ):
+                                    foreign_table_df_columns[column_name].append( sub_column_name )
+                                if column_name in { 'file_data', 'project_data', 'subject_data' }:
+                                    target_id_column = re.sub( r'_data$', r'', column_name ) + '_id'
+                                    if target_id_column not in foreign_table_df_columns[column_name]:
+                                        log.error( f"If the optional 'ignore_added_columns' flag is not set to True and your input DataFrames contain 'file_data', 'project_data' or 'subject_data' columns, the DataFrames in those columns must have 'file_id', 'project_id' and 'subject_id' columns, respectively, or we cannot merge the results." )
+                                        return
+                            elif len( result_record[column_name].columns ) > 0:
+                                if list( result_record[column_name].columns ) != foreign_table_df_columns[column_name]:
+                                    log.error( f"If the optional 'ignore_added_columns' flag is not set to True, then all input DataFrames must have compatible columns. '{column_name}' is present in multiple input DataFrames, but the columns present in '{column_name}' (sub-)DataFrames do not match across all (top-level) input DataFrames." )
+                                    return
+                            if main_id not in foreign_table_df_row_data_by_column_and_id[column_name]:
+                                foreign_table_df_row_data_by_column_and_id[column_name][main_id] = set()
+                            if len( result_record[column_name].columns ) > 0:
+                                for sub_row_index, sub_result_record in result_record[column_name].iterrows():
+                                    current_row = dict()
+                                    for sub_column_name in result_record[column_name].columns:
+                                        current_row[sub_column_name] = sub_result_record[sub_column_name]
+                                    foreign_table_df_row_data_by_column_and_id[column_name][main_id].add( current_row )
+
+    if not ignore_added_columns:
+        if seen_upstream_identifiers_data:
+            foreign_table_df_order.append( 'upstream_identifiers_data' )
+        if seen_external_reference_data:
+            foreign_table_df_order.append( 'external_reference_data' )
+
+    # Build result DataFrame.
+
+    merged_result_df = pd.DataFrame()
+
+    main_id_list = sorted( target_record_ids )
+
+    for column_name in source_table_columns_in_order:
+        if column_name in seen_source_table_columns:
+            if column_name == main_id_column:
+                merged_result_df[column_name] = main_id_list
+            else:
+                merged_result_df[column_name] = [ source_table_data_by_column_and_id[column_name][main_id] for main_id in main_id_list ]
+
+    if not ignore_added_columns:
+        for column_name in foreign_table_value_list_order:
+            merged_result_df[column_name] = [ sorted( foreign_table_value_list_data_by_column_and_id[column_name][main_id] ) for main_id in main_id_list ]
+        for column_name in foreign_table_df_order:
+            merged_result_df[column_name] = [ pd.DataFrame.from_dict( { sub_column_name : [ sub_record[sub_column_name] for sub_record in sorted( foreign_table_df_row_data_by_column_and_id[column_name][main_id] ) ] for sub_column_name in foreign_table_df_columns[column_name] }, orient='columns' )
+
+    return merged_result_df
 
 #############################################################################################################################
 #
