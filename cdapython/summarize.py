@@ -306,7 +306,7 @@ def intersect_results(
         for column_name in foreign_table_value_list_order:
             merged_result_df[column_name] = [ sorted( foreign_table_value_list_data_by_column_and_id[column_name][main_id] ) for main_id in main_id_list ]
         for column_name in foreign_table_df_order:
-            merged_result_df[column_name] = [ pd.DataFrame.from_dict( { sub_column_name : [ sub_record[sub_column_name] for sub_record in sorted( foreign_table_df_row_data_by_column_and_id[column_name][main_id] ) ] for sub_column_name in foreign_table_df_columns[column_name] }, orient='columns' )
+            merged_result_df[column_name] = [ pd.DataFrame.from_dict( { sub_column_name : [ sub_record[sub_column_name] for sub_record in sorted( foreign_table_df_row_data_by_column_and_id[column_name][main_id] ) ] for sub_column_name in foreign_table_df_columns[column_name] }, orient='columns' ) ]
 
     return merged_result_df
 
