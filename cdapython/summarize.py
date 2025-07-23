@@ -275,13 +275,12 @@ def intersect_results(
                                     log.error( f"If the optional 'ignore_added_columns' flag is not set to True, then all input DataFrames must have compatible columns. '{column_name}' is present in multiple input DataFrames, but the columns present in '{column_name}' (sub-)DataFrames do not match across all (top-level) input DataFrames." )
                                     return
                             if main_id not in foreign_table_df_row_data_by_column_and_id[column_name]:
-                                foreign_table_df_row_data_by_column_and_id[column_name][main_id] = set()
+                                foreign_table_df_row_data_by_column_and_id[column_name][main_id] = pd.DataFrame()
                             if len( result_record[column_name].columns ) > 0:
-                                for sub_row_index, sub_result_record in result_record[column_name].iterrows():
-                                    current_row = dict()
-                                    for sub_column_name in result_record[column_name].columns:
-                                        current_row[sub_column_name] = sub_result_record[sub_column_name]
-                                    foreign_table_df_row_data_by_column_and_id[column_name][main_id].add( current_row )
+                                if len( foreign_table_df_row_data_by_column_and_id[column_name][main_id].columns ) == 0:
+                                    foreign_table_df_row_data_by_column_and_id[column_name][main_id] = result_record[column_name].copy()
+                                else:
+                                    foreign_table_df_row_data_by_column_and_id[column_name][main_id] = pd.concat( foreign_table_df_row_data_by_column_and_id[column_name][main_id], result_record[column_name] ).drop_duplicates()
 
     if not ignore_added_columns:
         if seen_upstream_identifiers_data:
@@ -306,7 +305,7 @@ def intersect_results(
         for column_name in foreign_table_value_list_order:
             merged_result_df[column_name] = [ sorted( foreign_table_value_list_data_by_column_and_id[column_name][main_id] ) for main_id in main_id_list ]
         for column_name in foreign_table_df_order:
-            merged_result_df[column_name] = [ pd.DataFrame.from_dict( { sub_column_name : [ sub_record[sub_column_name] for sub_record in sorted( foreign_table_df_row_data_by_column_and_id[column_name][main_id] ) ] for sub_column_name in foreign_table_df_columns[column_name] }, orient='columns' ) ]
+            merged_result_df[column_name] = [ foreign_table_df_row_data_by_column_and_id[column_name][main_id] for main_id in main_id_list ]
 
     return merged_result_df
 
