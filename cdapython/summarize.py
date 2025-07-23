@@ -174,7 +174,7 @@ def intersect_results(
 
     # Make sure {table}_id is present, or we can't merge.
     main_id_column = f"{table}_id"
-    if main_id_column not result_dfs_to_merge[0].columns:
+    if main_id_column not in result_dfs_to_merge[0].columns:
         log.error( f"Column '{main_id_column}' must be present in all input DataFrames." )
         return
 
