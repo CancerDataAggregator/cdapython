@@ -280,7 +280,7 @@ def intersect_results(
                                 if len( foreign_table_df_row_data_by_column_and_id[column_name][main_id].columns ) == 0:
                                     foreign_table_df_row_data_by_column_and_id[column_name][main_id] = result_record[column_name].copy()
                                 else:
-                                    results_with_dupes = pd.concat( [ foreign_table_df_row_data_by_column_and_id[column_name][main_id], result_record[column_name] ] )
+                                    results_with_dupes = pd.concat( [ foreign_table_df_row_data_by_column_and_id[column_name][main_id], result_record[column_name] ], ignore_index = True )
                                     # Evades 'unhashable type: list' error when trying to deduplicate rows whose cells contain list values.
                                     foreign_table_df_row_data_by_column_and_id[column_name][main_id] = results_with_dupes.loc[ results_with_dupes.astype(str).drop_duplicates().index ]
 
