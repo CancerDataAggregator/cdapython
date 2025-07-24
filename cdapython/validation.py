@@ -82,7 +82,7 @@ def normalize_to_list( parameter_name, user_supplied_parameter_value, value_type
 #
 #############################################################################################################################
 
-def validate_and_transform_match_filter_list( cached_column_metadata, match_statement_list ):
+def validate_and_transform_match_filter_list( cached_column_metadata, match_statement_list, enforce_column_uniqueness=False ):
     """
     Parse `match_*` filter expressions and transform for syntax validity with the API.
 
@@ -93,6 +93,10 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
         match_statement_list ( list of strings; optional ):
             One or more conditions, expressed as filter strings
+
+        enforce_column_uniqueness ( boolean; optional ):
+            Should we only allow each column to be filtered exactly once? (for match_all)
+            Default: False (for match_any)
 
     Returns:
         List of transformed and cleaned up match statements, or an empty list if no inputs were given
@@ -136,6 +140,9 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         'f': 'false'
     }
 
+    # Track which columns have been seen in case we need to catch disallowed sets of multiple queries on the same column.
+    seen_filter_column_names = set()
+
     for filter_expression in match_statement_list:
         
         #############################################################################################################################
@@ -174,6 +181,13 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
         # Try to extract a column name from this filter expression. Don't be case-sensitive.
         filter_column_name = re.sub( r'^([\S]+)\s.*', r'\1', filter_expression ).lower()
+
+        # Have we seen this before (and do we care)?
+        if enforce_column_uniqueness:
+            if filter_column_name in seen_filter_column_names:
+                raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
+            else:
+                seen_filter_column_names.add( filter_column_name )
 
         # Let's see if this thing exists.
         filter_column_metadata = cached_column_metadata[ cached_column_metadata['column'] == filter_column_name ]
