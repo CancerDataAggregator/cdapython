@@ -30,6 +30,74 @@ from cda_client.models.summary_request_body import SummaryRequestBody
 #############################################################################################################################
 
 #############################################################################################################################
+#
+# intersect_file_results(): Combine DataFrames produced by get_file_data() into one DataFrame describing all the file rows
+#                            that are present in all input DataFrames.
+#
+#############################################################################################################################
+
+def intersect_file_results(
+    *result_dfs_to_merge,
+    ignore_added_columns=False
+):
+    """
+    Combine two or more DataFrames produced by get_file_data() via intersection: merge result data for
+    all files present in all input DataFrames.
+
+    Arguments:
+        two or more DataFrames returned by get_file_data()
+
+        ignore_added_columns ( boolean; optional ):
+            Merge only columns from the file table: avoids breakages in
+            cases where added extra (non-file) columns can't be merged due
+            to differences in how similar but different upstream queries produced
+            the results we're trying to merge.
+            (Default: False: try to merge file data plus all extra data appearing in
+            all input DataFrames.)
+
+    Returns:
+        A pandas.DataFrame containing combined metadata about all file rows that
+        appear in all input DataFrames, including by default all associated non-file data
+        present in all input DataFrames.
+    """
+
+    return intersect_results( *result_dfs_to_merge, ignore_added_columns=ignore_added_columns, table='file' )
+
+#############################################################################################################################
+#
+# intersect_subject_results(): Combine DataFrames produced by get_subject_data() into one DataFrame describing all the subject rows
+#                               that are present in all input DataFrames.
+#
+#############################################################################################################################
+
+def intersect_subject_results(
+    *result_dfs_to_merge,
+    ignore_added_columns=False
+):
+    """
+    Combine two or more DataFrames produced by get_subject_data() via intersection: merge result data for
+    all subjects present in all input DataFrames.
+
+    Arguments:
+        two or more DataFrames returned by get_subject_data()
+
+        ignore_added_columns ( boolean; optional ):
+            Merge only columns from the subject table: avoids breakages in
+            cases where added extra (non-subject) columns can't be merged due
+            to differences in how similar but different upstream queries produced
+            the results we're trying to merge.
+            (Default: False: try to merge subject data plus all extra data appearing in
+            all input DataFrames.)
+
+    Returns:
+        A pandas.DataFrame containing combined metadata about all subject rows that
+        appear in all input DataFrames, including by default all associated non-subject data
+        present in all input DataFrames.
+    """
+
+    return intersect_results( *result_dfs_to_merge, ignore_added_columns=ignore_added_columns, table='subject' )
+
+#############################################################################################################################
 # 
 # intersect_results(): Compute the intersection of two or more result DataFrames returned by get_data() from the same endpoint.
 # 
