@@ -48,6 +48,8 @@ def cda_functions():
             'summarize_files',
             'get_subject_data',
             'get_file_data',
+            'intersect_subject_results',
+            'intersect_file_results',
             'get_valid_log_levels',
             'get_log_level',
             'set_log_level',
