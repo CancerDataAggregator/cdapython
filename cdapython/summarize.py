@@ -935,7 +935,8 @@ def summarize(
     # ...and save parse results for each filter expression as a separate Query object (to be combined later).
 
     try:
-        queries_for_match_all = validate_and_transform_match_filter_list( cached_column_metadata, match_all, enforce_column_uniqueness=True )
+        # TO DO: RE-ENABLE enforce_column_uniqueness AFTER FIGURING OUT NUMERIC HANDLING AND COMPATIBILITY BETWEEN GET_DATA AND SUMMARIZE
+        queries_for_match_all = validate_and_transform_match_filter_list( cached_column_metadata, match_all, enforce_column_uniqueness=False )
     except Exception as e:
         log.error( e )
         return
