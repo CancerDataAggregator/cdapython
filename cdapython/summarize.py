@@ -57,7 +57,7 @@ def expand_file_results(
         return
     elif id_column_name not in results_dataframe.columns:
         if 'subject_id' in results_dataframe.columns:
-            log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: did you mean to use get_subject_data() instead?" )
+            log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: did you mean to use expand_subject_results() instead?" )
         else:
             log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: cannot collate sub-DataFrame results by file without it." )
         return
@@ -98,7 +98,7 @@ def expand_subject_results(
         return
     elif id_column_name not in results_dataframe.columns:
         if 'file_id' in results_dataframe.columns:
-            log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: did you mean to use get_file_data() instead?" )
+            log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: did you mean to use expand_file_results() instead?" )
         else:
             log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: cannot collate sub-DataFrame results by subject without it." )
         return
