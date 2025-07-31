@@ -31,6 +31,98 @@ from cda_client.models.summary_request_body import SummaryRequestBody
 
 #############################################################################################################################
 #
+# expand_file_results(): Expand the information from one embedded DataFrame column in a result DataFrame returned by
+#                            get_file_data() into a 2D table with one row per embdedded DataFrame row, with a `file_id` column
+#                            prepended to each to identify the parent file record.
+#
+#############################################################################################################################
+
+def expand_file_results(
+    results_dataframe,
+    column_to_expand
+):
+    """
+    Given a result DataFrame R returned by get_file_data(), and a column C in R
+    that contains DataFrames, return a version of the information in C
+    expanded into a 2-dimensional table T, with one row in T for every row in every
+    DataFrame in C, and with each row in T also containing the file_id in R that goes with
+    that row.
+    """
+
+    return expand_results( results_dataframe=results_dataframe, column_to_expand=column_to_expand, table='file' )
+
+#############################################################################################################################
+#
+# expand_subject_results(): Expand the information from one embedded DataFrame column in a result DataFrame returned by
+#                            get_subject_data() into a 2D table with one row per embdedded DataFrame row, with a `subject_id` column
+#                            prepended to each to identify the parent subject record.
+#
+#############################################################################################################################
+
+def expand_subject_results(
+    results_dataframe,
+    column_to_expand
+):
+    """
+    Given a result DataFrame R returned by get_subject_data(), and a column C in R
+    that contains DataFrames, return a version of the information in C
+    expanded into a 2-dimensional table T, with one row in T for every row in every
+    DataFrame in C, and with each row in T also containing the subject_id in R that goes with
+    that row.
+    """
+
+    return expand_results( results_dataframe=results_dataframe, column_to_expand=column_to_expand, table='subject' )
+
+#############################################################################################################################
+#
+# expand_results(): Expand the information from one embedded DataFrame column in a result DataFrame returned by
+#                            get_X_data() into a 2D table with one row per embdedded DataFrame row, with an `X_id` column
+#                            prepended to each to identify the parent result record.
+#
+#############################################################################################################################
+
+def expand_results(
+    results_dataframe,
+    column_to_expand,
+    table
+):
+    """
+    Given a result DataFrame R returned by get_data(), and a column C in R
+    that contains DataFrames, return a version of the information in C
+    expanded into a 2-dimensional table T, with one row in T for every row in every
+    DataFrame in C, and with each row in T also containing the ID in R that goes with
+    that row.
+    """
+
+    log = get_logger()
+
+    expanded_column_data = []
+
+    if not isinstance( results_dataframe, pd.DataFrame ):
+        log.error( f"The 'results_dataframe' parameter must be a pandas DataFrame; you passed in an object of type { type( results_dataframe ) }, which is not that." )
+        return
+    elif not isinstance( column_to_expand, str ):
+        log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in the 'results_dataframe' and contains (sub-)DataFrames as values. You passed in a value for 'column_to_expand' which wasn't a string (type {type(column_to_expand)})." )
+        return
+    elif column_to_expand not in results_dataframe.columns:
+        log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in the 'results_dataframe' and contains (sub-)DataFrames as values. You passed in 'column_to_expand={column_to_expand}', which isn't the name of a column in the result DataFrame you specified." )
+        return
+
+    for _, result in results_dataframe.iterrows():
+        if not isinstance( result[column_to_expand], pd.DataFrame ):
+            log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in the 'results_dataframe' and contains (sub-)DataFrames as values. You passed in 'column_to_expand={column_to_expand}', which isn't a column that contains DataFrames as values." )
+            return
+        else:
+            for _, dataframe_row in result[column_to_expand].iterrows():
+                row_data = {}
+                row_data[f"{table}_id"] = result[f"{table}_id"]
+                row_data.update( dataframe_row.to_dict() )
+                expanded_column_data.append( row_data )
+
+    return pd.DataFrame( expanded_column_data )
+
+#############################################################################################################################
+#
 # intersect_file_results(): Combine DataFrames produced by get_file_data() into one DataFrame describing all the file rows
 #                            that are present in all input DataFrames.
 #
