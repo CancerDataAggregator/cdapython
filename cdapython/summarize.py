@@ -49,6 +49,25 @@ def expand_file_results(
     that row.
     """
 
+    log = get_logger()
+    id_column_name = 'file_id'
+
+    if not isinstance( results_dataframe, pd.DataFrame ):
+        log.error( f"The 'results_dataframe' parameter must be a pandas DataFrame; you passed in an object of type { type( results_dataframe ) }, which is not that." )
+        return
+    elif id_column_name not in results_dataframe.columns:
+        if 'subject_id' in results_dataframe.columns:
+            log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: did you mean to use get_subject_data() instead?" )
+        else:
+            log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: cannot collate sub-DataFrame results by file without it." )
+        return
+    elif not isinstance( column_to_expand, str ):
+        log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in results_dataframe and contains (sub-)DataFrames as values. You passed in a value for 'column_to_expand' which wasn't a string (type {type(column_to_expand)})." )
+        return
+    elif column_to_expand not in results_dataframe.columns:
+        log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in results_dataframe and contains (sub-)DataFrames as values. You passed in column_to_expand='{column_to_expand}', which isn't the name of a column in the result DataFrame you specified." )
+        return
+
     return expand_results( results_dataframe=results_dataframe, column_to_expand=column_to_expand, table='file' )
 
 #############################################################################################################################
@@ -70,6 +89,25 @@ def expand_subject_results(
     DataFrame in C, and with each row in T also containing the subject_id in R that goes with
     that row.
     """
+
+    log = get_logger()
+    id_column_name = 'subject_id'
+
+    if not isinstance( results_dataframe, pd.DataFrame ):
+        log.error( f"The 'results_dataframe' parameter must be a pandas DataFrame; you passed in an object of type { type( results_dataframe ) }, which is not that." )
+        return
+    elif id_column_name not in results_dataframe.columns:
+        if 'file_id' in results_dataframe.columns:
+            log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: did you mean to use get_file_data() instead?" )
+        else:
+            log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: cannot collate sub-DataFrame results by subject without it." )
+        return
+    elif not isinstance( column_to_expand, str ):
+        log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in results_dataframe and contains (sub-)DataFrames as values. You passed in a value for 'column_to_expand' which wasn't a string (type {type(column_to_expand)})." )
+        return
+    elif column_to_expand not in results_dataframe.columns:
+        log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in results_dataframe and contains (sub-)DataFrames as values. You passed in column_to_expand='{column_to_expand}', which isn't the name of a column in the result DataFrame you specified." )
+        return
 
     return expand_results( results_dataframe=results_dataframe, column_to_expand=column_to_expand, table='subject' )
 
@@ -95,25 +133,13 @@ def expand_results(
     """
 
     log = get_logger()
-    expanded_column_data = []
     id_column_name = f"{table}_id"
 
-    if not isinstance( results_dataframe, pd.DataFrame ):
-        log.error( f"The 'results_dataframe' parameter must be a pandas DataFrame; you passed in an object of type { type( results_dataframe ) }, which is not that." )
-        return
-    elif id_column_name not in results_dataframe.columns:
-        log.error( f"The results dataframe you passed in does not have the expected '{id_column_name}' column: cannot collate sub-DataFrame results by {table} without it." )
-        return
-    elif not isinstance( column_to_expand, str ):
-        log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in the 'results_dataframe' and contains (sub-)DataFrames as values. You passed in a value for 'column_to_expand' which wasn't a string (type {type(column_to_expand)})." )
-        return
-    elif column_to_expand not in results_dataframe.columns:
-        log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in the 'results_dataframe' and contains (sub-)DataFrames as values. You passed in column_to_expand='{column_to_expand}', which isn't the name of a column in the result DataFrame you specified." )
-        return
+    expanded_column_data = []
 
     for _, result in results_dataframe.iterrows():
         if not isinstance( result[column_to_expand], pd.DataFrame ):
-            log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in the 'results_dataframe' and contains (sub-)DataFrames as values. You passed in column_to_expand='{column_to_expand}', which isn't a column that contains DataFrames as values." )
+            log.error( f"The 'column_to_expand' parameter must be a string naming a column that exists in results_dataframe and contains (sub-)DataFrames as values. You passed in column_to_expand='{column_to_expand}', which isn't a column that contains DataFrames as values." )
             return
         else:
             for _, dataframe_row in result[column_to_expand].iterrows():
