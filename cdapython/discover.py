@@ -50,6 +50,8 @@ def cda_functions():
             'get_file_data',
             'intersect_subject_results',
             'intersect_file_results',
+            'expand_subject_results',
+            'expand_file_results',
             'get_valid_log_levels',
             'get_log_level',
             'set_log_level',
