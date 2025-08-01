@@ -108,26 +108,38 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         return normalized_match_statement_list
 
     #############################################################################################################################
-    # Define the list of supported filter-string operators.
+    # Define and categorize lists of supported filter-string operators.
 
-    allowed_operators = {
+    comparison_operators = {
         '>',
         '>=',
         '<',
-        '<=',
+        '<='
+    }
+
+    flip_comparison_operator = {
+        '>' : '<',
+        '>=' : '<=',
+        '<' : '>',
+        '<=' : '>='
+    }
+
+    equality_operators = {
         '=',
         '!='
     }
+
+    allowed_operators = comparison_operators | equality_operators
 
     #############################################################################################################################
     # Enumerate restrictions on operator use to appropriate data types.
 
     operators_by_data_type = {
         'bigint': allowed_operators,
-        'boolean': { '=', '!=' },
+        'boolean': equality_operators,
         'integer': allowed_operators,
         'numeric': allowed_operators,
-        'text': { '=', '!=' },
+        'text': equality_operators,
     }
 
     #############################################################################################################################
@@ -139,6 +151,34 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         'false': 'false',
         'f': 'false'
     }
+
+    # Intercept filter expressions of the form <numeric literal> <comparison operator> <column name> <comparison operator> <numeric literal>
+    # and split each into two two-term/one-operator comparisons, marking the field as exempt from potential column uniqueness
+    # constraints (unless there are more top-level filters on this column in addition to the first 'X <= column < Y' expression encountered)
+    column_names_exempt_from_uniqueness_check = set()
+    new_match_statement_list = list()
+
+    for filter_expression in match_statement_list:
+        match_result = re.search( r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)$', filter_expression ) if isinstance( filter_expression, str ) else None
+        if match_result is not None:
+            left_numeric = match_result.group(1)
+            left_operator = match_result.group(2)
+            column_name = match_result.group(3)
+            right_operator = match_result.group(4)
+            right_numeric = match_result.group(5)
+            if enforce_column_uniqueness and column_name in column_names_exempt_from_uniqueness_check:
+                raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
+            else:
+                column_names_exempt_from_uniqueness_check.add( column_name )
+            if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is None or re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is None or \
+                left_operator not in comparison_operators or right_operator not in comparison_operators:
+                raise RuntimeError( f"Malformed filter expression: '{filter_expression}': 5-term expression, expected <number> <comparison> <column> <comparison> <number>." )
+            new_match_statement_list.add( f"{column_name} {flip_comparison_operator[left_operator]} {left_numeric}" )
+            new_match_statement_list.add( f"{column_name} {right_operator} {right_numeric}" )
+        else:
+            new_match_statement_list.add( filter_expression )
+
+    match_statement_list = new_match_statement_list
 
     # Track which columns have been seen in case we need to catch disallowed sets of multiple queries on the same column.
     seen_filter_column_names = set()
@@ -184,7 +224,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
 
         # Have we seen this before (and do we care)?
         if enforce_column_uniqueness:
-            if filter_column_name in seen_filter_column_names:
+            if filter_column_name not in column_names_exempt_from_uniqueness_check and filter_column_name in seen_filter_column_names:
                 raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
             else:
                 seen_filter_column_names.add( filter_column_name )
