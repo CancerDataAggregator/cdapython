@@ -173,10 +173,10 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
             if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is None or re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is None or \
                 left_operator not in comparison_operators or right_operator not in comparison_operators:
                 raise RuntimeError( f"Malformed filter expression: '{filter_expression}': 5-term expression, expected <number> <comparison> <column> <comparison> <number>." )
-            new_match_statement_list.add( f"{column_name} {flip_comparison_operator[left_operator]} {left_numeric}" )
-            new_match_statement_list.add( f"{column_name} {right_operator} {right_numeric}" )
+            new_match_statement_list.append( f"{column_name} {flip_comparison_operator[left_operator]} {left_numeric}" )
+            new_match_statement_list.append( f"{column_name} {right_operator} {right_numeric}" )
         else:
-            new_match_statement_list.add( filter_expression )
+            new_match_statement_list.append( filter_expression )
 
     match_statement_list = new_match_statement_list
 
