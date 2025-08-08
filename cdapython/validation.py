@@ -168,15 +168,17 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
             right_numeric = match_result.group(5)
             if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is None or re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is None or \
                 left_operator not in comparison_operators or right_operator not in comparison_operators:
-                raise RuntimeError( f"Malformed filter expression: '{filter_expression}': 5-term expression, expected <number> <comparison> <column> <comparison> <number>." )
-            # If we're enforcing column uniqueness, then at this level, whatever happens to a ternary filter downstream, we
-            # still only want to see each column filtered via at most one filter expression.
-            if enforce_column_uniqueness and column_name in column_names_exempt_from_uniqueness_check:
-                raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
+                # This is not a numeric comparison of the type we seek. Pass it along to downstream validation.
+                new_match_statement_list.append( filter_expression )
             else:
-                column_names_exempt_from_uniqueness_check.add( column_name )
-            new_match_statement_list.append( f"{column_name} {flip_comparison_operator[left_operator]} {left_numeric}" )
-            new_match_statement_list.append( f"{column_name} {right_operator} {right_numeric}" )
+                # If we're enforcing column uniqueness, then at this level, whatever happens to a ternary filter downstream, we
+                # still only want to see each column filtered via at most one filter expression.
+                if enforce_column_uniqueness and column_name in column_names_exempt_from_uniqueness_check:
+                    raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
+                else:
+                    column_names_exempt_from_uniqueness_check.add( column_name )
+                new_match_statement_list.append( f"{column_name} {flip_comparison_operator[left_operator]} {left_numeric}" )
+                new_match_statement_list.append( f"{column_name} {right_operator} {right_numeric}" )
         else:
             new_match_statement_list.append( filter_expression )
 
