@@ -159,20 +159,22 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
     new_match_statement_list = list()
 
     for filter_expression in match_statement_list:
-        match_result = re.search( r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)$', filter_expression ) if isinstance( filter_expression, str ) else None
+        match_result = re.search( r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S.*)$', filter_expression ) if isinstance( filter_expression, str ) else None
         if match_result is not None:
             left_numeric = match_result.group(1)
             left_operator = match_result.group(2)
             column_name = match_result.group(3)
             right_operator = match_result.group(4)
             right_numeric = match_result.group(5)
+            if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is None or re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is None or \
+                left_operator not in comparison_operators or right_operator not in comparison_operators:
+                raise RuntimeError( f"Malformed filter expression: '{filter_expression}': 5-term expression, expected <number> <comparison> <column> <comparison> <number>." )
+            # If we're enforcing column uniqueness, then at this level, whatever happens to a ternary filter downstream, we
+            # still only want to see each column filtered via at most one filter expression.
             if enforce_column_uniqueness and column_name in column_names_exempt_from_uniqueness_check:
                 raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
             else:
                 column_names_exempt_from_uniqueness_check.add( column_name )
-            if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is None or re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is None or \
-                left_operator not in comparison_operators or right_operator not in comparison_operators:
-                raise RuntimeError( f"Malformed filter expression: '{filter_expression}': 5-term expression, expected <number> <comparison> <column> <comparison> <number>." )
             new_match_statement_list.append( f"{column_name} {flip_comparison_operator[left_operator]} {left_numeric}" )
             new_match_statement_list.append( f"{column_name} {right_operator} {right_numeric}" )
         else:
