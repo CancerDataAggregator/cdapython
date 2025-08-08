@@ -19,7 +19,7 @@ setup_list = [
     'wheel >= 0.42.0',
     'cda-client >= 1.0.0',
     'tabulate >= 0.9.0',
-    #cda_openapi_python_sdk_setup_list_entry,
+    cda_openapi_python_sdk_setup_list_entry,
 ]
 
 # Load a long description of the cdapython package from the README

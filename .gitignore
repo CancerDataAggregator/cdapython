@@ -16,7 +16,7 @@ zz01_install_somewhere
 **/GCS-service-account-key.*
 
 # Virtual environment files
-/venv*/
+.venv/*
 
 # Data subdirs
 /extracted_data/
