@@ -612,15 +612,15 @@ def get_data(
             # If collate == True, we'll need to ask for provenance information from this column's
             # home table, if we haven't yet done so.
             if collate_results:
-                # Identify this column's home table. If we're asking for 'upstream_identifiers.*',
-                # then skip this bit -- it has its own closer-bound data source info.
+                # Identify this column's home table.
                 foreign_table_name = ''
-                if column_to_add != 'upstream_identifiers.*' and re.search( r'\.\*$', column_to_add ) is not None:
+                if re.search( r'\.\*$', column_to_add ) is not None:
                     foreign_table_name = re.sub( r'\.\*$', r'', column_to_add )
-                elif column_to_add != 'upstream_identifiers.*':
+                else:
                     foreign_table_name = cached_column_metadata.query( f"column == '{column_to_add}'" )['table'].iloc[0]
-                # Check to see if we're already asking for provenance info from that table: if not, do, unless we're asking for 'upstream_identifiers.*'.
-                if foreign_table_name != '':
+                # If we're asking for upstream_identifiers info, then skip this bit -- it has its own closer-bound data source info.
+                if foreign_table_name != 'upstream_identifiers':
+                    # Check to see if we're already asking for provenance info from that table: if not, do, unless we're asking for 'upstream_identifiers.*'.
                     for data_source in [ source_label.lower() for source_label in sorted( valid_data_sources ) ]:
                         provenance_field = f"{foreign_table_name}_data_at_{data_source}"
                         if provenance_field not in columns_to_add:
