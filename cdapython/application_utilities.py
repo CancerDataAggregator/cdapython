@@ -17,7 +17,7 @@ def get_api_url():
 
     # System default.
 
-    default_api_url = 'http://127.0.0.1:8000'
+    default_api_url = 'https://cda.datacommons.cancer.gov'
 
     # Has the user set a non-default URL?
 
