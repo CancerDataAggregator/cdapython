@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "cdapython"
+version = "2.0.0"
+description = "NCI CRDC CDA front-end user interface library"
+authors = []
+readme = "README.md"
+packages = [
+    {include = "cdapython"},
+]
+
+[tool.poetry.dependencies]
+cda-client = ">=2.0.0"
+pandas = ">=2.2.3"
+tabulate = ">=0.9.0"
+python = "^3.9"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+

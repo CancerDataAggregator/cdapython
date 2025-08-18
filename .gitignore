@@ -27,7 +27,6 @@ zz01_install_somewhere
 /cda_tsvs/
 /SQL_data/
 
-
 *.ipynb
 /.vscode
 /.pytest_cache
