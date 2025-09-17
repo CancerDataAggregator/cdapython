@@ -152,41 +152,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         'f': 'false'
     }
 
-    # Enforce column uniqueness (across multiple filters) if directed to do so.
-    # Track which columns have been seen in case we need to catch disallowed sets of multiple queries on the same column.
     seen_filter_column_names = set()
-
-        # Have we seen this before (and do we care)?
-        if enforce_column_uniqueness:
-            if filter_column_name not in column_names_exempt_from_uniqueness_check and filter_column_name in seen_filter_column_names:
-                raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
-            else:
-                seen_filter_column_names.add( filter_column_name )
-
-    for filter_expression in match_statement_list:
-        match_result = re.search( r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S.*)$', filter_expression ) if isinstance( filter_expression, str ) else None
-        is_ternary = False
-        if match_result is not None:
-            left_numeric = match_result.group(1)
-            left_operator = match_result.group(2)
-            column_name = match_result.group(3)
-            right_operator = match_result.group(4)
-            right_numeric = match_result.group(5)
-            if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is not None and re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is not None and \
-                left_operator in comparison_operators and right_operator in comparison_operators:
-                # This is a numeric comparison of the type we seek.
-                is_ternary = True
-
-                # If we're enforcing column uniqueness, we only want to see each column filtered via
-                # at most one filter expression.
-                if enforce_column_uniqueness and column_name in seen_filter_column_names:
-                    raise RuntimeError( f"Requested column '{column_name}' cannot be used twice in a 'match_all' list." )
-                else:
-                    seen_filter_column_names.add( column_name )
-        if enforce_column_uniqueness and not is_ternary:
-            new_match_statement_list.append( filter_expression )
-
-    match_statement_list = new_match_statement_list
 
     for filter_expression in match_statement_list:
         
@@ -242,6 +208,13 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         # ternary filters, we've already extracted `filter_column_name`, above.
         if not filter_is_ternary:
             filter_column_name = re.sub( r'^([\S]+)\s.*', r'\1', filter_expression ).lower()
+
+        # Have we seen this before (and do we care)?
+        if enforce_column_uniqueness:
+            if filter_column_name in seen_filter_column_names:
+                raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
+            else:
+                seen_filter_column_names.add( filter_column_name )
 
         # Let's see if this thing exists.
         filter_column_metadata = cached_column_metadata[ cached_column_metadata['column'] == filter_column_name ]
