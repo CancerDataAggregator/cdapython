@@ -632,7 +632,22 @@ def get_data(
         # included only implicitly (by filters, not by add_columns).
 
         for filter_query in set( queries_for_match_all ) | set( queries_for_match_any ):
-            column_to_add = re.search( r'^(\S+)\s', filter_query ).group(1)
+            # TO DO: Compartmentalize/parametrize this conditional check better: it repeats much that is already made explicit in validation.py.
+            filter_is_ternary = False
+            column_to_add = ''
+            match_result = re.search( r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S.*)$', filter_query )
+            if match_result is not None:
+                left_numeric = match_result.group(1)
+                left_operator = match_result.group(2)
+                column_name = match_result.group(3)
+                right_operator = match_result.group(4)
+                right_numeric = match_result.group(5)
+                if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is not None and re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is not None and \
+                    left_operator in { '<', '>', '<=', '>=' } and right_operator in { '<', '>', '<=', '>=' }:
+                    filter_is_ternary = True
+                    column_to_add = column_name
+            if not filter_is_ternary:
+                column_to_add = re.search( r'^(\S+)\s', filter_query ).group(1)
             foreign_table_name = cached_column_metadata.query( f"column == '{column_to_add}'" )['table'].iloc[0]
             # Check to see if we're already asking for provenance info from that table: if not, do, unless {table} is 'upstream_identifiers'.
             if foreign_table_name != 'upstream_identifiers':
