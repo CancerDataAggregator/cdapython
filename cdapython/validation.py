@@ -192,7 +192,7 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
             if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is not None and re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is not None and \
                 left_operator in comparison_operators and right_operator in comparison_operators:
                 # This is a numeric comparison of the type we seek.
-                is_ternary = True
+                filter_is_ternary = True
                 filter_column_name = column_name.lower()
 
         #############################################################################################################################
