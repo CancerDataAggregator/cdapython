@@ -152,79 +152,9 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         'f': 'false'
     }
 
-    # Intercept filter expressions of the form <numeric literal> <comparison operator> <column name> <comparison operator> <numeric literal>
-    # and split each into two two-term/one-operator comparisons, marking the field as exempt from potential column uniqueness
-    # constraints (unless there are more top-level filters on this column in addition to the first 'X <= column < Y' expression encountered)
-    column_names_exempt_from_uniqueness_check = set()
-    new_match_statement_list = list()
-
-    for filter_expression in match_statement_list:
-        match_result = re.search( r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S.*)$', filter_expression ) if isinstance( filter_expression, str ) else None
-        if match_result is not None:
-            left_numeric = match_result.group(1)
-            left_operator = match_result.group(2)
-            column_name = match_result.group(3)
-            right_operator = match_result.group(4)
-            right_numeric = match_result.group(5)
-            if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is None or re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is None or \
-                left_operator not in comparison_operators or right_operator not in comparison_operators:
-                # This is not a numeric comparison of the type we seek. Pass it along to downstream validation.
-                new_match_statement_list.append( filter_expression )
-            else:
-                # If we're enforcing column uniqueness, then at this level, whatever happens to a ternary filter downstream, we
-                # still only want to see each column filtered via at most one filter expression.
-                if enforce_column_uniqueness and column_name in column_names_exempt_from_uniqueness_check:
-                    raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
-                else:
-                    column_names_exempt_from_uniqueness_check.add( column_name )
-                new_match_statement_list.append( f"{column_name} {flip_comparison_operator[left_operator]} {left_numeric}" )
-                new_match_statement_list.append( f"{column_name} {right_operator} {right_numeric}" )
-        else:
-            new_match_statement_list.append( filter_expression )
-
-    match_statement_list = new_match_statement_list
-
+    # Enforce column uniqueness (across multiple filters) if directed to do so.
     # Track which columns have been seen in case we need to catch disallowed sets of multiple queries on the same column.
     seen_filter_column_names = set()
-
-    for filter_expression in match_statement_list:
-        
-        #############################################################################################################################
-        # Enforce the simplified cdapython query syntax as described in the docs, but quietly allow synonyms if received. Map them
-        # first back to the canonical operator in the simplified query syntax, then validate, then normalize for API request syntax
-        # as if they'd come in as their canonical versions.
-
-        # Take care of two-word operators first: downstream, unmodified, they break simplifying assumptions
-        # about filter string tokenization that should safe to make given the spec of the cdapython query syntax.
-
-        if re.search( r'^(\S+)\s+IS\s+NOT\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
-            filter_expression = re.sub( r'^(\S+)\s+IS\s+NOT\s+(\S.*)$', r'\1 != \2', filter_expression, flags=re.IGNORECASE )
-
-        elif re.search( r'^(\S+)\s+NOT\s+LIKE\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
-            filter_expression = re.sub( r'^(\S+)\s+NOT\s+LIKE\s+(\S.*)$', r'\1 != \2', filter_expression, flags=re.IGNORECASE )
-
-        # Normalize the rest of the known operators (used for null and fuzzy matches) to conform to cdapython query syntax.
-
-        elif re.search( r'^(\S+)\s+IS\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
-            filter_expression = re.sub( r'^(\S+)\s+IS\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
-
-        elif re.search( r'^(\S+)\s+LIKE\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
-            filter_expression = re.sub( r'^(\S+)\s+LIKE\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
-
-        #############################################################################################################################
-        # Validate minimal filter string format: <non-whitespace string (column name)><whitespace><non-whitespace string (operator)><whitespace><non-whitespace string (beginning of value to match)><any mix of whitespace and non-whitespace characters (end of value to match)>
-
-        if not isinstance( filter_expression, str ) or len( filter_expression ) == 0:
-            raise RuntimeError( f"Match parameters must be nonempty filter strings: you specified '{filter_expression}' (from match list {match_statement_list}), which is not." )
-
-        if re.search( r'^\S+\s+\S+\s+\S.*$', filter_expression ) is None:
-            raise RuntimeError( f"Filter string '{filter_expression}' does not conform to 'COLUMN_NAME OP VALUE' format. See the help text for details." )
-
-        #############################################################################################################################
-        # Now parse the filter expression and validate COLUMN and OP tokens.
-
-        # Try to extract a column name from this filter expression. Don't be case-sensitive.
-        filter_column_name = re.sub( r'^([\S]+)\s.*', r'\1', filter_expression ).lower()
 
         # Have we seen this before (and do we care)?
         if enforce_column_uniqueness:
@@ -232,6 +162,86 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
                 raise RuntimeError( f"Requested column '{filter_column_name}' cannot be used twice in a 'match_all' list." )
             else:
                 seen_filter_column_names.add( filter_column_name )
+
+    for filter_expression in match_statement_list:
+        match_result = re.search( r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S.*)$', filter_expression ) if isinstance( filter_expression, str ) else None
+        is_ternary = False
+        if match_result is not None:
+            left_numeric = match_result.group(1)
+            left_operator = match_result.group(2)
+            column_name = match_result.group(3)
+            right_operator = match_result.group(4)
+            right_numeric = match_result.group(5)
+            if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is not None and re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is not None and \
+                left_operator in comparison_operators and right_operator in comparison_operators:
+                # This is a numeric comparison of the type we seek.
+                is_ternary = True
+
+                # If we're enforcing column uniqueness, we only want to see each column filtered via
+                # at most one filter expression.
+                if enforce_column_uniqueness and column_name in seen_filter_column_names:
+                    raise RuntimeError( f"Requested column '{column_name}' cannot be used twice in a 'match_all' list." )
+                else:
+                    seen_filter_column_names.add( column_name )
+        if enforce_column_uniqueness and not is_ternary:
+            new_match_statement_list.append( filter_expression )
+
+    match_statement_list = new_match_statement_list
+
+    for filter_expression in match_statement_list:
+        
+        if not isinstance( filter_expression, str ) or len( filter_expression ) == 0:
+            raise RuntimeError( f"Match parameters must be nonempty filter strings: you specified '{filter_expression}' (from match list {match_statement_list}), which is not." )
+
+        #############################################################################################################################
+        # Enforce the simplified cdapython query syntax as described in the docs, but quietly allow synonyms if received. Map them
+        # first back to the canonical operator in the simplified query syntax, then validate, then normalize for API request syntax
+        # as if they'd come in as their canonical versions.
+
+        # Take care of two-word operators first: downstream, unmodified, they break simplifying assumptions
+        # about filter string tokenization that should safe to make given the spec of the cdapython query syntax.
+        if re.search( r'^(\S+)\s+IS\s+NOT\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
+            filter_expression = re.sub( r'^(\S+)\s+IS\s+NOT\s+(\S.*)$', r'\1 != \2', filter_expression, flags=re.IGNORECASE )
+
+        elif re.search( r'^(\S+)\s+NOT\s+LIKE\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
+            filter_expression = re.sub( r'^(\S+)\s+NOT\s+LIKE\s+(\S.*)$', r'\1 != \2', filter_expression, flags=re.IGNORECASE )
+
+        # Normalize the rest of the known operators (used for null and fuzzy matches) to conform to cdapython query syntax.
+        elif re.search( r'^(\S+)\s+IS\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
+            filter_expression = re.sub( r'^(\S+)\s+IS\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
+
+        elif re.search( r'^(\S+)\s+LIKE\s+(\S.*)$', filter_expression, flags=re.IGNORECASE ) is not None:
+            filter_expression = re.sub( r'^(\S+)\s+LIKE\s+(\S.*)$', r'\1 = \2', filter_expression, flags=re.IGNORECASE )
+
+        # Handle ternary comparisons and mark matching filters as such.
+        filter_is_ternary = False
+        filter_column_name = ''
+        match_result = re.search( r'^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S.*)$', filter_expression )
+        if match_result is not None:
+            left_numeric = match_result.group(1)
+            left_operator = match_result.group(2)
+            column_name = match_result.group(3)
+            right_operator = match_result.group(4)
+            right_numeric = match_result.group(5)
+            if re.search( r'^[-+]?\d+(\.\d+)?$', left_numeric ) is not None and re.search( r'^[-+]?\d+(\.\d+)?$', right_numeric ) is not None and \
+                left_operator in comparison_operators and right_operator in comparison_operators:
+                # This is a numeric comparison of the type we seek.
+                is_ternary = True
+                filter_column_name = column_name.lower()
+
+        #############################################################################################################################
+        # Validate (non-ternary) minimal filter string format: <non-whitespace string (column name)><whitespace><non-whitespace string (operator)><whitespace><non-whitespace string (beginning of value to match)><any mix of whitespace and non-whitespace characters (end of value to match)>
+
+        if not filter_is_ternary and re.search( r'^\S+\s+\S+\s+\S.*$', filter_expression ) is None:
+            raise RuntimeError( f"Filter string '{filter_expression}' does not conform to 'COLUMN_NAME OP VALUE' format. See the help text for details." )
+
+        #############################################################################################################################
+        # Now parse the filter expression and validate COLUMN and OP tokens.
+
+        # Try to extract a column name from this filter expression. Don't be case-sensitive. For
+        # ternary filters, we've already extracted `filter_column_name`, above.
+        if not filter_is_ternary:
+            filter_column_name = re.sub( r'^([\S]+)\s.*', r'\1', filter_expression ).lower()
 
         # Let's see if this thing exists.
         filter_column_metadata = cached_column_metadata[ cached_column_metadata['column'] == filter_column_name ]
@@ -247,92 +257,96 @@ def validate_and_transform_match_filter_list( cached_column_metadata, match_stat
         if target_data_type not in operators_by_data_type:
             raise RuntimeError( f"Requested column '{filter_column_name}' is of unknown data_type '{target_data_type}': cannot continue, please contact the CDA devs with a description of this event." )
 
-        # See what the operator is.
-        filter_operator = re.sub( r'^\S+\s+(\S+)\s.*', r'\1', filter_expression )
+        normalized_filter_expression = filter_expression
 
-        # Be kind to computer scientists.
-        if filter_operator == '==':
-            filter_operator = '='
-
-        # Make sure the operator specified is allowed for the data type of the column being filtered.
-        if filter_operator not in operators_by_data_type[target_data_type]:
-            raise RuntimeError( f"Operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
-
-        # Extract the filter value/pattern.
-        filter_value = re.sub( r'^\S+\s+\S+\s+(\S.*)$', r'\1', filter_expression )
-
-        # We said quotes weren't required for string values. Doesn't technically mean they can't be used. Remove them.
-        filter_value = re.sub( r'''^['"]*(.*)['"]*$''', r'\1', filter_value)
-
-        #############################################################################################################################
-        # Validate VALUE types and process wildcards.
-
-        # Ignore leading and trailing whitespace unless we're dealing with strings.
-
-        if target_data_type != 'text':
-            filter_value = filter_value.strip()
-
-        if filter_value.lower() != 'null':
+        if not filter_is_ternary:
             
-            if target_data_type == 'boolean':
+            # See what the operator is.
+            filter_operator = re.sub( r'^\S+\s+(\S+)\s.*', r'\1', filter_expression )
+
+            # Be kind to computer scientists.
+            if filter_operator == '==':
+                filter_operator = '='
+
+            # Make sure the operator specified is allowed for the data type of the column being filtered.
+            if filter_operator not in operators_by_data_type[target_data_type]:
+                raise RuntimeError( f"Operator '{filter_operator}' is not usable for values of type '{target_data_type}'." )
+
+            # Extract the filter value/pattern.
+            filter_value = re.sub( r'^\S+\s+\S+\s+(\S.*)$', r'\1', filter_expression )
+
+            # We said quotes weren't required for string values. Doesn't technically mean they can't be used. Remove them.
+            filter_value = re.sub( r'''^['"]*(.*)['"]*$''', r'\1', filter_value)
+
+            #############################################################################################################################
+            # Validate VALUE types and process wildcards.
+
+            # Ignore leading and trailing whitespace unless we're dealing with strings.
+
+            if target_data_type != 'text':
+                filter_value = filter_value.strip()
+
+            if filter_value.lower() != 'null':
                 
-                # If we're supposed to be in a boolean column, make sure we've got a true/false value. Normalize recognized synonyms for valid values.
-
-                filter_value = filter_value.lower()
-
-                if filter_value not in boolean_alias:
-                    raise RuntimeError( f"Requested column {filter_column_name} has data type 'boolean', requiring a true/false value; you specified '{filter_value}', which is not valid." )
-                else:
-                    filter_value = boolean_alias[filter_value]
-
-            elif target_data_type in [ 'bigint', 'integer', 'numeric' ]:
-                
-                # If we're supposed to be in a numeric column, make sure we've got a number.
-
-                if re.search( r'^[-+]?\d+(\.\d+)?$', filter_value ) is None:
-                    raise RuntimeError( f"Requested column {filter_column_name} has data type '{target_data_type}', requiring a number value; you specified '{filter_value}', which is not." )
-
-            elif target_data_type == 'text':
-                
-                # Check for wildcards: if found, adjust operator and
-                # wildcard syntax to match API expectations on incoming queries.
-
-                original_filter_value = filter_value
-
-                if re.search( r'^\*', filter_value ) is not None or re.search( r'\*$', filter_value ) is not None:
+                if target_data_type == 'boolean':
                     
-                    # API expects lowercase operators.
-                    if filter_operator == '!=':
-                        filter_operator = 'not like'
+                    # If we're supposed to be in a boolean column, make sure we've got a true/false value. Normalize recognized synonyms for valid values.
+
+                    filter_value = filter_value.lower()
+
+                    if filter_value not in boolean_alias:
+                        raise RuntimeError( f"Requested column {filter_column_name} has data type 'boolean', requiring a true/false value; you specified '{filter_value}', which is not valid." )
                     else:
-                        filter_operator = 'like'
+                        filter_value = boolean_alias[filter_value]
 
-                if re.search(r'.\*.', filter_value) is not None:
-                    raise RuntimeError( f"Wildcards (*) are only allowed at the ends of string values; string '{original_filter_value}' is noncompliant (it has one in the middle). Please fix." )
+                elif target_data_type in [ 'bigint', 'integer', 'numeric' ]:
+                    
+                    # If we're supposed to be in a numeric column, make sure we've got a number.
 
-                # API expects percent signs.
-                filter_value = re.sub( r'\*', r'%', filter_value )
+                    if re.search( r'^[-+]?\d+(\.\d+)?$', filter_value ) is None:
+                        raise RuntimeError( f"Requested column {filter_column_name} has data type '{target_data_type}', requiring a number value; you specified '{filter_value}', which is not." )
 
-                # API needs strings quoted. Minimal replication case: match a string that contains only numbers. Need to distinguish from integer input.
-                filter_value = f"'{filter_value}'"
+                elif target_data_type == 'text':
+                    
+                    # Check for wildcards: if found, adjust operator and
+                    # wildcard syntax to match API expectations on incoming queries.
+
+                    original_filter_value = filter_value
+
+                    if re.search( r'^\*', filter_value ) is not None or re.search( r'\*$', filter_value ) is not None:
+                        
+                        # API expects lowercase operators.
+                        if filter_operator == '!=':
+                            filter_operator = 'not like'
+                        else:
+                            filter_operator = 'like'
+
+                    if re.search(r'.\*.', filter_value) is not None:
+                        raise RuntimeError( f"Wildcards (*) are only allowed at the ends of string values; string '{original_filter_value}' is noncompliant (it has one in the middle). Please fix." )
+
+                    # API expects percent signs.
+                    filter_value = re.sub( r'\*', r'%', filter_value )
+
+                    # API needs strings quoted. Minimal replication case: match a string that contains only numbers. Need to distinguish from integer input.
+                    filter_value = f"'{filter_value}'"
+
+                else:
+
+                    # Just to be safe. Types change.
+                    raise RuntimeError( f"Unanticipated data_type '{target_data_type}' encountered for filter-target column '{filter_column_name}'; cannot continue. Please report this event to CDA developers." )
 
             else:
+                
+                if filter_operator == '=':
+                    filter_operator = 'is'
+                elif filter_operator == '!=':
+                    filter_operator = 'is not'
+                else:
+                    raise RuntimeError( f"Unexpected operator encountered for NULL: '{filter_operator}' (from '{filter_expression}') -- please use = or != instead." )
 
-                # Just to be safe. Types change.
-                raise RuntimeError( f"Unanticipated data_type '{target_data_type}' encountered for filter-target column '{filter_column_name}'; cannot continue. Please report this event to CDA developers." )
+                filter_value = 'null'
 
-        else:
-            
-            if filter_operator == '=':
-                filter_operator = 'is'
-            elif filter_operator == '!=':
-                filter_operator = 'is not'
-            else:
-                raise RuntimeError( f"Unexpected operator encountered for NULL: '{filter_operator}' (from '{filter_expression}') -- please use = or != instead." )
-
-            filter_value = 'null'
-
-        normalized_filter_expression = filter_column_name + ' ' + filter_operator + ' ' + filter_value
+            normalized_filter_expression = filter_column_name + ' ' + filter_operator + ' ' + filter_value
 
         normalized_match_statement_list.append( normalized_filter_expression )
 
