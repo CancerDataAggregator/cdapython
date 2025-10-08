@@ -609,7 +609,7 @@ def get_data(
         # Ignore requests for columns that are already present by default, and don't add columns twice.
         if column_to_add not in source_table_columns_in_order and column_to_add not in columns_to_add:
             # If collate == True, we'll need to ask for provenance information from this column's
-            # home table, if we haven't yet done so.
+            # home table, if we haven't yet done so. This info is returned by default only for `file` and `subject`.
             if collate_results:
                 # Identify this column's home table.
                 foreign_table_name = ''
@@ -629,7 +629,8 @@ def get_data(
 
     if collate_results:
         # Be sure to include requests for provenance information about foreign tables
-        # included only implicitly (by filters, not by add_columns).
+        # included only implicitly (by filters, not by add_columns). Such info is
+        # only included by default from `file` and `subject`.
 
         for filter_query in set( queries_for_match_all ) | set( queries_for_match_any ):
             # TO DO: Compartmentalize/parametrize this conditional check better: it repeats much that is already made explicit in validation.py.
@@ -648,13 +649,17 @@ def get_data(
                     column_to_add = column_name
             if not filter_is_ternary:
                 column_to_add = re.search( r'^(\S+)\s', filter_query ).group(1)
-            foreign_table_name = cached_column_metadata.query( f"column == '{column_to_add}'" )['table'].iloc[0]
-            # Check to see if we're already asking for provenance info from that table: if not, do, unless {table} is 'upstream_identifiers'.
-            if foreign_table_name != 'upstream_identifiers':
-                for data_source in [ source_label.lower() for source_label in sorted( valid_data_sources ) ]:
-                    provenance_field = f"{foreign_table_name}_data_at_{data_source}"
-                    if provenance_field not in columns_to_add:
-                        columns_to_add.append( provenance_field )
+            # The user-exposed `data_source` parameter can add filters on e.g. `subject_data_at_pdc` -- don't bother with these.
+            # They won't be in the reference structure we're about to search, and they don't on their own indicate
+            # a need for any extra provenance info.
+            if re.search( r'_data_at_', column_to_add ) is None:
+                foreign_table_name = cached_column_metadata.query( f"column == '{column_to_add}'" )['table'].iloc[0]
+                # Check to see if we're already asking for provenance info from that table: if not, do, unless {table} is 'upstream_identifiers'.
+                if foreign_table_name != 'upstream_identifiers':
+                    for data_source in [ source_label.lower() for source_label in sorted( valid_data_sources ) ]:
+                        provenance_field = f"{foreign_table_name}_data_at_{data_source}"
+                        if provenance_field not in columns_to_add:
+                            columns_to_add.append( provenance_field )
 
     columns_to_exclude = list()
 
