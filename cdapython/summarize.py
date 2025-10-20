@@ -544,8 +544,8 @@ def summarize_files(
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
-            data source(s). Current valid values are 'GDC', 'IDC', 'PDC',
-            'CDS' and 'ICDC'. (Default: no filter.)
+            data source(s). Current valid values are 'GC', 'GDC', 'IDC',
+            'PDC' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
             One or more columns from a second table to add to summary output.
@@ -686,8 +686,8 @@ def summarize_subjects(
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
-            data source(s). Current valid values are 'GDC', 'IDC', 'PDC',
-            'CDS' and 'ICDC'. (Default: no filter.)
+            data source(s). Current valid values are 'GC', 'GDC', 'IDC',
+            'PDC' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
             One or more columns from a second table to add to summary output.
@@ -832,8 +832,8 @@ def summarize(
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
-            data source(s). Current valid values are 'GDC', 'IDC', 'PDC',
-            'CDS' and 'ICDC'. (Default: no filter.)
+            data source(s). Current valid values are 'GC', 'GDC', 'IDC',
+            'PDC' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
             One or more columns from a second table to add to summary output for `table`.
@@ -1338,37 +1338,37 @@ def summarize(
     #         }
     #       ],
     #       "data_source": {
-    #         "cds_exclusive": 235,
+    #         "gc_exclusive": 235,
     #         "gdc_exclusive": 351,
     #         "icdc_exclusive": 0,
     #         "idc_exclusive": 0,
     #         "pdc_exclusive": 6,
-    #         "cds_gdc_exclusive": 0,
-    #         "cds_icdc_exclusive": 0,
-    #         "cds_idc_exclusive": 898,
-    #         "cds_pdc_exclusive": 0,
+    #         "gc_gdc_exclusive": 0,
+    #         "gc_icdc_exclusive": 0,
+    #         "gc_idc_exclusive": 898,
+    #         "gc_pdc_exclusive": 0,
     #         "gdc_icdc_exclusive": 0,
     #         "gdc_idc_exclusive": 4544,
     #         "gdc_pdc_exclusive": 7,
     #         "icdc_idc_exclusive": 0,
     #         "icdc_pdc_exclusive": 0,
     #         "idc_pdc_exclusive": 0,
-    #         "cds_gdc_icdc_exclusive": 0,
-    #         "cds_gdc_idc_exclusive": 574,
-    #         "cds_gdc_pdc_exclusive": 1,
-    #         "cds_icdc_idc_exclusive": 0,
-    #         "cds_icdc_pdc_exclusive": 0,
-    #         "cds_idc_pdc_exclusive": 0,
+    #         "gc_gdc_icdc_exclusive": 0,
+    #         "gc_gdc_idc_exclusive": 574,
+    #         "gc_gdc_pdc_exclusive": 1,
+    #         "gc_icdc_idc_exclusive": 0,
+    #         "gc_icdc_pdc_exclusive": 0,
+    #         "gc_idc_pdc_exclusive": 0,
     #         "gdc_icdc_idc_exclusive": 0,
     #         "gdc_icdc_pdc_exclusive": 0,
     #         "gdc_idc_pdc_exclusive": 205,
     #         "icdc_idc_pdc_exclusive": 0,
-    #         "cds_gdc_icdc_idc_exclusive": 0,
-    #         "cds_gdc_icdc_pdc_exclusive": 0,
-    #         "cds_gdc_idc_pdc_exclusive": 83,
-    #         "cds_icdc_idc_pdc_exclusive": 0,
+    #         "gc_gdc_icdc_idc_exclusive": 0,
+    #         "gc_gdc_icdc_pdc_exclusive": 0,
+    #         "gc_gdc_idc_pdc_exclusive": 83,
+    #         "gc_icdc_idc_pdc_exclusive": 0,
     #         "gdc_icdc_idc_pdc_exclusive": 0,
-    #         "cds_gdc_icdc_idc_pdc": 0
+    #         "gc_gdc_icdc_idc_pdc": 0
     #       },
     #       "sex": [
     #         {
@@ -1386,7 +1386,7 @@ def summarize(
     #       ]
     #     }
     #   ],
-    #   "query_sql": "WITH subject_preselect AS (SELECT subject.id AS subject_id, subject.id_alias AS subject_id_alias, [...these are very long!...] AS cds_gdc_icdc_idc_pdc) AS subquery) AS data_source, (SELECT observation_columns.sex FROM observation_columns) AS sex) AS json_result"
+    #   "query_sql": "WITH subject_preselect AS (SELECT subject.id AS subject_id, subject.id_alias AS subject_id_alias, [...these are very long!...] AS gc_gdc_icdc_idc_pdc) AS subquery) AS data_source, (SELECT observation_columns.sex FROM observation_columns) AS sex) AS json_result"
     # }
 
     # Report some metadata about the results we got back.

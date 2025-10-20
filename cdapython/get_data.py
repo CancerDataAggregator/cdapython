@@ -68,8 +68,8 @@ def get_file_data(
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
-            data source(s). Current valid values are 'GDC', 'IDC', 'PDC',
-            'CDS' and 'ICDC'. (Default: no filter.)
+            data source(s). Current valid values are 'GC', 'GDC', 'IDC',
+            'PDC' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
             One or more columns from a second table to add to result data.
@@ -185,8 +185,8 @@ def get_subject_data(
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
-            data source(s). Current valid values are 'GDC', 'IDC', 'PDC',
-            'CDS' and 'ICDC'. (Default: no filter.)
+            data source(s). Current valid values are 'GC', 'GDC', 'IDC',
+            'PDC' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
             One or more columns from a second table to add to result data.
@@ -311,8 +311,8 @@ def get_data(
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
-            data source(s). Current valid values are 'GDC', 'IDC', 'PDC',
-            'CDS' and 'ICDC'. (Default: no filter.)
+            data source(s). Current valid values are 'GC', 'GDC', 'IDC',
+            'PDC' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
             One or more columns from a second table to add to result data from `table`.
@@ -759,7 +759,7 @@ def get_data(
     #             "ethnicity": null,
     #             "subject_data_at_gdc": true,
     #             "subject_data_at_idc": true,
-    #             "subject_data_at_cds": false,
+    #             "subject_data_at_gc": false,
     #             "subject_data_at_pdc": true,
     #             "subject_data_at_icdc": false,
     #             "subject_data_source_count": 3,

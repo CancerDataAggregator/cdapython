@@ -788,7 +788,7 @@ def column_values(
 
         data_source ( string; optional ):
             Restrict returned values to the given upstream data source. Current
-            valid values are 'GDC', 'PDC', 'IDC', 'CDS' and 'ICDC'.
+            valid values are 'GC', 'GDC', 'PDC', 'IDC' and 'ICDC'.
             Defaults to '' (no filter).
 
         force( boolean; optional ):
@@ -839,15 +839,15 @@ def column_values(
     # This should be replaced ASAP with a fetch from the /release_metadata endpoint.
 
     allowed_data_source_values = {
+        'GC',
         'GDC',
         'PDC',
         'IDC',
-        'CDS',
         'ICDC'
     }
 
     if data_source != '' and data_source not in allowed_data_source_values:
-        log.error( f"The 'data_source' parameter must be one of [ 'GDC', 'PDC', 'IDC', 'CDS', 'ICDC' ]. You supplied '{data_source}', which is not." )
+        log.error( f"The 'data_source' parameter must be one of [ 'GC', 'GDC', 'PDC', 'IDC', 'ICDC' ]. You supplied '{data_source}', which is not." )
         return
 
     #############################################################################################################################
