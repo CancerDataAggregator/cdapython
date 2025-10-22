@@ -834,20 +834,36 @@ def column_values(
     # Let's not care about case, and remove any whitespace before it can do any damage.
     data_source = re.sub( r'\s+', r'', data_source ).upper()
 
-    # TEMPORARY: enumerate valid `data_source` values and warn the user if they supplied something else.
-    #
-    # This should be replaced ASAP with a fetch from the /release_metadata endpoint.
+    # Cache valid labels for upstream data sources. The data structure coming back from
+    # release_metadata() is a list of dicts, with each dict looking like
+    # 
+    # {
+    #     'cda_table': 'file',
+    #     'cda_column': 'access',
+    #     'data_source': 'GDC',
+    #     'data_source_version': 'March 2025',
+    #     'data_source_extraction_date': '2025-03-21',
+    #     'data_source_row_count': 3025352,
+    #     'data_source_unique_value_count': 4,
+    #     'data_source_null_count': 407714
+    # }
 
-    allowed_data_source_values = {
-        'GC',
-        'GDC',
-        'PDC',
-        'IDC',
-        'ICDC'
-    }
+    try:
+        cached_release_metadata = release_metadata()
+    except Exception as e:
+        log.critical( e )
+        return
 
-    if data_source != '' and data_source not in allowed_data_source_values:
-        log.error( f"The 'data_source' parameter must be one of [ 'GC', 'GDC', 'PDC', 'IDC', 'ICDC' ]. You supplied '{data_source}', which is not." )
+    valid_data_sources = set()
+
+    for column_record in cached_release_metadata:
+        record_data_source = column_record['data_source']
+        # Let's not care about case.
+        if record_data_source.upper() != 'CDA':
+            valid_data_sources.add( record_data_source.upper() )
+
+    if data_source != '' and data_source not in valid_data_sources:
+        log.error( f"The 'data_source' parameter must be one of { sorted( valid_data_sources ) }. You supplied '{data_source}', which is not." )
         return
 
     #############################################################################################################################
