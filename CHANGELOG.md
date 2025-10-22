@@ -1,3 +1,5 @@
+2025-10-22: 2.0.9: parametrize data\_source check in column\_values()
+
 2025-10-20: 2.0.8: rename CDS to GC throughout
 
 2025-10-08: 2.0.7: fix malformed column metadata selector inside `collate=True` provenance management in get\_data()
