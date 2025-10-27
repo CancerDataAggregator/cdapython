@@ -2,7 +2,6 @@ import json
 import os
 import pandas as pd
 import re
-import sys
 
 import cda_client
 import cda_client.api.columns.columns_endpoint_columns_get
@@ -825,8 +824,6 @@ def column_values(
         log.error( e )
         return
 
-    print( f"data_source is {data_source}", file=sys.stderr )
-
     # Cache CDA table and column metadata from the API for downstream reuse without further
     # network disturbance. The data structure coming back from columns() is a DataFrame
     # with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
@@ -918,8 +915,12 @@ def column_values(
         'subject_id'
     }
 
-    # Warn the user if an override hasn't been requested.
+    # Make sure the `force` parameter is a Boolean.
+    if not isinstance( force, bool ):
+        log.warning( f"The `force` parameter must be True or False; you supplied {force}, which is neither." )
+        return
 
+    # Warn the user if an override hasn't been requested.
     if not force and column in expensive_columns:
         log.warning( f"'{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' )." )
         return
