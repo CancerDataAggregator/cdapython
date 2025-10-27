@@ -738,7 +738,7 @@ def column_values(
     output_file='',
     sort_by='',
     filters=None,
-    data_source='',
+    data_source=None,
     force=False
 ):
     """
