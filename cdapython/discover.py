@@ -11,7 +11,6 @@ import cda_client.api.column_values.column_values_endpoint_column_values_column_
 from cdapython.application_utilities import get_api_url
 from cda_client.errors import UnexpectedStatus
 from cdapython.logging_wrappers import get_logger
-from cdapython.validation import normalize_to_list, validate_parameter_values
 
 #############################################################################################################################
 #############################################################################################################################
@@ -1381,5 +1380,8 @@ def release_metadata():
 # END release_metadata()
 #
 #############################################################################################################################
+
+# This is down here to avoid a circular import problem.
+from cdapython.validation import normalize_to_list, validate_parameter_values
 
 
