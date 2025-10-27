@@ -2,6 +2,7 @@ import json
 import os
 import pandas as pd
 import re
+import sys
 
 import cda_client
 import cda_client.api.columns.columns_endpoint_columns_get
