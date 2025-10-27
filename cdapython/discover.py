@@ -790,7 +790,7 @@ def column_values(
         data_source ( string; optional ):
             Restrict returned values to the given upstream data source. Current
             valid values are 'GC', 'GDC', 'PDC', 'IDC' and 'ICDC'.
-            Defaults to '' (no filter).
+            Defaults to None (no filter).
 
         force( boolean; optional ):
             Force execution of high-overhead queries on columns (like IDs)
@@ -823,6 +823,8 @@ def column_values(
     except Exception as e:
         log.error( e )
         return
+
+    print( f"data_source is {data_source}", file=sys.stderr )
 
     # Cache CDA table and column metadata from the API for downstream reuse without further
     # network disturbance. The data structure coming back from columns() is a DataFrame
