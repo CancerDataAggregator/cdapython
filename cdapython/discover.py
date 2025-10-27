@@ -875,11 +875,15 @@ def column_values(
             include_external_refs=None,
             return_data_as=return_data_as,
             output_file=output_file,
+            sort_by=sort_by,
             log=log
         )
     except Exception as e:
         log.error( e )
         return
+
+    # Normalize sort_by case. Also, ':asc' is redundant: remove it (politely).
+    sort_by = re.sub( r':asc$', r'', sort_by ).lower()
 
     #############################################################################################################################
     # Check in advance for columns flagged as high-overhead.
@@ -924,49 +928,6 @@ def column_values(
     if not force and column in expensive_columns:
         log.warning( f"'{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' )." )
         return
-
-    #############################################################################################################################
-    # Process sorting directives.
-
-    # Enumerate all allowed values that a user can specify using the `sort_by` parameter. ( 'X:asc' will be aliased immediately to just 'X'. )
-
-    allowed_sort_by_options = {
-        'list': {
-            '',
-            'value',
-            'value:desc'
-        },
-        'dataframe_or_tsv': {
-            '',
-            'count',
-            'count:desc',
-            'value',
-            'value:desc'
-        }
-    }
-
-    if not isinstance( sort_by, str ):
-        # Complain if we receive any unexpected data types instead of string directives.
-        log.critical( f"column_values(): ERROR: 'sort_by' must be a string; you used '{sort_by}', which is not." )
-        return
-
-    # Let's not care about case. Also, ':asc' is redundant: remove it (politely).
-    sort_by = re.sub( r':asc$', r'', sort_by ).lower()
-
-    if return_data_as == 'list':
-        # Restrict sorting options for lists.
-        if sort_by == '':
-            sort_by = 'value'
-        elif sort_by not in allowed_sort_by_options['list']:
-            log.critical( f"column_values(): ERROR: return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again." )
-            return
-    else:
-        # For TSV output files and DataFrames, we support more user-configurable options (defaulting to sort_by='count:desc'):
-        if sort_by == '':
-            sort_by = 'count:desc'
-        elif sort_by not in allowed_sort_by_options['dataframe_or_tsv']:
-            log.critical( f"column_values(): ERROR: unrecognized sort_by '{sort_by}'. Please use one of 'count', 'value', 'count:desc', 'value:desc', 'count:asc' or 'value:asc' (or omit the sort_by parameter altogether)." )
-            return
 
     #############################################################################################################################
     # Report details of the final parsed parameters.

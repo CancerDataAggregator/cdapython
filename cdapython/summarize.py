@@ -1002,6 +1002,7 @@ def summarize(
             include_external_refs=None,
             return_data_as=return_data_as,
             output_file=output_file,
+            sort_by=None,
             log=log
         )
     except Exception as e:

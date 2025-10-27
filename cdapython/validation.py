@@ -416,6 +416,7 @@ def validate_and_transform_match_from_file_values( cda_column_to_match, target_d
 #     * `include_external_refs` isn't a boolean value or None, depending on `called_function`
 #     * `return_data_as` isn't one of the allowable types for `called_function`
 #     * The value of `output_file` isn't consistent with the directive in `return_data_as` for `called_function`
+#     * `sort_by` isn't an allowable string value (or None, for callers get_data() and summarize())
 #
 #############################################################################################################################
 
@@ -433,6 +434,7 @@ def validate_parameter_values(
     include_external_refs,
     return_data_as,
     output_file,
+    sort_by,
     log
 ):
     # The data structure coming back from columns() is a DataFrame with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
@@ -620,6 +622,48 @@ def validate_parameter_values(
 
         else:
             raise RuntimeError( f"Got unpexpectedly non-null 'return_data_as' value '{return_data_as}' from function '{called_function}'. Please report this event to the CDA devs." )
+
+    if called_function in [ 'column_values' ]:
+
+        #############################################################################################################################
+        # Process sorting directives.
+
+        # Enumerate all allowed values that a user can specify using the `sort_by` parameter. ( 'X:asc' will be aliased immediately to just 'X'. )
+
+        allowed_sort_by_options = {
+            'list': {
+                '',
+                'value',
+                'value:desc'
+            },
+            'dataframe_or_tsv': {
+                '',
+                'count',
+                'count:desc',
+                'value',
+                'value:desc'
+            }
+        }
+
+        if not isinstance( sort_by, str ):
+            # Complain if we receive any unexpected data types instead of string directives.
+            raise RuntimeError( f"'sort_by' must be a string; you used '{sort_by}', which is not." )
+
+        if return_data_as == 'list':
+            # Restrict sorting options for lists.
+            if sort_by == '':
+                sort_by = 'value'
+            elif sort_by not in allowed_sort_by_options['list']:
+                raise RuntimeError( f"return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again." )
+        else:
+            # For TSV output files and DataFrames, we support more user-configurable options (defaulting to sort_by='count:desc'):
+            if sort_by == '':
+                sort_by = 'count:desc'
+            elif sort_by not in allowed_sort_by_options['dataframe_or_tsv']:
+                raise RuntimeError( f"unrecognized sort_by '{sort_by}'. Please use one of 'count', 'value', 'count:desc', 'value:desc', 'count:asc' or 'value:asc' (or omit the sort_by parameter altogether)." )
+
+    elif sort_by is not None:
+        raise RuntimeError( f"'sort_by' cannot be non-null for get_data() or summarize() callers: please alert the CDA devs to this event, something is misconfigured in our code." )
 
     return
 
