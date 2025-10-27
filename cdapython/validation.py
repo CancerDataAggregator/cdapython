@@ -1,8 +1,6 @@
 import re
 import sys
 
-from cdapython.discover import tables
-
 #############################################################################################################################
 #
 # normalize_to_list( parameter_name, user_supplied_parameter_value, value_type ):
@@ -631,4 +629,6 @@ def validate_parameter_values(
 # 
 #############################################################################################################################
 
+# This is down here to avoid a circular import problem.
 
+from cdapython.discover import tables
