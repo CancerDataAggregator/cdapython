@@ -1008,7 +1008,7 @@ def column_values(
         log.error( f"{type(error)}: {error}" )
         return
 
-    log.debug( f"Sending query to API:\n{json.dumps( { 'column': column, 'data_source': {', '.join( data_source )}, 'limit': records_per_page, 'offset': starting_offset }, indent=4 )}\n" )
+    log.debug( f"Sending query to API:\n{json.dumps( { 'column': column, 'data_source': ', '.join( data_source ), 'limit': records_per_page, 'offset': starting_offset }, indent=4 )}\n" )
 
     # Report some metadata about the results we got back.
 
