@@ -587,14 +587,14 @@ def summarize_files(
         Users can require partial matches to string VALUEs by adding * to either or
         both ends. For example:
 
-            primary_disease_type = *duct*
+            diagnosis = *duct*
             sex = F*
             size < 100
 
         String VALUEs need not be quoted inside of filter strings. For example, to include
         the filters specified just above in the `match_all` argument, we can write:
 
-            summarize_files( match_all=[ 'primary_disease_type = *duct*', 'sex = F*', 'size < 100' ] )
+            summarize_files( match_all=[ 'diagnosis = *duct*', 'sex = F*', 'size < 100' ] )
 
         NULL is a special VALUE which can be used to match missing data. For
         example, to get a summary report for CDA files where the `access` field
@@ -728,14 +728,14 @@ def summarize_subjects(
         Users can require partial matches to string VALUEs by adding * to either or
         both ends. For example:
 
-            primary_disease_type = *duct*
+            diagnosis = *duct*
             sex = F*
             size < 100
 
         String VALUEs need not be quoted inside of filter strings. For example, to include
         the filters specified just above in the `match_all` argument, we can write:
 
-            summarize_subjects( match_all=[ 'primary_disease_type = *duct*', 'sex = F*' ] )
+            summarize_subjects( match_all=[ 'diagnosis = *duct*', 'sex = F*' ] )
 
         NULL is a special VALUE which can be used to match missing data. For
         example, to get a summary report for CDA subjects where the `year_of_birth` field
@@ -876,13 +876,13 @@ def summarize(
         Users can require partial matches to string VALUEs by adding * to either or
         both ends. For example:
 
-            primary_disease_type = *duct*
+            diagnosis = *duct*
             sex = F*
 
         String VALUEs need not be quoted inside of filter strings. For example, to include
         the filters specified just above in the `match_all` argument, we can write:
 
-            summarize( table='subject', match_all=[ 'primary_disease_type = *duct*', 'sex = F*' ] )
+            summarize( table='subject', match_all=[ 'diagnosis = *duct*', 'sex = F*' ] )
 
         NULL is a special VALUE which can be used to match missing data. For
         example, to get a count summary for rows where the `sex` field is missing data,
@@ -993,6 +993,7 @@ def summarize(
             cached_column_metadata=cached_column_metadata,
             valid_data_sources=valid_data_sources,
             table=table,
+            column=None,
             match_from_file=match_from_file,
             data_source=data_source,
             add_columns=add_columns,

@@ -406,7 +406,8 @@ def validate_and_transform_match_from_file_values( cda_column_to_match, target_d
 # Fail if:
 # 
 #     * `called_function` is not in [ 'column_values', 'get_data', 'summarize' ]
-#     * `table` is not a CDA table
+#     * `table` is not a CDA table (unless `called_function` is 'column_values', in which case `table` must be None)
+#     * `column` is not a CDA column (unless `called_function` is 'get_data' or 'summarize', in which case `column` must be None)
 #     * `match_from_file` isn't a dict which (if non-null) specifies an accessible input file
 #       containing a user-specified column, whose values are to be matched against a CDA column
 #       that exists
@@ -425,6 +426,7 @@ def validate_parameter_values(
     cached_column_metadata,
     valid_data_sources,
     table,
+    column,
     match_from_file,
     data_source,
     add_columns,
@@ -437,35 +439,39 @@ def validate_parameter_values(
 ):
     # The data structure coming back from columns() is a DataFrame with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
 
-    # Make sure `table` exists.
+    # Make sure `table` exists, unless we're called by column_values().
+    if called_function in [ 'column_values' ]:
+        if table is not None:
+            raise RuntimeError( f"'table' cannot be non-null for column_values() caller: please alert the CDA devs to this event, something is misconfigured in our code." )
+    elif called_function in [ 'get_data', 'summarize' ]:
+        if table is None or not isinstance( table, str ) or table not in cached_column_metadata['table'].unique():
+            raise RuntimeError( f"The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list." )
 
-    if table is None or not isinstance( table, str ) or table not in cached_column_metadata['table'].unique():
-        raise RuntimeError( f"The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list." )
-
+    # Make sure `column` exists, unless we're called by get_data() or summarize().
     if called_function in [ 'get_data', 'summarize' ]:
-        
-        # Check `match_from_file` data for sanity.
+        if column is not None:
+            raise RuntimeError( f"'column' cannot be non-null for get_data() or summarize() caller: please alert the CDA devs to this event, something is misconfigured in our code." )
+    elif called_function in [ 'column_values' ]:
+        if column is None or not isinstance( column, str ) or column not in cached_column_metadata['column'].unique():
+            raise RuntimeError( f"The required parameter 'column' must be a searchable CDA column; you supplied '{column}', which is not. Please run columns() for a list." )
 
+    # Check `match_from_file` data for sanity.
+    if called_function in [ 'get_data', 'summarize' ]:
         # Is `match_from_file` a dict with the expected set of keys?
         if not isinstance( match_from_file, dict ) or set( match_from_file.keys() ) != { 'input_file', 'input_column', 'cda_column_to_match' }:
             raise RuntimeError( f"'match_from_file' must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match']; you specified '{match_from_file}', which is not." )
-
         # Does `match_from_file`['cda_column_to_match'] exist?
         if match_from_file['cda_column_to_match'] != '' and match_from_file['cda_column_to_match'] not in cached_column_metadata['column'].unique():
             raise RuntimeError( f"'match_from_file['cda_column_to_match']' must be a valid CDA column; you supplied {match_from_file['cda_column_to_match']}, which is not." )
-
         # Does `match_from_file`['input_file'] exist and does it have a column named `match_from_file`['input_column']?
         if match_from_file['input_file'] != '':
-            
             try:
                 with open( match_from_file['input_file'] ) as IN:
                     input_file_column_names = next( IN ).rstrip( '\n' ).split( '\t' )
                     if match_from_file['input_column'] not in input_file_column_names:
                         raise RuntimeError( f"'match_from_file['input_column']' must specify a column that exists in 'match_from_file['input_file']'. You specified '{match_from_file['input_column']}', which is not present in '{match_from_file['input_file']}'." )
-
             except Exception as error:
                 raise RuntimeError( f"Couldn't read from match_from_file input file '{match_from_file['input_file']}': got error of type '{type(error)}', with error message '{error}'." )
-
         # Are the values given in `match_from_file` internally consistent? (Strange results might occur if not.)
         if match_from_file['cda_column_to_match'] == '':
             if match_from_file['input_file'] != '' or match_from_file['input_column'] != '':
@@ -476,18 +482,17 @@ def validate_parameter_values(
         elif match_from_file['input_column'] == '':
             if match_from_file['cda_column_to_match'] != '' or match_from_file['input_file'] != '':
                 raise RuntimeError( f"If the 'match_from_file' parameter is used, it must be a 3-element dictionary with keys ['input_file', 'input_column', 'cda_column_to_match'] pointing to non-empty values. You specified '{match_from_file}', which is not that." )
+        if match_from_file['input_file'] != '' and match_from_file['input_file'] == output_file:
+            raise RuntimeError( f"You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different." )
+    elif called_function in [ 'column_values' ]:
+        if match_from_file is not None:
+            raise RuntimeError( f"'match_from_file' cannot be non-null for column_values() caller: please alert the CDA devs to this event, something is misconfigured in our code." )
 
-    if match_from_file['input_file'] != '' and match_from_file['input_file'] == output_file:
-        raise RuntimeError( f"You specified the same file ('{output_file}') as both a source of filter values (via 'match_from_file') and the target output file ( via 'output_file'). Please make sure these two files are different." )
-
-    # Check that `data_source` is a single valid upstream data source label (for `called_function`=='column_values')
-    # or a list of valid upstream data source labels (for `called_function` in [ 'get_data', 'summarize' ]).
+    # Check that `data_source` is a list of valid upstream data source labels (for
+    # `called_function` in [ 'column_values', 'get_data', 'summarize' ]).
     # `valid_data_sources` was normalized to uppercase when it was constructed by the caller.
 
     normalized_data_source = list()
-
-    if called_function == 'column_values' and len( data_source ) > 1:
-        raise RuntimeError( f"The 'data_source' parameter must be one valid data source name (e.g. 'GDC'); you specified '{data_source}', which is not." )
 
     for ds in data_source:
         if ds.upper() not in valid_data_sources:
@@ -496,31 +501,30 @@ def validate_parameter_values(
 
     data_source = normalized_data_source
 
-    # Make sure CDA columns named in `add_columns` exist.
+    # Make sure CDA columns named in `add_columns` and `exclude_columns` exist, unless we're called by 'column_values'.
 
-    for column_name in add_columns:
-        match_result = re.search( r'^(.+)\.\*$', column_name )
-
-        if match_result is not None:
-            foreign_table = match_result.group(1)
-            if foreign_table not in tables():
+    if called_function in [ 'column_values' ]:
+        if add_columns is not None or exclude_columns is not None:
+            raise RuntimeError( f"'add_columns' and 'exclude_columns' must be null for column_values() caller: please alert the CDA devs to this event, something is misconfigured in our code." )
+    elif called_function in [ 'get_data', 'summarize' ]:
+        for column_name in add_columns:
+            match_result = re.search( r'^(.+)\.\*$', column_name )
+            if match_result is not None:
+                foreign_table = match_result.group(1)
+                if foreign_table not in tables():
+                    raise RuntimeError( f"'add_columns' can only contain valid CDA column names, or macros for whole tables like 'treatment.*'. You specified '{column_name}', which is neither." )
+            elif column_name not in cached_column_metadata['column'].unique():
                 raise RuntimeError( f"'add_columns' can only contain valid CDA column names, or macros for whole tables like 'treatment.*'. You specified '{column_name}', which is neither." )
-        elif column_name not in cached_column_metadata['column'].unique():
-            raise RuntimeError( f"'add_columns' can only contain valid CDA column names, or macros for whole tables like 'treatment.*'. You specified '{column_name}', which is neither." )
+        for column_name in exclude_columns:
+            match_result = re.search( r'^(.+)\.\*$', column_name )
+            if match_result is not None:
+                foreign_table = match_result.group(1)
+                if foreign_table not in tables():
+                    raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names, or macros for whole tables like 'treatment.*'. You specified '{column_name}', which is neither." )
+            elif column_name not in cached_column_metadata['column'].unique():
+                raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names. You specified '{column_name}', which is not that." )
 
-    # Make sure CDA columns named in `exclude_columns` exist.
-
-    for column_name in exclude_columns:
-        match_result = re.search( r'^(.+)\.\*$', column_name )
-
-        if match_result is not None:
-            foreign_table = match_result.group(1)
-            if foreign_table not in tables():
-                raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names, or macros for whole tables like 'treatment.*'. You specified '{column_name}', which is neither." )
-        elif column_name not in cached_column_metadata['column'].unique():
-            raise RuntimeError( f"'exclude_columns' can only contain valid CDA column names. You specified '{column_name}', which is not that." )
-
-    # Check that `collate_results` is a boolean (for get_data) or None (for column_values, summarize) and that `called_function` has an expected value.
+    # Check that `collate_results` and `include_external_refs` are booleans (for get_data) or None (for column_values, summarize) and that `called_function` has an expected value.
 
     if called_function == 'get_data':
         if collate_results != True and collate_results != False:
@@ -529,9 +533,9 @@ def validate_parameter_values(
             raise RuntimeError( f"The `include_external_refs` parameter must be set to True or False; you specified '{include_external_refs}', which is neither." )
     elif called_function == 'summarize' or called_function == 'column_values':
         if collate_results is not None:
-            raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom collate_results values in summarize() calls; please notify the CDA devs of this event." )
+            raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom collate_results values in summarize() or column_values() calls; please notify the CDA devs of this event." )
         if include_external_refs is not None:
-            raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom include_external_refs values in summarize() calls; please notify the CDA devs of this event." )
+            raise RuntimeError( f"Something has gone horribly and unexpectedly wrong with respect to phantom include_external_refs values in summarize() or column_values() calls; please notify the CDA devs of this event." )
     else:
         raise RuntimeError( f"`called_function` must be one of [ 'column_values', 'get_data', 'summarize' ] -- '{called_function}' is none of those. Please notify the CDA devs of this event." )
 
@@ -542,6 +546,12 @@ def validate_parameter_values(
     # writing.
 
     allowed_return_types = {
+        'column_values': {
+            '',
+            'dataframe',
+            'tsv',
+            'list'
+        },
         'get_data': {
             'dataframe',
             'tsv'
@@ -594,6 +604,21 @@ def validate_parameter_values(
                 # so we complain and ask them to clarify.
 
                 raise RuntimeError( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'json'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to printing tables to the standard output stream and not to an output file.)." )
+
+        elif called_function == 'column_values':
+            
+            if return_data_as == 'tsv' and output_file == '':
+                # If the user asks for TSV, they also have to give us a path for the output file. If they didn't, complain.
+                raise RuntimeError( 'Return type \'tsv\' was requested, but \'output_file\' was not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to/your_tsv_output_file.tsv\'.' )
+
+            elif return_data_as != 'tsv' and output_file != '':
+                
+                # If the user put something in the `output_file` parameter but didn't specify `result_data_as`='tsv',
+                # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
+                # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
+                # so we complain and ask them to clarify.
+
+                raise RuntimeError( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
 
         else:
             raise RuntimeError( f"Got unpexpectedly non-null 'return_data_as' value '{return_data_as}' from function '{called_function}'. Please report this event to the CDA devs." )

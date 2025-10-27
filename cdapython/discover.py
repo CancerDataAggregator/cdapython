@@ -11,6 +11,7 @@ import cda_client.api.column_values.column_values_endpoint_column_values_column_
 from cdapython.application_utilities import get_api_url
 from cda_client.errors import UnexpectedStatus
 from cdapython.logging_wrappers import get_logger
+from cdapython.validation import normalize_to_list, validate_parameter_values
 
 #############################################################################################################################
 #############################################################################################################################
@@ -48,10 +49,11 @@ def cda_functions():
             'summarize_files',
             'get_subject_data',
             'get_file_data',
-            'intersect_subject_results',
-            'intersect_file_results',
             'expand_subject_results',
             'expand_file_results',
+            'intersect_subject_results',
+            'intersect_file_results',
+            'release_metadata',
             'get_valid_log_levels',
             'get_log_level',
             'set_log_level',
@@ -806,33 +808,28 @@ def column_values(
     log = get_logger()
 
     #############################################################################################################################
-    # Check for our one required parameter: column.
-
-    if ( not isinstance( column, str ) ) or column == '':
-        log.critical( 'column_values(): ERROR: parameter \'column\' cannot be omitted. Please specify a column from which to fetch a list of distinct values.')
-        return
-
-    # Let's not care about case, and if there's whitespace in our column name, remove it before it does any damage.
-    column = re.sub( r'\s+', r'', column ).lower()
-
-    # See if columns() agrees that the requested column exists. Note: cdapython.columns() and
-    # the API's /columns endpoint give different sets of columns, by design. Here we want our output
-    # to match the former, because we postprocess some of the columns offered by the API instead of
-    # exposing them directly.
-
-    if len( columns( column=column, return_data_as='list' ) ) == 0:
-        log.critical( f"column_values(): ERROR: parameter 'column' must be a searchable CDA column name. You supplied '{column}', which is not." )
-        return
-
+    # Validate parameter inputs.
     #############################################################################################################################
-    # Check the data_source parameter.
 
-    if not isinstance( data_source, str ):
-        log.error( f"The 'data_source' parameter must be a string (e.g. 'GDC'); you specified '{data_source}', which is not." )
+    # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
+    # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
+    # and leave the rest unmodified. Also convert everything to lowercase.
+
+    # If someone can devise a way to do this with a control loop, I'm all ears. I gave up after 20 minutes
+    # of fiddling with `locals()`.
+
+    try:
+        filters = normalize_to_list( 'filters', filters, str )
+        data_source = normalize_to_list( 'data_source', data_source, str )
+    except Exception as e:
+        log.error( e )
         return
 
-    # Let's not care about case, and remove any whitespace before it can do any damage.
-    data_source = re.sub( r'\s+', r'', data_source ).upper()
+    # Cache CDA table and column metadata from the API for downstream reuse without further
+    # network disturbance. The data structure coming back from columns() is a DataFrame
+    # with columns [ 'table', 'column', 'data_type', 'nullable', 'description' ].
+
+    cached_column_metadata = columns()
 
     # Cache valid labels for upstream data sources. The data structure coming back from
     # release_metadata() is a list of dicts, with each dict looking like
@@ -862,17 +859,38 @@ def column_values(
         if record_data_source.upper() != 'CDA':
             valid_data_sources.add( record_data_source.upper() )
 
-    if data_source != '' and data_source not in valid_data_sources:
-        log.error( f"The 'data_source' parameter must be one of { sorted( valid_data_sources ) }. You supplied '{data_source}', which is not." )
+    # Validate user-supplied parameter data.
+
+    try:
+        validate_parameter_values(
+            called_function='column_values',
+            cached_column_metadata=cached_column_metadata,
+            valid_data_sources=valid_data_sources,
+            table=None,
+            column=column,
+            match_from_file=None,
+            data_source=data_source,
+            add_columns=None,
+            exclude_columns=None,
+            collate_results=None,
+            include_external_refs=None,
+            return_data_as=return_data_as,
+            output_file=output_file,
+            log=log
+        )
+    except Exception as e:
+        log.error( e )
         return
 
     #############################################################################################################################
     # Check in advance for columns flagged as high-overhead.
 
+    # TO DO: Maybe store this somewhere better than here.
+
     expensive_columns = {
         'file_id',
-        'description',
         'drs_uri',
+        'file_description',
         'file_name',
         'size',
         'case_id',
@@ -894,6 +912,7 @@ def column_values(
         'tumor_seq_allele1',
         'tumor_seq_allele2',
         'tumor_submitter_uuid',
+        'upstream_id',
         'subject_id'
     }
 
@@ -901,62 +920,6 @@ def column_values(
 
     if not force and column in expensive_columns:
         log.warning( f"'{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' )." )
-        return
-
-    #############################################################################################################################
-    # Listify `filters`, if it's a string, so we can process it in a uniform way later on.
-
-    if filters is None:
-        filters = list()
-    elif isinstance( filters, str ):
-        filters = [ filters ]
-
-    #############################################################################################################################
-    # Process return_data_as and output_file directives.
-
-    allowed_return_types = {
-        '',
-        'dataframe',
-        'tsv',
-        'list'
-    }
-
-    if not isinstance( return_data_as, str ):
-        log.critical( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
-        return
-
-    # Let's not be picky if someone wants to give us return_data_as='DataFrame' or return_data_as='TSV'
-    return_data_as = return_data_as.lower()
-
-    # We can't do much validation on filenames. If `output_file` isn't
-    # a locally writeable path, it'll fail when we try to open it for
-    # writing. Strip trailing whitespace from both ends and wrap the
-    # file-access operation (later, below) in a try{} block.
-
-    if not isinstance( output_file, str ):
-        log.critical( f"column_values(): ERROR: the `output_file` parameter, if not omitted, should be a string containing a path to the desired output file. You supplied '{output_file}', which is not a string, let alone a valid path." )
-        return
-
-    output_file = output_file.strip()
-
-    if return_data_as not in allowed_return_types:
-        
-        log.critical( f"column_values(): ERROR: unrecognized return type '{return_data_as}' requested. Please use one of 'dataframe', 'list' or 'tsv'." )
-        return
-
-    elif return_data_as == 'tsv' and output_file == '':
-        
-        log.critical( 'column_values(): ERROR: return type \'tsv\' requested, but \'output_file\' not specified. Please specify output_file=\'some/path/string/to/write/your/tsv/to\'.')
-        return
-
-    elif return_data_as != 'tsv' and output_file != '':
-        
-        # If the user put something in the `output_file` parameter but didn't specify `result_data_as='tsv'`,
-        # they most likely want their data saved to a file (so ignoring the parameter misconfiguration
-        # isn't safe), but ultimately we can't be sure what they meant (so taking an action isn't safe),
-        # so we complain and ask them to clarify.
-
-        log.error( f"'output_file' was specified, but this is only meaningful if 'return_data_as' is set to 'tsv'. You requested return_data_as='{return_data_as}'.\n(Note that if you don't specify any value for 'return_data_as', it defaults to 'dataframe'.)." )
         return
 
     #############################################################################################################################
@@ -980,9 +943,7 @@ def column_values(
     }
 
     if not isinstance( sort_by, str ):
-        
         # Complain if we receive any unexpected data types instead of string directives.
-
         log.critical( f"column_values(): ERROR: 'sort_by' must be a string; you used '{sort_by}', which is not." )
         return
 
@@ -990,19 +951,14 @@ def column_values(
     sort_by = re.sub( r':asc$', r'', sort_by ).lower()
 
     if return_data_as == 'list':
-        
         # Restrict sorting options for lists.
-
         if sort_by == '':
             sort_by = 'value'
         elif sort_by not in allowed_sort_by_options['list']:
             log.critical( f"column_values(): ERROR: return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again." )
             return
-
     else:
-        
         # For TSV output files and DataFrames, we support more user-configurable options (defaulting to sort_by='count:desc'):
-
         if sort_by == '':
             sort_by = 'count:desc'
         elif sort_by not in allowed_sort_by_options['dataframe_or_tsv']:
@@ -1037,7 +993,8 @@ def column_values(
             cda_client.api.column_values.column_values_endpoint_column_values_column_post.sync(
                 client=query_api_instance,
                 column=column,
-                data_source=data_source,
+                # This is how the API expects the data_source parameter to be encoded.
+                data_source=', '.join( data_source ),
                 limit=records_per_page,
                 offset=starting_offset
             )
@@ -1049,7 +1006,7 @@ def column_values(
         log.error( f"{type(error)}: {error}" )
         return
 
-    log.debug( f"Sending query to API:\n{json.dumps( { 'columnname': column, 'system': data_source, 'count': True, 'total_count': True, 'limit': records_per_page, 'offset': starting_offset }, indent=4 )}\n" )
+    log.debug( f"Sending query to API:\n{json.dumps( { 'column': column, 'data_source': {', '.join( data_source )}, 'limit': records_per_page, 'offset': starting_offset }, indent=4 )}\n" )
 
     # Report some metadata about the results we got back.
 
@@ -1109,7 +1066,7 @@ def column_values(
                 cda_client.api.column_values.column_values_endpoint_column_values_column_post.sync(
                     client=query_api_instance,
                     column=column,
-                    data_source=data_source,
+                    data_source=', '.join( data_source ),
                     limit=records_per_page,
                     offset=incremented_offset
                 )
