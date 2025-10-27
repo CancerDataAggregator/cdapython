@@ -634,13 +634,16 @@ def validate_parameter_values(
             'list': {
                 '',
                 'value',
+                'value:asc',
                 'value:desc'
             },
             'dataframe_or_tsv': {
                 '',
                 'count',
+                'count:asc',
                 'count:desc',
                 'value',
+                'value:asc',
                 'value:desc'
             }
         }
@@ -653,13 +656,13 @@ def validate_parameter_values(
             # Restrict sorting options for lists.
             if sort_by == '':
                 sort_by = 'value'
-            elif sort_by not in allowed_sort_by_options['list']:
+            elif sort_by.lower() not in allowed_sort_by_options['list']:
                 raise RuntimeError( f"return_data_as='list' can only be processed with sort_by='value' or sort_by='value:desc' (or omitting sort_by altogether). Please modify unsupported sort_by directive '{sort_by}' and try again." )
         else:
             # For TSV output files and DataFrames, we support more user-configurable options (defaulting to sort_by='count:desc'):
             if sort_by == '':
                 sort_by = 'count:desc'
-            elif sort_by not in allowed_sort_by_options['dataframe_or_tsv']:
+            elif sort_by.lower() not in allowed_sort_by_options['dataframe_or_tsv']:
                 raise RuntimeError( f"unrecognized sort_by '{sort_by}'. Please use one of 'count', 'value', 'count:desc', 'value:desc', 'count:asc' or 'value:asc' (or omit the sort_by parameter altogether)." )
 
     elif sort_by is not None:
