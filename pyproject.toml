@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cdapython"
-version = "2.0.9"
+version = "2.0.11"
 description = "NCI CRDC CDA front-end user interface library"
 authors = []
 readme = "README.md"

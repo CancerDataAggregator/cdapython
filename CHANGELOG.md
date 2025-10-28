@@ -1,3 +1,7 @@
+2025-10-27: 2.0.11: _cough_ bugfix for previous
+
+2025-10-27: 2.0.10: integrate column\_values() parameter validation with shared validation library; expand support for column\_values( data\_source ) to accept list values in addition to single strings
+
 2025-10-22: 2.0.9: parametrize data\_source check in column\_values()
 
 2025-10-20: 2.0.8: rename CDS to GC throughout
