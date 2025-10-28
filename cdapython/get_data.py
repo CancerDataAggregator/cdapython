@@ -824,6 +824,8 @@ def get_data(
 
         next_result_batch = pd.json_normalize( api_response_object.to_dict()['result'] )
 
+        log.debug( f"/data/{table} endpoint query SQL:\n{api_response_object.to_dict()['query_sql']}" )
+
         # Add data from this page to our full result set.
 
         if not result_dataframe.empty and not next_result_batch.empty:
