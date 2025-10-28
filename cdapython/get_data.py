@@ -832,7 +832,7 @@ def get_data(
             
             # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
             # 
-            # Possiby relevant note: never fill in missing numeric values with 0!
+            # Possibly relevant note: never fill in missing numeric values with 0!
 
             next_result_batch = next_result_batch.astype( result_dataframe.dtypes )
             result_dataframe = pd.concat( [result_dataframe, next_result_batch] )
