@@ -885,6 +885,16 @@ def column_values(
     # Normalize sort_by case. Also, ':asc' is redundant: remove it (politely).
     sort_by = re.sub( r':asc$', r'', sort_by ).lower()
 
+    # Set default sort_by value.
+    if sort_by == '':
+        if return_data_as in [ '', 'dataframe', 'tsv' ]:
+            sort_by = 'count'
+        elif return_data_as in [ 'list' ]:
+            sort_by = 'value'
+        else:
+            log.error( f"Cannot identify default `sort_by` value for unexpected `return_data_as` value '{return_data_as}': please notify the CDA devs of this event." )
+            return
+
     #############################################################################################################################
     # Check in advance for columns flagged as high-overhead.
 
