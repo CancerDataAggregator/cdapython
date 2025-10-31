@@ -1,3 +1,5 @@
+2025-10-31: 2.0.12: standardize debug-layer SQL echo; adjust column\_values() to handle known pathologies
+
 2025-10-27: 2.0.11: _cough_ bugfix for previous
 
 2025-10-27: 2.0.10: integrate column\_values() parameter validation with shared validation library; expand support for column\_values( data\_source ) to accept list values in addition to single strings
