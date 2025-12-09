@@ -1478,12 +1478,12 @@ def get_data(
         # Make a new column called 'disease_slims', populated with slim terms corresponding to any mapped terms from `observation.diagnosis` or `observation.morphology`.
         result_dataframe['disease_slims'] = [ [] for _ in range( len( result_dataframe ) ) ]
         for row_index, result_record in result_dataframe.iterrows():
-            result_dataframe['disease_slims'].iloc[row_index] = set()
+            result_dataframe.loc[row_index, 'disease_slims'] = set()
             for disease_column in [ 'diagnosis', 'morphology' ]:
                 if disease_column in result_dataframe:
-                    for term in result_dataframe[disease_column].iloc[row_index]:
+                    for term in result_dataframe.loc[row_index, disease_column]:
                         if term in disease_slim_map and term != '':
-                            result_dataframe['disease_slims'].iloc[row_index].add( disease_slim_map[term] )
+                            result_dataframe.loc[row_index, 'disease_slims'].add( disease_slim_map[term] )
     # END :: REMOVE ME AFTER SLIM DB INFRASTRUCTURE UPDATE
 
     # Ensure the contents and ordering of the set of default columns for this endpoint
