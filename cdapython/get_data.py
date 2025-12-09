@@ -1717,7 +1717,7 @@ def get_data(
                         # We have a nonzero-length list of non-null data values.
                         processed_cell_value = list()
 
-                        for list_element in current_cell_value:
+                        for list_element in sorted( current_cell_value ):
                             
                             processed_list_element = list_element
 
