@@ -1476,9 +1476,8 @@ def get_data(
     }
     if include_disease_slims and not collate_results and ( 'diagnosis' in result_dataframe or 'morphology' in result_dataframe ):
         # Make a new column called 'disease_slims', populated with slim terms corresponding to any mapped terms from `observation.diagnosis` or `observation.morphology`.
-        result_dataframe['disease_slims'] = [ [] for _ in range( len( result_dataframe ) ) ]
+        result_dataframe['disease_slims'] = [ set() for _ in range( len( result_dataframe ) ) ]
         for row_index, result_record in result_dataframe.iterrows():
-            result_dataframe.loc[row_index, 'disease_slims'] = set()
             for disease_column in [ 'diagnosis', 'morphology' ]:
                 if disease_column in result_dataframe:
                     for term in result_dataframe.loc[row_index, disease_column]:
