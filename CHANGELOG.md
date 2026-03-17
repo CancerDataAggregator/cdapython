@@ -1,3 +1,7 @@
+2025-12-09: 2.0.14: add sort postproc to POC disease\_slims return column
+
+2025-12-09: 2.0.13: add POC `include\_disease\_slims` Boolean flag to get\_data()
+
 2025-10-31: 2.0.12: standardize debug-layer SQL echo; adjust column\_values() to handle known pathologies
 
 2025-10-27: 2.0.11: _cough_ bugfix for previous
