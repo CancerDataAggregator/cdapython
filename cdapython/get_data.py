@@ -34,6 +34,7 @@ from cda_client.models.data_request_body import DataRequestBody
 #############################################################################################################################
 
 def get_file_data(
+    search_string='',
     *,
     match_all=None,
     match_any=None,
@@ -50,6 +51,10 @@ def get_file_data(
     Get CDA file rows ('result rows') that match user-specified criteria.
 
     Arguments:
+        search_string ( string; optional: ):
+            A whitespace-separated list of keywords, all of which must be
+            associated with each result row.
+
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
             ALL of which must be met by all result rows.
@@ -142,7 +147,7 @@ def get_file_data(
 
     """
 
-    return get_data( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=False, return_data_as=return_data_as, output_file=output_file, include_disease_slims=include_disease_slims )
+    return get_data( table='file', search_string=search_string, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=False, return_data_as=return_data_as, output_file=output_file, include_disease_slims=include_disease_slims )
 
 #############################################################################################################################
 #
@@ -151,6 +156,7 @@ def get_file_data(
 #############################################################################################################################
 
 def get_subject_data(
+    search_string='',
     *,
     match_all=None,
     match_any=None,
@@ -168,6 +174,10 @@ def get_subject_data(
     Get CDA subject rows ('result rows') that match user-specified criteria.
 
     Arguments:
+        search_string ( string; optional: ):
+            A whitespace-separated list of keywords, all of which must be
+            associated with each result row.
+
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
             ALL of which must be met by all result rows.
@@ -265,7 +275,7 @@ def get_subject_data(
 
     """
 
-    return get_data( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=include_external_refs, return_data_as=return_data_as, output_file=output_file, include_disease_slims=include_disease_slims )
+    return get_data( table='subject', search_string=search_string, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=include_external_refs, return_data_as=return_data_as, output_file=output_file, include_disease_slims=include_disease_slims )
 
 #############################################################################################################################
 #
@@ -275,6 +285,7 @@ def get_subject_data(
 
 def get_data(
     table=None,
+    search_string='',
     *,
     match_all=None,
     match_any=None,
@@ -294,6 +305,10 @@ def get_data(
     Arguments:
         table ( string; required: 'file' or 'subject' ):
             The CDA table whose rows are to be filtered and retrieved.
+
+        search_string ( string; optional: ):
+            A whitespace-separated list of keywords, all of which must be
+            associated with each result row.
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -400,6 +415,9 @@ def get_data(
     #############################################################################################################################
     # Validate parameter inputs.
     #############################################################################################################################
+
+    # Let's not _immediately_ break our downstream processing with funky characters.
+    search_string = re.sub( r'[&|!:<>]', r' ', json.dumps( search_string ).strip( '"' ) ).strip()
 
     # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
     # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
@@ -692,6 +710,7 @@ def get_data(
     # Build an object to represent our upcoming API query.
 
     query_object = DataRequestBody()
+    query_object.search_string = search_string
     query_object.match_all = queries_for_match_all
     query_object.match_some = queries_for_match_any
     query_object.add_columns = columns_to_add

@@ -949,7 +949,7 @@ def summarize(
     # Validate parameter inputs.
     #############################################################################################################################
 
-    # Let's not let users _immediately_ break our downstream processing with funky characters.
+    # Let's not _immediately_ break our downstream processing with funky characters.
     search_string = re.sub( r'[&|!:<>]', r' ', json.dumps( search_string ).strip( '"' ) ).strip()
 
     # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
