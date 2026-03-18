@@ -651,6 +651,7 @@ def summarize_files(
 #############################################################################################################################
 
 def summarize_subjects(
+    search_string='',
     *,
     match_all=None,
     match_any=None,
@@ -774,6 +775,8 @@ def summarize_subjects(
 
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
+
+    print( f"BAGAAH! {search_string}" )
 
     return summarize( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
 
