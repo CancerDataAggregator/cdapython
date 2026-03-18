@@ -526,6 +526,10 @@ def summarize_files(
     set of rows, profiled across (user-modifiable) columns of interest.
 
     Arguments:
+        search_string ( string; optional: ):
+            A whitespace-separated list of keywords, all of which must be
+            associated with each result row.
+
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
             ALL of which must be met by all result rows.
@@ -669,6 +673,10 @@ def summarize_subjects(
     set of rows, profiled across (user-modifiable) columns of interest.
 
     Arguments:
+        search_string ( string; optional: ):
+            A whitespace-separated list of keywords, all of which must be
+            associated with each result row.
+
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
             ALL of which must be met by all result rows.
@@ -940,6 +948,9 @@ def summarize(
     #############################################################################################################################
     # Validate parameter inputs.
     #############################################################################################################################
+
+    # Let's not let users _immediately_ break our downstream processing with funky characters.
+    search_string = json.dumps( search_string ).strip( '"' )
 
     # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
     # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
