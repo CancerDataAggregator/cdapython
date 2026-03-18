@@ -460,6 +460,7 @@ def get_data(
             cached_column_metadata=cached_column_metadata,
             valid_data_sources=valid_data_sources,
             table=table,
+            search_string='',
             column=None,
             match_from_file=match_from_file,
             data_source=data_source,

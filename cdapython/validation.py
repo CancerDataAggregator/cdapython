@@ -395,7 +395,7 @@ def validate_and_transform_match_from_file_values( cda_column_to_match, target_d
 
 #############################################################################################################################
 #
-# validate_parameter_values( called_function, cached_column_metadata, valid_data_sources, table, match_from_file, data_source, add_columns, exclude_columns, return_data_as, output_file, log ):
+# validate_parameter_values( called_function, cached_column_metadata, valid_data_sources, table, search_string, match_from_file, data_source, add_columns, exclude_columns, return_data_as, output_file, log ):
 # 
 # Validate user-supplied parameters as passed to `called_function`, after first
 # having passed relevant parameters (`data_source`, `add_columns`, `exclude_columns`)
@@ -405,6 +405,7 @@ def validate_and_transform_match_from_file_values( cda_column_to_match, target_d
 # 
 #     * `called_function` is not in [ 'column_values', 'get_data', 'summarize' ]
 #     * `table` is not a CDA table (unless `called_function` is 'column_values', in which case `table` must be None)
+#     * `search_string` is not a string
 #     * `column` is not a CDA column (unless `called_function` is 'get_data' or 'summarize', in which case `column` must be None)
 #     * `match_from_file` isn't a dict which (if non-null) specifies an accessible input file
 #       containing a user-specified column, whose values are to be matched against a CDA column
@@ -425,6 +426,7 @@ def validate_parameter_values(
     cached_column_metadata,
     valid_data_sources,
     table,
+    search_string,
     column,
     match_from_file,
     data_source,
@@ -446,6 +448,10 @@ def validate_parameter_values(
     elif called_function in [ 'get_data', 'summarize' ]:
         if table is None or not isinstance( table, str ) or table not in cached_column_metadata['table'].unique():
             raise RuntimeError( f"The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list." )
+
+    # Make sure `search_string` is a string.
+    if not isinstance( search_string, str ):
+        raise RuntimeError( f"The optional 'search_string' parameter must be a string; you supplied '{search_string}', which is not." )
 
     # Make sure `column` exists, unless we're called by get_data() or summarize().
     if called_function in [ 'get_data', 'summarize' ]:

@@ -866,6 +866,7 @@ def column_values(
             cached_column_metadata=cached_column_metadata,
             valid_data_sources=valid_data_sources,
             table=None,
+            search_string='',
             column=column,
             match_from_file=None,
             data_source=data_source,

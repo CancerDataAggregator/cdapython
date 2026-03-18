@@ -509,6 +509,7 @@ def intersect_results(
 #############################################################################################################################
 
 def summarize_files(
+    search_string='',
     *,
     match_all=None,
     match_any=None,
@@ -634,7 +635,7 @@ def summarize_files(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    return summarize( table='file', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
+    return summarize( table='file', search_string=search_string, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -776,9 +777,7 @@ def summarize_subjects(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    print( f"BAGAAH! {search_string}" )
-
-    return summarize( table='subject', match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
+    return summarize( table='subject', search_string=search_string, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -797,6 +796,7 @@ def summarize_subjects(
 
 def summarize(
     table='',
+    search_string='',
     *,
     match_all=None,
     match_any=None,
@@ -815,6 +815,10 @@ def summarize(
     Arguments:
         table ( string; required: 'file' or 'subject' ):
             The CDA table to be queried and summarized.
+
+        search_string ( string; optional: ):
+            A whitespace-separated list of keywords, all of which must be
+            associated with each result row.
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -996,6 +1000,7 @@ def summarize(
             cached_column_metadata=cached_column_metadata,
             valid_data_sources=valid_data_sources,
             table=table,
+            search_string=search_string,
             column=None,
             match_from_file=match_from_file,
             data_source=data_source,
@@ -1194,6 +1199,7 @@ def summarize(
     # Build an object to represent our upcoming API query.
 
     query_object = SummaryRequestBody()
+    query_object.search_string = search_string
     query_object.match_all = queries_for_match_all
     query_object.match_some = queries_for_match_any
     query_object.add_columns = columns_to_add
