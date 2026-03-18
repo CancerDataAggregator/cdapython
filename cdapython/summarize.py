@@ -950,7 +950,7 @@ def summarize(
     #############################################################################################################################
 
     # Let's not let users _immediately_ break our downstream processing with funky characters.
-    search_string = json.dumps( search_string ).strip( '"' )
+    search_string = re.sub( r'[&|:*]', r' ', json.dumps( search_string ).strip( '"' ) )
 
     # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
     # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
