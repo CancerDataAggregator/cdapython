@@ -1,3 +1,5 @@
+2026-03-XX: 2.0.15: add `search\_string` support; obsolesce disease\_slims POC in deference to upcoming full version
+
 2025-12-09: 2.0.14: add sort postproc to POC disease\_slims return column
 
 2025-12-09: 2.0.13: add POC `include\_disease\_slims` Boolean flag to get\_data()
