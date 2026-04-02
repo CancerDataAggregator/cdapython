@@ -426,7 +426,7 @@ def validate_parameter_values(
     cached_column_metadata,
     valid_data_sources,
     table,
-    search_string,
+    search_list,
     column,
     match_from_file,
     data_source,
@@ -449,9 +449,13 @@ def validate_parameter_values(
         if table is None or not isinstance( table, str ) or table not in cached_column_metadata['table'].unique():
             raise RuntimeError( f"The required parameter 'table' must be a searchable CDA table; you supplied '{table}', which is not. Please run tables() for a list." )
 
-    # Make sure `search_string` is a string.
-    if not isinstance( search_string, str ):
-        raise RuntimeError( f"The optional 'search_string' parameter must be a string; you supplied '{search_string}', which is not." )
+    # Make sure `search_list` is a list of strings.
+    if not isinstance( search_list, list ):
+        raise RuntimeError( f"The internal 'search_list' parameter must be a string; please alert the CDA devs to this event, something is misconfigured in our code." )
+    else:
+        for search_term in search_list:
+            if not isinstance( search_term, str ):
+                raise RuntimeError( f"Search terms must be strings: you supplied '{search_term}', which is not." )
 
     # Make sure `column` exists, unless we're called by get_data() or summarize().
     if called_function in [ 'get_data', 'summarize' ]:
