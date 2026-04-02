@@ -828,7 +828,7 @@ def summarize(
             One or more search terms (including phrases), all of which must be
             associated with each result row. Leading and trailing wildcards '*'
             are supported. Example:
-                summarize( 'subject', 'kidney', 'adeno*', 'latino' )
+                summarize( 'kidney', 'adeno*', 'latino', table='subject' )
 
         search_string ( string; optional: ):
             A whitespace-separated list of keywords, all of which must be
@@ -906,13 +906,13 @@ def summarize(
         String VALUEs need not be quoted inside of filter strings. For example, to include
         the filters specified just above in the `match_all` argument, we can write:
 
-            summarize( table='subject', match_all=[ 'diagnosis = *duct*', 'sex = F*' ] )
+            summarize( match_all=[ 'diagnosis = *duct*', 'sex = F*' ], table='subject' )
 
         NULL is a special VALUE which can be used to match missing data. For
         example, to get a count summary for rows where the `sex` field is missing data,
         we can write:
 
-            summarize( table='subject', match_all=[ 'sex = NULL' ] )
+            summarize( match_all=[ 'sex = NULL' ], table='subject' )
 
     Returns:
 

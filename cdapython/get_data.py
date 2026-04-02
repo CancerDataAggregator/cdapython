@@ -34,8 +34,7 @@ from cda_client.models.data_request_body import DataRequestBody
 #############################################################################################################################
 
 def get_file_data(
-    search_string='',
-    *,
+    *search_terms,
     match_all=None,
     match_any=None,
     match_from_file={ 'input_file': '', 'input_column': '', 'cda_column_to_match': '' },
@@ -50,9 +49,12 @@ def get_file_data(
     Get CDA file rows ('result rows') that match user-specified criteria.
 
     Arguments:
-        search_string ( string; optional: ):
-            A whitespace-separated list of keywords, all of which must be
-            associated with each result row.
+        search_terms ( zero or more strings; optional: ):
+            One or more search terms (including phrases), all of which must be
+            associated with each result row. Users can add a wildcard character * to
+            either or both ends of each search term to enable partial matches
+            to longer values. Example:
+                get_file_data( 'kidney', 'adeno*', 'latino' )
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -146,7 +148,7 @@ def get_file_data(
 
     """
 
-    return get_data( table='file', search_string=search_string, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=False, return_data_as=return_data_as, output_file=output_file )
+    return get_data( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=False, return_data_as=return_data_as, output_file=output_file, table='file' )
 
 #############################################################################################################################
 #
@@ -155,8 +157,7 @@ def get_file_data(
 #############################################################################################################################
 
 def get_subject_data(
-    search_string='',
-    *,
+    *search_terms,
     match_all=None,
     match_any=None,
     match_from_file={ 'input_file': '', 'input_column': '', 'cda_column_to_match': '' },
@@ -172,9 +173,12 @@ def get_subject_data(
     Get CDA subject rows ('result rows') that match user-specified criteria.
 
     Arguments:
-        search_string ( string; optional: ):
-            A whitespace-separated list of keywords, all of which must be
-            associated with each result row.
+        search_terms ( zero or more strings; optional: ):
+            One or more search terms (including phrases), all of which must be
+            associated with each result row. Users can add a wildcard character * to
+            either or both ends of each search term to enable partial matches
+            to longer values. Example:
+                get_subject_data( 'kidney', 'adeno*', 'latino' )
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -273,7 +277,7 @@ def get_subject_data(
 
     """
 
-    return get_data( table='subject', search_string=search_string, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=include_external_refs, return_data_as=return_data_as, output_file=output_file )
+    return get_data( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=include_external_refs, return_data_as=return_data_as, output_file=output_file, table='subject' )
 
 #############################################################################################################################
 #
@@ -282,9 +286,7 @@ def get_subject_data(
 #############################################################################################################################
 
 def get_data(
-    table=None,
-    search_string='',
-    *,
+    *search_terms,
     match_all=None,
     match_any=None,
     match_from_file={ 'input_file': '', 'input_column': '', 'cda_column_to_match': '' },
@@ -294,18 +296,19 @@ def get_data(
     collate_results=False,
     include_external_refs=False,
     return_data_as='dataframe',
-    output_file=''
+    output_file='',
+    table=None
 ):
     """
     Get CDA data rows ('result rows') from `table` that match user-specified criteria.
 
     Arguments:
-        table ( string; required: 'file' or 'subject' ):
-            The CDA table whose rows are to be filtered and retrieved.
-
-        search_string ( string; optional: ):
-            A whitespace-separated list of keywords, all of which must be
-            associated with each result row.
+        search_terms ( zero or more strings; optional: ):
+            One or more search terms (including phrases), all of which must be
+            associated with each result row. Users can add a wildcard character * to
+            either or both ends of each search term to enable partial matches
+            to longer values. Example:
+                get_data( 'kidney', 'adeno*', 'latino', table='subject' )
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -359,6 +362,9 @@ def get_data(
             resolvable path to a file into which get_data() will write
             tab-delimited results.
 
+        table ( string; required: 'file' or 'subject' ):
+            The CDA table whose rows are to be filtered and retrieved.
+
     Filter strings:
         Filter strings are expressions of the form 'COLUMN_NAME OP VALUE'
         (note in particular that the whitespace surrounding OP is required),
@@ -388,13 +394,13 @@ def get_data(
         the filters specified just above in the `match_all` argument, when querying
         the `subject` table, we can write:
 
-            get_data( table='subject', match_all=[ 'diagnosis = *duct*', 'sex = F*' ] )
+            get_data( match_all=[ 'diagnosis = *duct*', 'sex = F*' ], table='subject' )
 
         NULL is a special VALUE which can be used to match missing data. For
         example, to get `subject` rows where the `cause_of_death` field
         is missing data, we can write:
 
-            get_data( table='subject', match_all=[ 'cause_of_death = NULL' ] )
+            get_data( match_all=[ 'cause_of_death = NULL' ], table='subject' )
 
     Returns:
         (Default) A pandas.DataFrame containing CDA `table` rows matching the user-specified
@@ -413,8 +419,12 @@ def get_data(
     # Validate parameter inputs.
     #############################################################################################################################
 
-    # Let's not _immediately_ break our downstream processing with funky characters or evadable anomalies.
-    search_string = json.dumps( search_string ).strip( '"' ).strip()
+    search_list = list()
+    if len( search_terms ) > 0:
+        for search_string in search_terms:
+            # Let's not _immediately_ break our downstream processing with funky characters or evadable anomalies. Also,
+            # strip leading and trailing whitespace.
+            search_list.append( json.dumps( search_string ).strip( '"' ).strip() )
 
     # Normalize user-supplied parameter data so we can assume from here on out that these are always lists of values:
     # convert any of the following that come in as single values (instead of lists of values) into one-element lists,
@@ -475,7 +485,7 @@ def get_data(
             cached_column_metadata=cached_column_metadata,
             valid_data_sources=valid_data_sources,
             table=table,
-            search_string='',
+            search_list=search_list,
             column=None,
             match_from_file=match_from_file,
             data_source=data_source,
@@ -707,7 +717,7 @@ def get_data(
     # Build an object to represent our upcoming API query.
 
     query_object = DataRequestBody()
-    query_object.search_string = search_string
+    query_object.search_list = search_list
     query_object.match_all = queries_for_match_all
     query_object.match_some = queries_for_match_any
     query_object.add_columns = columns_to_add
