@@ -641,7 +641,7 @@ def summarize_files(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    return summarize( table='file', search_terms=search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
+    return summarize( table='file', *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
@@ -789,7 +789,7 @@ def summarize_subjects(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    return summarize( table='subject', search_terms=search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
+    return summarize( table='subject', *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
 
 #############################################################################################################################
 #
