@@ -641,7 +641,7 @@ def summarize_files(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    return summarize( table='file', *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
+    return summarize( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file, table='file' )
 
 #############################################################################################################################
 #
@@ -789,7 +789,7 @@ def summarize_subjects(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    return summarize( table='subject', *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file )
+    return summarize( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file, table='subject' )
 
 #############################################################################################################################
 #
@@ -807,7 +807,6 @@ def summarize_subjects(
 #############################################################################################################################
 
 def summarize(
-    table='',
     *search_terms,
     match_all=None,
     match_any=None,
@@ -816,7 +815,8 @@ def summarize(
     add_columns=None,
     exclude_columns=None,
     return_data_as='',
-    output_file=''
+    output_file='',
+    table=''
 ):
     """
     For a set of rows in a user-specified table that all match a user-specified set of
@@ -824,9 +824,6 @@ def summarize(
     set of rows, profiled across (user-modifiable) columns of interest.
 
     Arguments:
-        table ( string; required: 'file' or 'subject' ):
-            The CDA table to be queried and summarized.
-
         search_terms ( zero or more strings; optional: ):
             One or more search terms (including phrases), all of which must be
             associated with each result row. Leading and trailing wildcards '*'
@@ -877,6 +874,9 @@ def summarize(
             If return_data_as='json' is specified, output_file should contain a
             resolvable path to a file into which summarize() will write
             JSON-formatted results.
+
+        table ( string; required: 'file' or 'subject' ):
+            The CDA table to be queried and summarized.
 
     Filter strings:
         Filter strings are expressions of the form "COLUMN_NAME OP VALUE"
