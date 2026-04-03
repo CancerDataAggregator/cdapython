@@ -530,7 +530,7 @@ def summarize_files(
             associated with each result row. Users can add a wildcard character * to
             either or both ends of each search term to enable partial matches
             to longer values. Example:
-                summarize_files( 'kidney', 'adeno*', 'latino' )
+                summarize_files( 'kidney', 'adeno*', 'hispanic or latino' )
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -679,7 +679,7 @@ def summarize_subjects(
             associated with each result row. Users can add a wildcard character * to
             either or both ends of each search term to enable partial matches
             to longer values. Example:
-                summarize_subjects( 'kidney', 'adeno*', 'latino' )
+                summarize_subjects( 'kidney', 'adeno*', 'hispanic or latino' )
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -828,7 +828,7 @@ def summarize(
             One or more search terms (including phrases), all of which must be
             associated with each result row. Leading and trailing wildcards '*'
             are supported. Example:
-                summarize( 'kidney', 'adeno*', 'latino', table='subject' )
+                summarize( 'kidney', 'adeno*', 'hispanic or latino', table='subject' )
 
         search_string ( string; optional: ):
             A whitespace-separated list of keywords, all of which must be

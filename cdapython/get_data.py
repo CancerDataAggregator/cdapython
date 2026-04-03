@@ -54,7 +54,7 @@ def get_file_data(
             associated with each result row. Users can add a wildcard character * to
             either or both ends of each search term to enable partial matches
             to longer values. Example:
-                get_file_data( 'kidney', 'adeno*', 'latino' )
+                get_file_data( 'kidney', 'adeno*', 'hispanic or latino' )
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -178,7 +178,7 @@ def get_subject_data(
             associated with each result row. Users can add a wildcard character * to
             either or both ends of each search term to enable partial matches
             to longer values. Example:
-                get_subject_data( 'kidney', 'adeno*', 'latino' )
+                get_subject_data( 'kidney', 'adeno*', 'hispanic or latino' )
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
@@ -308,7 +308,7 @@ def get_data(
             associated with each result row. Users can add a wildcard character * to
             either or both ends of each search term to enable partial matches
             to longer values. Example:
-                get_data( 'kidney', 'adeno*', 'latino', table='subject' )
+                get_data( 'kidney', 'adeno*', 'hispanic or latino', table='subject' )
 
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
