@@ -830,10 +830,6 @@ def summarize(
             are supported. Example:
                 summarize( 'kidney', 'adeno*', 'hispanic or latino', table='subject' )
 
-        search_string ( string; optional: ):
-            A whitespace-separated list of keywords, all of which must be
-            associated with each result row.
-
         match_all ( string or list of strings; optional ):
             One or more conditions, expressed as filter strings (see below),
             ALL of which must be met by all result rows.
