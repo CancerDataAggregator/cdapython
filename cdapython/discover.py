@@ -889,7 +889,7 @@ def column_values(
     # Set default sort_by value.
     if sort_by == '':
         if return_data_as in [ '', 'dataframe', 'tsv' ]:
-            sort_by = 'count'
+            sort_by = 'count:desc'
         elif return_data_as in [ 'list' ]:
             sort_by = 'value'
         else:
