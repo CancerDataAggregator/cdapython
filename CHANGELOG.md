@@ -1,4 +1,4 @@
-2026-03-XX: 2.0.15: add `search\_string` support; obsolesce disease\_slims POC in deference to upcoming full version
+2026-04-07: 2.1.0: add `search\_terms` support; obsolesce disease\_slims POC in deference to upcoming full version
 
 2025-12-09: 2.0.14: add sort postproc to POC disease\_slims return column
 
