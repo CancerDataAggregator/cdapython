@@ -10,7 +10,8 @@ packages = [
 include = ["CHANGELOG.md"]
 
 [tool.poetry.dependencies]
-cda-client = ">=2.1.0"
+#cda-client = ">=2.0.0"
+cda-client = {git = "https://github.com/CancerDataAggregator/cda-client", rev = "controlled_term"}
 pandas = ">=2.2.3"
 python = "^3.9"
 pyyaml = ">= 6.0.0"
