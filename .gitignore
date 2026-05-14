@@ -31,3 +31,4 @@ zz01_install_somewhere
 /.vscode
 /.pytest_cache
 *.log
+cdapython_log.txt
