@@ -949,7 +949,7 @@ def summarize(
 
     # These need to go somewhere else. Until then, they are prominently deposited here.
     extra_list_types = [ 'containing_terms', 'related_terms', 'slim_terms', 'synonym_terms' ]
-    has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology' ]
+    has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology', 'treatment_anatomic_site', 'primary_site' ]
 
     # Create logger object.
     log = get_logger()
@@ -2246,10 +2246,10 @@ def summarize(
 
                             if result_column in has_non_null_extras:
                                 for extra_list_type in extra_list_types:
-                                    if f"{result_column}_{extra_list_type}" in dict_pair:
+                                    if f"{result_column}_{extra_list_type}" in dict_pair and len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 0:
                                         result_column_dict[extra_list_type].append( dict_pair[f"{result_column}_{extra_list_type}"] )
                                     else:
-                                        result_column_dict[extra_list_type].append( [] )
+                                        result_column_dict[extra_list_type].append( '<NA>' )
 
                     result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ 'count_result', result_column ], ascending=[ False, True ] ).reset_index( drop=True ) )
 
