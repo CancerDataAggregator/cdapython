@@ -949,6 +949,7 @@ def summarize(
 
     # These need to go somewhere else. Until then, they are prominently deposited here.
     extra_list_types = [ 'containing_terms', 'related_terms', 'slim_terms', 'synonym_terms' ]
+    has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology' ]
 
     # Create logger object.
     log = get_logger()
