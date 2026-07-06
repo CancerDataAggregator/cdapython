@@ -8,7 +8,6 @@ import cda_client.api.columns.columns_endpoint_columns_get
 import cda_client.api.release_metadata.release_metadata_endpoint_release_metadata_get
 import cda_client.api.column_values.column_values_endpoint_column_values_column_post
 
-from cdapython.application_utilities import get_api_url
 from cda_client.errors import UnexpectedStatus
 from cdapython.logging_wrappers import get_logger
 
@@ -21,6 +20,47 @@ from cdapython.logging_wrappers import get_logger
 #############################################################################################################################
 #############################################################################################################################
 
+
+#############################################################################################################################
+#
+# get_api_url(): Return the current system URL for the CDA REST API.
+#
+#############################################################################################################################
+
+def get_api_url():
+    """
+    Return the currently-set URL pointing to the CDA REST API.
+    """
+
+    # System default.
+    default_api_url = 'https://cda.datacommons.cancer.gov'
+
+    # Has the user set a non-default URL?
+    local_api_url = os.environ.get( '__CDA_API_URL' )
+
+    if local_api_url is not None and len( local_api_url ) > 0:
+        return local_api_url
+    else:
+        return default_api_url
+
+#############################################################################################################################
+#
+# set_api_url(): Set the current system URL for the CDA REST API.
+#
+#############################################################################################################################
+
+def set_api_url( new_api_url ):
+    """
+    Set the current system URL for the CDA REST API.
+    """
+
+    # Do some basic sanity checking.
+    if re.search( r'^https*:\/\/', new_api_url ) is None:
+        raise RuntimeError( 'set_api_url(): Only HTTP and HTTPS URLs are allowed.' )
+    elif len( new_api_url ) > 100:
+        raise RuntimeError( 'set_api_url(): Whatever that was, it wasn\'t the URL of the CDA REST API.' )
+
+    os.environ['__CDA_API_URL'] = new_api_url
 
 #############################################################################################################################
 #

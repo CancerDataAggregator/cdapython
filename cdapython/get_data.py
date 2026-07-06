@@ -5,8 +5,7 @@ import re
 
 import cda_client
 
-from cdapython.application_utilities import get_api_url
-from cdapython.discover import columns, release_metadata
+from cdapython.discover import columns, get_api_url, release_metadata
 from cdapython.logging_wrappers import get_logger
 from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list, validate_and_transform_match_from_file_values, validate_parameter_values
 
