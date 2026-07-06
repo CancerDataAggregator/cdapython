@@ -947,6 +947,10 @@ def summarize(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
+    # These need to go somewhere else. Until then, they are prominently deposited here.
+    extra_list_types = [ 'containing_terms', 'related_terms', 'slim_terms', 'synonym_terms' ]
+
+    # Create logger object.
     log = get_logger()
 
     #############################################################################################################################
@@ -1007,7 +1011,7 @@ def summarize(
 
     for column_record in cached_release_metadata:
         record_data_source = column_record['data_source']
-        if record_data_source != 'CDA':
+        if record_data_source.upper() != 'CDA':
             # Let's not care about case.
             valid_data_sources.add( record_data_source.upper() )
 
@@ -1258,173 +1262,774 @@ def summarize(
         log.error( f"{api_response_object.error_type}: {api_response_object.message}" )
         return
 
-    # Sample JSON response from a /summary endpoint:
+    # Sample JSON data at the /summary/subject endpoint:
+    # 
+    # Request:
+    # {
+    #     "SEARCH_LIST": [ "lung", "anus" ],
+    #     "MATCH_ALL": [],
+    #     "MATCH_SOME": [],
+    #     "ADD_COLUMNS": [ "observed_anatomic_site", "resection_anatomic_site", "anatomic_site", "diagnosis", "morphology" ],
+    #     "EXCLUDE_COLUMNS": []
+    # }
+    # 
+    # Response:
     # 
     # {
     #   "result": [
     #     {
-    #       "total_count": 6904,
-    #       "file_count": 584670,
-    #       "species_summary": [
-    #         {
-    #           "species": "human",
-    #           "count_result": 6904
-    #         }
-    #       ],
-    #       "year_of_birth_summary": [
-    #         {
-    #           "min": 1908,
-    #           "max": 2010,
-    #           "mean": 1958,
-    #           "median": 1956,
-    #           "lower_quartile": 1942,
-    #           "upper_quartile": 1971
-    #         }
-    #       ],
+    #       "total_count": 5,
+    #       "file_count": 108,
     #       "year_of_death_summary": [
     #         {
-    #           "min": 1996,
-    #           "max": 2022,
-    #           "mean": 2009,
-    #           "median": 2007,
-    #           "lower_quartile": 2002,
-    #           "upper_quartile": 2018
-    #         }
-    #       ],
-    #       "cause_of_death_summary": [
-    #         {
-    #           "cause_of_death": null,
-    #           "count_result": 6683
-    #         },
-    #         {
-    #           "cause_of_death": "Non-Cancer Related Death",
-    #           "count_result": 28
-    #         },
-    #         {
-    #           "cause_of_death": "Surgical Complication",
-    #           "count_result": 4
-    #         },
-    #         {
-    #           "cause_of_death": "Cancer-Related Death",
-    #           "count_result": 186
-    #         },
-    #         {
-    #           "cause_of_death": "Cardiovascular Disorder",
-    #           "count_result": 3
-    #         }
-    #       ],
-    #       "race_summary": [
-    #         {
-    #           "race": null,
-    #           "count_result": 902
-    #         },
-    #         {
-    #           "race": "Black or African American",
-    #           "count_result": 596
-    #         },
-    #         {
-    #           "race": "Asian",
-    #           "count_result": 431
-    #         },
-    #         {
-    #           "race": "More than one race",
-    #           "count_result": 14
-    #         },
-    #         {
-    #           "race": "White",
-    #           "count_result": 4922
-    #         },
-    #         {
-    #           "race": "American Indian or Alaska Native",
-    #           "count_result": 24
-    #         },
-    #         {
-    #           "race": "Native Hawaiian or Other Pacific Islander",
-    #           "count_result": 15
+    #           "min": null,
+    #           "max": null,
+    #           "mean": null,
+    #           "median": null,
+    #           "lower_quartile": null,
+    #           "upper_quartile": null
     #         }
     #       ],
     #       "ethnicity_summary": [
     #         {
     #           "ethnicity": null,
-    #           "count_result": 1595
+    #           "count_result": 3,
+    #           "ethnicity_containing_terms": [],
+    #           "ethnicity_related_terms": [],
+    #           "ethnicity_slim_terms": [],
+    #           "ethnicity_synonym_terms": []
     #         },
     #         {
     #           "ethnicity": "Non-Hispanic",
-    #           "count_result": 4903
+    #           "count_result": 2,
+    #           "ethnicity_containing_terms": [],
+    #           "ethnicity_related_terms": [],
+    #           "ethnicity_slim_terms": [],
+    #           "ethnicity_synonym_terms": []
+    #         }
+    #       ],
+    #       "cause_of_death_summary": [
+    #         {
+    #           "cause_of_death": null,
+    #           "count_result": 4,
+    #           "cause_of_death_containing_terms": [],
+    #           "cause_of_death_related_terms": [],
+    #           "cause_of_death_slim_terms": [],
+    #           "cause_of_death_synonym_terms": []
     #         },
     #         {
-    #           "ethnicity": "Hispanic or Latino",
-    #           "count_result": 406
+    #           "cause_of_death": "Non-Cancer Related Death",
+    #           "count_result": 1,
+    #           "cause_of_death_containing_terms": [],
+    #           "cause_of_death_related_terms": [],
+    #           "cause_of_death_slim_terms": [],
+    #           "cause_of_death_synonym_terms": []
+    #         }
+    #       ],
+    #       "race_summary": [
+    #         {
+    #           "race": null,
+    #           "count_result": 3,
+    #           "race_containing_terms": [],
+    #           "race_related_terms": [],
+    #           "race_slim_terms": [],
+    #           "race_synonym_terms": []
+    #         },
+    #         {
+    #           "race": "Black or African American",
+    #           "count_result": 2,
+    #           "race_containing_terms": [],
+    #           "race_related_terms": [],
+    #           "race_slim_terms": [],
+    #           "race_synonym_terms": []
+    #         }
+    #       ],
+    #       "species_summary": [
+    #         {
+    #           "species": null,
+    #           "count_result": 1,
+    #           "species_containing_terms": [],
+    #           "species_related_terms": [],
+    #           "species_slim_terms": [],
+    #           "species_synonym_terms": []
+    #         },
+    #         {
+    #           "species": "human",
+    #           "count_result": 4,
+    #           "species_containing_terms": [],
+    #           "species_related_terms": [],
+    #           "species_slim_terms": [],
+    #           "species_synonym_terms": []
+    #         }
+    #       ],
+    #       "year_of_birth_summary": [
+    #         {
+    #           "min": null,
+    #           "max": null,
+    #           "mean": null,
+    #           "median": null,
+    #           "lower_quartile": null,
+    #           "upper_quartile": null
     #         }
     #       ],
     #       "subject_data_source_count_summary": [
     #         {
     #           "min": 1,
-    #           "max": 4,
-    #           "mean": 2,
-    #           "median": 2,
-    #           "lower_quartile": 2,
-    #           "upper_quartile": 2
+    #           "max": 1,
+    #           "mean": 1,
+    #           "median": 1,
+    #           "lower_quartile": 1,
+    #           "upper_quartile": 1
     #         }
     #       ],
     #       "data_source": {
-    #         "gc_exclusive": 235,
-    #         "gdc_exclusive": 351,
+    #         "gdc_exclusive": 4,
+    #         "idc_exclusive": 1,
     #         "icdc_exclusive": 0,
-    #         "idc_exclusive": 0,
-    #         "pdc_exclusive": 6,
-    #         "gc_gdc_exclusive": 0,
-    #         "gc_icdc_exclusive": 0,
-    #         "gc_idc_exclusive": 898,
-    #         "gc_pdc_exclusive": 0,
+    #         "gc_exclusive": 0,
+    #         "pdc_exclusive": 0,
+    #         "gdc_idc_exclusive": 0,
     #         "gdc_icdc_exclusive": 0,
-    #         "gdc_idc_exclusive": 4544,
-    #         "gdc_pdc_exclusive": 7,
-    #         "icdc_idc_exclusive": 0,
-    #         "icdc_pdc_exclusive": 0,
+    #         "gdc_gc_exclusive": 0,
+    #         "gdc_pdc_exclusive": 0,
+    #         "idc_icdc_exclusive": 0,
+    #         "idc_gc_exclusive": 0,
     #         "idc_pdc_exclusive": 0,
-    #         "gc_gdc_icdc_exclusive": 0,
-    #         "gc_gdc_idc_exclusive": 574,
-    #         "gc_gdc_pdc_exclusive": 1,
-    #         "gc_icdc_idc_exclusive": 0,
-    #         "gc_icdc_pdc_exclusive": 0,
-    #         "gc_idc_pdc_exclusive": 0,
-    #         "gdc_icdc_idc_exclusive": 0,
+    #         "icdc_gc_exclusive": 0,
+    #         "icdc_pdc_exclusive": 0,
+    #         "gc_pdc_exclusive": 0,
+    #         "gdc_idc_icdc_exclusive": 0,
+    #         "gdc_idc_gc_exclusive": 0,
+    #         "gdc_idc_pdc_exclusive": 0,
+    #         "gdc_icdc_gc_exclusive": 0,
     #         "gdc_icdc_pdc_exclusive": 0,
-    #         "gdc_idc_pdc_exclusive": 205,
-    #         "icdc_idc_pdc_exclusive": 0,
-    #         "gc_gdc_icdc_idc_exclusive": 0,
-    #         "gc_gdc_icdc_pdc_exclusive": 0,
-    #         "gc_gdc_idc_pdc_exclusive": 83,
-    #         "gc_icdc_idc_pdc_exclusive": 0,
-    #         "gdc_icdc_idc_pdc_exclusive": 0,
-    #         "gc_gdc_icdc_idc_pdc": 0
+    #         "gdc_gc_pdc_exclusive": 0,
+    #         "idc_icdc_gc_exclusive": 0,
+    #         "idc_icdc_pdc_exclusive": 0,
+    #         "idc_gc_pdc_exclusive": 0,
+    #         "icdc_gc_pdc_exclusive": 0,
+    #         "gdc_idc_icdc_gc_exclusive": 0,
+    #         "gdc_idc_icdc_pdc_exclusive": 0,
+    #         "gdc_idc_gc_pdc_exclusive": 0,
+    #         "gdc_icdc_gc_pdc_exclusive": 0,
+    #         "idc_icdc_gc_pdc_exclusive": 0,
+    #         "gdc_idc_icdc_gc_pdc": 0
     #       },
-    #       "sex": [
+    #       "resection_anatomic_site_summary": [
     #         {
-    #           "sex": null,
-    #           "count_result": 6
+    #           "resection_anatomic_site": null,
+    #           "count_result": 1,
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": []
     #         },
     #         {
-    #           "sex": "female",
-    #           "count_result": 3591
+    #           "resection_anatomic_site": "lung",
+    #           "count_result": 4,
+    #           "resection_anatomic_site_containing_terms": [
+    #             "anatomical collection",
+    #             "anatomical conduit",
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "compound organ",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "lateral structure",
+    #             "lower respiratory tract",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organ",
+    #             "organism subdivision",
+    #             "organ part",
+    #             "pair of lungs",
+    #             "proximo-distal subdivision of respiratory tract",
+    #             "respiration organ",
+    #             "respiratory airway",
+    #             "respiratory system",
+    #             "respiratory tract",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "subdivision of tube",
+    #             "thoracic cavity element",
+    #             "thoracic segment of trunk",
+    #             "thoracic segment organ",
+    #             "trunk",
+    #             "trunk region element",
+    #             "tube",
+    #             "viscus"
+    #           ],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [
+    #             "respiratory airway"
+    #           ],
+    #           "resection_anatomic_site_synonym_terms": [
+    #             "pulmo"
+    #           ]
+    #         }
+    #       ],
+    #       "diagnosis_summary": [
+    #         {
+    #           "diagnosis": null,
+    #           "count_result": 1,
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [],
+    #           "diagnosis_synonym_terms": []
     #         },
     #         {
-    #           "sex": "male",
-    #           "count_result": 3309
+    #           "diagnosis": "Neoplasm, uncertain whether benign or malignant",
+    #           "count_result": 1,
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Neoplasms"
+    #           ],
+    #           "diagnosis_synonym_terms": []
+    #         },
+    #         {
+    #           "diagnosis": "Basaloid squamous cell carcinoma",
+    #           "count_result": 1,
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Squamous cell neoplasms"
+    #           ],
+    #           "diagnosis_synonym_terms": [
+    #             "basaloid squamous cell carcinoma"
+    #           ]
+    #         },
+    #         {
+    #           "diagnosis": "Squamous cell carcinoma",
+    #           "count_result": 4,
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Squamous cell neoplasms"
+    #           ],
+    #           "diagnosis_synonym_terms": [
+    #             "squamous cell carcinoma"
+    #           ]
+    #         }
+    #       ],
+    #       "observed_anatomic_site_summary": [
+    #         {
+    #           "observed_anatomic_site": "abdomen",
+    #           "count_result": 1,
+    #           "observed_anatomic_site_containing_terms": [
+    #             "abdominal segment of trunk",
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organism subdivision",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "trunk"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "adult abdomen",
+    #             "belly",
+    #             "celiac region"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "trunk"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "abdominopelvic region",
+    #             "abdominopelvis"
+    #           ]
+    #         },
+    #         {
+    #           "observed_anatomic_site": "chest",
+    #           "count_result": 1,
+    #           "observed_anatomic_site_containing_terms": [
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organism subdivision",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "thoracic segment of trunk",
+    #             "trunk"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "thoracic body wall",
+    #             "thorax"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "trunk"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "anterolateral part of thorax",
+    #             "front of thorax",
+    #             "pectus",
+    #             "ventral part of thoracic region"
+    #           ]
+    #         },
+    #         {
+    #           "observed_anatomic_site": "anus",
+    #           "count_result": 4,
+    #           "observed_anatomic_site_containing_terms": [
+    #             "anatomical conduit",
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "digestive system",
+    #             "digestive tract",
+    #             "disconnected anatomical group",
+    #             "ectoderm-derived structure",
+    #             "entire sense organ system",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "orifice",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "tube"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "lower digestive tract"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "anal opening",
+    #             "anal orifice",
+    #             "opening of terminal part of digestive tract"
+    #           ]
+    #         },
+    #         {
+    #           "observed_anatomic_site": "upper lobe of lung",
+    #           "count_result": 1,
+    #           "observed_anatomic_site_containing_terms": [
+    #             "anatomical collection",
+    #             "anatomical conduit",
+    #             "anatomical entity",
+    #             "anatomical lobe",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "compound organ",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "lateral structure",
+    #             "lobe of lung",
+    #             "lower respiratory tract",
+    #             "lung",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organ",
+    #             "organism subdivision",
+    #             "organ part",
+    #             "organ subunit",
+    #             "pair of lungs",
+    #             "proximo-distal subdivision of respiratory tract",
+    #             "respiration organ",
+    #             "respiratory airway",
+    #             "respiratory system",
+    #             "respiratory tract",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "subdivision of tube",
+    #             "thoracic cavity element",
+    #             "thoracic segment of trunk",
+    #             "thoracic segment organ",
+    #             "trunk",
+    #             "trunk region element",
+    #             "tube",
+    #             "viscus"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "respiratory airway"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "cranial lobe of lung",
+    #             "lobus superior",
+    #             "lobus superior pulmonis",
+    #             "superior lobe of lung"
+    #           ]
+    #         },
+    #         {
+    #           "observed_anatomic_site": "lung",
+    #           "count_result": 1,
+    #           "observed_anatomic_site_containing_terms": [
+    #             "anatomical collection",
+    #             "anatomical conduit",
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "compound organ",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "lateral structure",
+    #             "lower respiratory tract",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organ",
+    #             "organism subdivision",
+    #             "organ part",
+    #             "pair of lungs",
+    #             "proximo-distal subdivision of respiratory tract",
+    #             "respiration organ",
+    #             "respiratory airway",
+    #             "respiratory system",
+    #             "respiratory tract",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "subdivision of tube",
+    #             "thoracic cavity element",
+    #             "thoracic segment of trunk",
+    #             "thoracic segment organ",
+    #             "trunk",
+    #             "trunk region element",
+    #             "tube",
+    #             "viscus"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "respiratory airway"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "pulmo"
+    #           ]
+    #         }
+    #       ],
+    #       "morphology_summary": [
+    #         {
+    #           "morphology": null,
+    #           "count_result": 1,
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "morphology": "Basaloid squamous cell carcinoma",
+    #           "count_result": 1,
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Squamous cell neoplasms"
+    #           ],
+    #           "morphology_synonym_terms": [
+    #             "basaloid squamous cell carcinoma"
+    #           ]
+    #         },
+    #         {
+    #           "morphology": "Squamous cell carcinoma",
+    #           "count_result": 3,
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Squamous cell neoplasms"
+    #           ],
+    #           "morphology_synonym_terms": [
+    #             "squamous cell carcinoma"
+    #           ]
+    #         }
+    #       ],
+    #       "anatomic_site_summary": [
+    #         {
+    #           "anatomic_site": null,
+    #           "count_result": 100,
+    #           "anatomic_site_containing_terms": [],
+    #           "anatomic_site_related_terms": [],
+    #           "anatomic_site_slim_terms": [],
+    #           "anatomic_site_synonym_terms": []
+    #         },
+    #         {
+    #           "anatomic_site": "abdomen",
+    #           "count_result": 2,
+    #           "anatomic_site_containing_terms": [
+    #             "abdominal segment of trunk",
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organism subdivision",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "trunk"
+    #           ],
+    #           "anatomic_site_related_terms": [
+    #             "adult abdomen",
+    #             "belly",
+    #             "celiac region"
+    #           ],
+    #           "anatomic_site_slim_terms": [
+    #             "trunk"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "abdominopelvic region",
+    #             "abdominopelvis"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": "chest",
+    #           "count_result": 6,
+    #           "anatomic_site_containing_terms": [
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organism subdivision",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "thoracic segment of trunk",
+    #             "trunk"
+    #           ],
+    #           "anatomic_site_related_terms": [
+    #             "thoracic body wall",
+    #             "thorax"
+    #           ],
+    #           "anatomic_site_slim_terms": [
+    #             "trunk"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "anterolateral part of thorax",
+    #             "front of thorax",
+    #             "pectus",
+    #             "ventral part of thoracic region"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": "left lung",
+    #           "count_result": 2,
+    #           "anatomic_site_containing_terms": [
+    #             "anatomical collection",
+    #             "anatomical conduit",
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "compound organ",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "lateral structure",
+    #             "lower respiratory tract",
+    #             "lung",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organ",
+    #             "organism subdivision",
+    #             "organ part",
+    #             "pair of lungs",
+    #             "proximo-distal subdivision of respiratory tract",
+    #             "respiration organ",
+    #             "respiratory airway",
+    #             "respiratory system",
+    #             "respiratory tract",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "subdivision of tube",
+    #             "thoracic cavity element",
+    #             "thoracic segment of trunk",
+    #             "thoracic segment organ",
+    #             "trunk",
+    #             "trunk region element",
+    #             "tube",
+    #             "viscus"
+    #           ],
+    #           "anatomic_site_related_terms": [],
+    #           "anatomic_site_slim_terms": [
+    #             "respiratory airway"
+    #           ],
+    #           "anatomic_site_synonym_terms": []
+    #         },
+    #         {
+    #           "anatomic_site": "right lung",
+    #           "count_result": 2,
+    #           "anatomic_site_containing_terms": [
+    #             "anatomical collection",
+    #             "anatomical conduit",
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "compound organ",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "lateral structure",
+    #             "lower respiratory tract",
+    #             "lung",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organ",
+    #             "organism subdivision",
+    #             "organ part",
+    #             "pair of lungs",
+    #             "proximo-distal subdivision of respiratory tract",
+    #             "respiration organ",
+    #             "respiratory airway",
+    #             "respiratory system",
+    #             "respiratory tract",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "subdivision of tube",
+    #             "thoracic cavity element",
+    #             "thoracic segment of trunk",
+    #             "thoracic segment organ",
+    #             "trunk",
+    #             "trunk region element",
+    #             "tube",
+    #             "viscus"
+    #           ],
+    #           "anatomic_site_related_terms": [],
+    #           "anatomic_site_slim_terms": [
+    #             "respiratory airway"
+    #           ],
+    #           "anatomic_site_synonym_terms": []
+    #         },
+    #         {
+    #           "anatomic_site": "anus",
+    #           "count_result": 2,
+    #           "anatomic_site_containing_terms": [
+    #             "anatomical conduit",
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "digestive system",
+    #             "digestive tract",
+    #             "disconnected anatomical group",
+    #             "ectoderm-derived structure",
+    #             "entire sense organ system",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "orifice",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "tube"
+    #           ],
+    #           "anatomic_site_related_terms": [],
+    #           "anatomic_site_slim_terms": [
+    #             "lower digestive tract"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "anal opening",
+    #             "anal orifice",
+    #             "opening of terminal part of digestive tract"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": "mediastinal lymph node",
+    #           "count_result": 2,
+    #           "anatomic_site_containing_terms": [
+    #             "anatomical entity",
+    #             "anatomical structure",
+    #             "anatomical system",
+    #             "body proper",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "hemolymphoid system",
+    #             "immune organ",
+    #             "immune system",
+    #             "lymph node",
+    #             "lymphoid system",
+    #             "main body axis",
+    #             "material anatomical entity",
+    #             "multicellular anatomical structure",
+    #             "multicellular organism",
+    #             "non-connected functional system",
+    #             "organ",
+    #             "organism subdivision",
+    #             "sensory system",
+    #             "somatosensory system",
+    #             "subdivision of organism along main body axis",
+    #             "subdivision of trunk",
+    #             "thoracic cavity element",
+    #             "thoracic lymph node",
+    #             "thoracic segment of trunk",
+    #             "thoracic segment organ",
+    #             "trunk",
+    #             "trunk region element",
+    #             "viscus"
+    #           ],
+    #           "anatomic_site_related_terms": [],
+    #           "anatomic_site_slim_terms": [
+    #             "lymphoid system"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "mediastinal node"
+    #           ]
     #         }
     #       ]
     #     }
     #   ],
-    #   "query_sql": "WITH subject_preselect AS (SELECT subject.id AS subject_id, subject.id_alias AS subject_id_alias, [...these are very long!...] AS gc_gdc_icdc_idc_pdc) AS subquery) AS data_source, (SELECT observation_columns.sex FROM observation_columns) AS sex) AS json_result"
+    #   "query_sql": "[Please go to the API directly to see the value of this response variable. It's huge.]"
     # }
 
-    # Report some metadata about the results we got back.
+    # Report some metadata about the results we got back. All of this is typically immensely verbose.
 
     log.debug( f"/summary/{table} endpoint query SQL:\n{api_response_object.to_dict()['query_sql']}" )
-
-    # This is immensely verbose, sometimes.
-
     log.debug( f"/summary/{table} endpoint results:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
 
     #############################################################################################################################
@@ -1439,6 +2044,17 @@ def summarize(
 
     # Wrap the 'data_source' response element in a list to avoid splitting the entries into individual columns
     # when converting into a DataFrame.
+    # 
+    #       "data_source": {
+    #         "gdc_exclusive": 4,
+    #         "idc_exclusive": 1,
+    #         "icdc_exclusive": 0,
+    #         "gc_exclusive": 0,
+    #         "pdc_exclusive": 0,
+    #         "gdc_idc_exclusive": 0,
+    #         "gdc_icdc_exclusive": 0,
+    #         "gdc_gc_exclusive": 0,
+    #         ...
 
     api_response_dict['data_source'] = [api_response_dict['data_source']]
 
@@ -1584,13 +2200,17 @@ def summarize(
                 elif result_dataframe[result_column].dtype == 'object':
                     
                     result_column_dict = {
-                        result_column: list(),
-                        'count_result': list()
+                        result_column: [],
+                        'count_result': []
                     }
+
+                    if result_column in has_non_null_extras:
+                        for extra_list_type in extra_list_types:
+                            result_column_dict[extra_list_type] = []
 
                     if result_dataframe[result_column][0] is not None:
                         
-                        # This cell should contain an array of Python dicts, with each dict containing two entries:
+                        # This cell should contain an array of Python dicts, with each dict containing at least two entries:
                         #
                         #    data column label and value:
                         #       keyword: `result_column`, e.g. 'cause_of_death'
@@ -1599,6 +2219,15 @@ def summarize(
                         #    observed count of the given value:
                         #       keyword: 'count_result'
                         #       value: (int) number of times the given data value (described in the previous dictionary entry) was observed in this set of result data
+                        # 
+                        # plus possibly extra decorator entries, which will be arrays of values, e.g. (all together):
+                        # 
+                        #     "anatomic_site": "arm",
+                        #     "count_result": 4,
+                        #     "anatomic_site_containing_terms": [],
+                        #     "anatomic_site_related_terms": [],
+                        #     "anatomic_site_slim_terms": [],
+                        #     "anatomic_site_synonym_terms": []
 
                         for dict_pair in result_dataframe[result_column][0]:
                             
@@ -1613,6 +2242,13 @@ def summarize(
                             result_column_dict[result_column].append( print_value )
 
                             result_column_dict['count_result'].append( dict_pair['count_result'] )
+
+                            if result_column in has_non_null_extras:
+                                for extra_list_type in extra_list_types:
+                                    if f"{result_column}_{extra_list_type}" in dict_pair:
+                                        result_column_dict[extra_list_type].append( dict_pair[f"{result_column}_{extra_list_type}"] )
+                                    else:
+                                        result_column_dict[extra_list_type].append( [] )
 
                     result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ 'count_result', result_column ], ascending=[ False, True ] ).reset_index( drop=True ) )
 
