@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cdapython"
-version = "2.1.0"
+version = "2.2.0"
 description = "NCI CRDC CDA front-end user interface library"
 authors = []
 readme = "README.md"
@@ -14,7 +14,7 @@ cda-client = ">=2.1.0"
 pandas = ">=2.2.3,<3.0.0"
 python = "^3.9"
 pyyaml = ">= 6.0.0"
-tabulate = ">=0.9.0"
+tabulate = ">=0.10.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
