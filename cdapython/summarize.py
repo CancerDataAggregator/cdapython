@@ -2259,9 +2259,6 @@ def summarize(
                             if actual_value is not None and actual_value != '':
                                 
                                 print_value = actual_value
-                                # TEMP DEBUG TEST
-                                if actual_value == 'organ':
-                                    print_value = 'organBWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH'
 
                             result_column_dict[result_column].append( print_value )
 
@@ -2270,7 +2267,8 @@ def summarize(
                             if result_column in has_non_null_extras:
                                 for extra_list_type in extra_list_types:
                                     if f"{result_column}_{extra_list_type}" in dict_pair and len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 0:
-                                        result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_pair[f"{result_column}_{extra_list_type}"] ) ) )
+                                        # the good version: result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_pair[f"{result_column}_{extra_list_type}"] ) ) )
+                                        result_column_dict[extra_list_type].append( '\n'.join( sorted( [ x if x != 'organ' else 'organBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWWWWWWWWWWWWWWWWWWWWWWWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH' for x in dict_pair[f"{result_column}_{extra_list_type}"] ] ) ) )
                                     else:
                                         result_column_dict[extra_list_type].append( '<NA>' )
 
