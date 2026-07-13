@@ -947,8 +947,8 @@ def summarize(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    # These need to go somewhere else. Until then, they are prominently deposited here.
-    extra_list_types = [ 'containing_terms', 'related_terms', 'slim_terms', 'synonym_terms' ]
+    # These need to go somewhere else. Until then, they are prominently deposited here. extra_list_types is here to be enumerated in desired column-display order for return_data_as=''.
+    extra_list_types = [ 'slim_terms', 'synonym_terms', 'related_terms', 'containing_terms' ]
     has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology', 'treatment_anatomic_site', 'primary_site' ]
 
     # Create logger object.
@@ -2267,7 +2267,6 @@ def summarize(
                             if result_column in has_non_null_extras:
                                 for extra_list_type in extra_list_types:
                                     if f"{result_column}_{extra_list_type}" in dict_pair and len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 0:
-                                        #result_column_dict[extra_list_type].append( dict_pair[f"{result_column}_{extra_list_type}"] )
                                         result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_pair[f"{result_column}_{extra_list_type}"] ) ) )
                                     else:
                                         result_column_dict[extra_list_type].append( '<NA>' )
@@ -2305,17 +2304,42 @@ def summarize(
 
                         elif 'count_result' in print_df.columns.values or f"{table}s" in print_df.columns.values:
                             
+                            # Find the base result_column name; find out if extra columns are present; identify the name of the count column; and order output columns accordingly for display.
+
+                            # TO DO: This next thing should be made more robust. Also see the big lambda constructor a few
+                            # lines below which similarly references the first column in print_df. A brief review suggests
+                            # we're relying on Python dict key insert order to support our assumption that this is in fact
+                            # `result_column`; while Python dicts remembering and regurgitating key insert order is
+                            # guaranteed stable insofar as that goes, it's subject to downstream obliteration risk and is
+                            # also impossible to debug.
+                            result_column = print_df.columns.values[0]
+
                             maxcolwidths_list = [ None, max_col_width ]
 
                             colalign_list = [ 'right', 'right' ]
 
-                            # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
+                            # Check for extra columns and update accordingly.
+                            for extra_list_type in extra_list_types:
+                                if extra_list_type in print_df.columns.values:
+                                    colalign_list.append( 'left' )
+                                    maxcolwidths_list.append( max_col_width )
 
+                            # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
                             print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and not isinstance( x, bool ) and len( x ) > max_col_width ) else x )
 
                             # Put the count values first in the display.
+                            new_column_ordering = []
 
-                            new_column_ordering = list( reversed( print_df.columns.tolist() ) )
+                            if f"{table}s" in print_df.columns.values:
+                                new_column_ordering = [ f"{table}s" ]
+                            else:
+                                new_column_ordering = [ 'count_result' ]
+
+                            new_column_ordering.append( result_column )
+
+                            for extra_list_type in extra_list_types:
+                                if extra_list_type in print_df.columns.values:
+                                    new_column_ordering.append( extra_list_type )
 
                             print_df = print_df[new_column_ordering]
 
