@@ -2298,6 +2298,8 @@ def summarize(
 
                     if print_df is not None and len( print_df ) > 0:
                         
+                        table_output_format = 'double_outline'
+
                         if len( print_df.columns ) == 1:
                             
                             colalign_list = [ 'left' ]
@@ -2323,6 +2325,8 @@ def summarize(
                                 if extra_list_type in print_df.columns.values:
                                     colalign_list.append( 'left' )
                                     maxcolwidths_list.append( max_col_width )
+                                    # Alter the border scheme to accommodate multiline cells.
+                                    table_output_format = 'double_grid'
 
                             # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
                             print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and not isinstance( x, bool ) and len( x ) > max_col_width ) else x )
@@ -2375,7 +2379,7 @@ def summarize(
                                 print_df,
                                 showindex=False,
                                 headers=print_df.columns,
-                                tablefmt='double_grid',
+                                tablefmt=table_output_format,
                                 colalign=colalign_list,
                                 maxcolwidths=maxcolwidths_list,
                                 disable_numparse=True,
