@@ -2120,6 +2120,9 @@ def summarize(
 
         # Return overall result summary counts first.
 
+        # Identify the total result count for {table}.
+        total_base_rows = 0
+
         for toplevel_column in [ 'number_of_matching_files', 'number_of_matching_subjects', 'number_of_matching_rows', 'number_of_files_related_to_matching_subjects', 'number_of_subjects_related_to_matching_files' ]:
             
             if toplevel_column in result_dataframe:
@@ -2127,6 +2130,9 @@ def summarize(
                 # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
 
                 result_list.append( pd.DataFrame( result_dataframe[toplevel_column], columns=[toplevel_column] ) )
+
+                if toplevel_column == f"number_of_matching_{table}s":
+                    total_base_rows = int( result_dataframe[toplevel_column][0] )
 
         # Next, summarize data sources unless `exclude_columns='data_source'` was specified by the user.
 
@@ -2174,7 +2180,7 @@ def summarize(
                 
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
                 # 
-                # They come back with null values if there are no results. In such a case, we don't want to include this structure in our output.
+                # They come back with null values if there are no results. In such a case, print <NA>s.
 
                 if result_dataframe[result_column][0][0]['median'] is not None:
                     
@@ -2187,6 +2193,20 @@ def summarize(
                     for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
                         
                         result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
+
+                    result_list_tail.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
+
+                else:
+                    
+                    result_column_dict = dict()
+
+                    result_column_dict['cda_column_name'] = [result_column]
+
+                    # Hard-coding this is fragile, but safe for now and there's a lot to do.
+
+                    for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
+                        
+                        result_column_dict[key] = ['<NA>']
 
                     result_list_tail.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
 
@@ -2354,17 +2374,15 @@ def summarize(
                 
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
                 # 
-                # They come back with null values if there are no results. In such a case, we don't want to include this structure in our output.
+                # They come back with null values if there are no results. These nulls are forwarded to the result dicts without modification, matching what's done for counts for null values in enumerated fields.
 
-                if result_dataframe[result_column][0][0]['median'] is not None:
+                result_dict[result_column] = dict()
+
+                # Hard-coding this is fragile, but safe for now and there's a lot to do.
+
+                for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
                     
-                    result_dict[result_column] = dict()
-
-                    # Hard-coding this is fragile, but safe for now and there's a lot to do.
-
-                    for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
-                        
-                        result_dict[result_column][key] = result_dataframe[result_column][0][0][key]
+                    result_dict[result_column][key] = result_dataframe[result_column][0][0][key]
 
             elif result_column == 'data_source':
                 
