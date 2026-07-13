@@ -2267,8 +2267,7 @@ def summarize(
                             if result_column in has_non_null_extras:
                                 for extra_list_type in extra_list_types:
                                     if f"{result_column}_{extra_list_type}" in dict_pair and len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 0:
-                                        # the good version: result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_pair[f"{result_column}_{extra_list_type}"] ) ) )
-                                        result_column_dict[extra_list_type].append( '\n'.join( sorted( [ x if x != 'organ' else 'organBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWWWWWWWWWWWWWWWWWWWWWWWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH' for x in dict_pair[f"{result_column}_{extra_list_type}"] ] ) ) )
+                                        result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_pair[f"{result_column}_{extra_list_type}"] ) ) )
                                     else:
                                         result_column_dict[extra_list_type].append( '<NA>' )
 
@@ -2291,7 +2290,7 @@ def summarize(
                     
                     print_df = result_list_df
 
-                    max_col_width = 80
+                    max_col_width = 40
 
                     maxcolwidths_list = [ None ]
 
