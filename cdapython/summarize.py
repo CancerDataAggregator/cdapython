@@ -2375,7 +2375,7 @@ def summarize(
                                 print_df,
                                 showindex=False,
                                 headers=print_df.columns,
-                                tablefmt='double_outline',
+                                tablefmt='double_grid',
                                 colalign=colalign_list,
                                 maxcolwidths=maxcolwidths_list,
                                 disable_numparse=True,
