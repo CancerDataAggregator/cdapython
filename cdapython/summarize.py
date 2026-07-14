@@ -2305,6 +2305,8 @@ def summarize(
 
                     if print_df is not None and len( print_df ) > 0:
                         
+                        result_column = ''
+
                         if len( print_df.columns ) == 1:
                             
                             colalign_list = [ 'left' ]
@@ -2358,12 +2360,12 @@ def summarize(
                             
                             colalign_list = [ 'right' ]
 
-                            result_name = print_df['cda_column_name'][0]
+                            result_column = print_df['cda_column_name'][0]
 
                             result_dict = {
                                 
                                 '': list(),
-                                result_name: list()
+                                result_column: list()
                             }
 
                             # Hard-coding this is fragile, but safe for now and there's a lot to do.
@@ -2372,17 +2374,13 @@ def summarize(
                                 
                                 result_dict[''].append( f"{re.sub( r'_', r' ', key )}" )
 
-                                result_dict[result_name].append( f"{print_df[key][0]:>15}" )
+                                result_dict[result_column].append( f"{print_df[key][0]:>15}" )
 
                             print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
 
                         # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
 
                         table_output_format = default_table_output_format
-
-                        # TO DO: See TO DO above and note about fragility of access.
-                        result_column = print_df.columns.values[0]
-                        print( result_column )
 
                         if result_column in custom_table_output_format:
                             table_output_format = custom_table_output_format[result_column]
