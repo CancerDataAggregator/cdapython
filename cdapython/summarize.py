@@ -2119,7 +2119,8 @@ def summarize(
         result_list = list()
 
         # Track context-relevant table display format defaults and options.
-        table_output_format = 'double_outline'
+        default_table_output_format = 'double_outline'
+        custom_table_output_format = dict()
 
         # Return overall result summary counts first.
 
@@ -2273,7 +2274,7 @@ def summarize(
                                         result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_pair[f"{result_column}_{extra_list_type}"] ) ) )
                                         if len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 1:
                                             # Alter the border scheme to accommodate multiline cells.
-                                            table_output_format = 'double_grid'
+                                            custom_table_output_format[result_column] = 'double_grid'
                                     else:
                                         result_column_dict[extra_list_type].append( '<NA>' )
 
@@ -2317,7 +2318,8 @@ def summarize(
                             # we're relying on Python dict key insert order to support our assumption that this is in fact
                             # `result_column`; while Python dicts remembering and regurgitating key insert order is
                             # guaranteed stable insofar as that goes, it's subject to downstream obliteration risk and is
-                            # also impossible to debug.
+                            # also impossible to debug. Also see near the tabulate block where we use this to determine
+                            # context-dependent output formatting.
                             result_column = print_df.columns.values[0]
 
                             maxcolwidths_list = [ None, max_col_width ]
@@ -2375,6 +2377,14 @@ def summarize(
                             print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
 
                         # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
+
+                        table_output_format = default_table_output_format
+
+                        # TO DO: See TO DO above and note about fragility of access.
+                        result_column = print_df.columns.values[0]
+
+                        if result_column in custom_table_output_format:
+                            table_output_format = custom_table_output_format[result_column]
 
                         print(
                             tabulate.tabulate(
