@@ -2382,6 +2382,7 @@ def summarize(
 
                         # TO DO: See TO DO above and note about fragility of access.
                         result_column = print_df.columns.values[0]
+                        print( result_column, file=sys.stderr )
 
                         if result_column in custom_table_output_format:
                             table_output_format = custom_table_output_format[result_column]
