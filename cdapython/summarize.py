@@ -2257,7 +2257,9 @@ def summarize(
 
                     if result_column in has_non_null_extras:
                         for extra_list_type in extra_list_types:
-                            result_column_dict[extra_list_type] = []
+                            # Consult the user-supplied parameter to determine which of these to include.
+                            if extra_list_type in add_extras or 'all' in add_extras:
+                                result_column_dict[extra_list_type] = []
 
                     if result_dataframe[result_column][0] is not None:
                         
@@ -2296,12 +2298,15 @@ def summarize(
 
                             if result_column in has_non_null_extras:
                                 for extra_list_type in extra_list_types:
-                                    if f"{result_column}_{extra_list_type}" in dict_pair and len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 0:
+                                    # Follow instructions received from the user as to whether or not to include each available extra column:
+                                    # substructures of result_column_dict were initialized above for those that were asked for, so make sure
+                                    # they exist before populating them.
+                                    if extra_list_type in result_column_dict and f"{result_column}_{extra_list_type}" in dict_pair and len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 0:
                                         result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_pair[f"{result_column}_{extra_list_type}"] ) ) )
                                         if len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 1:
                                             # Alter the border scheme to accommodate multiline cells.
                                             custom_table_output_format[result_column] = 'double_grid'
-                                    else:
+                                    elif extra_list_type in result_column_dict:
                                         result_column_dict[extra_list_type].append( '<NA>' )
 
                     result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ 'count_result', result_column ], ascending=[ False, True ] ).reset_index( drop=True ) )
