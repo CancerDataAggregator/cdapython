@@ -2458,7 +2458,7 @@ def summarize(
 
                     if result_dataframe[result_column][0] is not None:
                         
-                        # This cell should contain an array of Python dicts, with each dict containing two entries:
+                        # This cell should contain an array of Python dicts, with each dict containing at least two entries:
                         #
                         #    data column label and value:
                         #       keyword: `result_column`, e.g. 'cause_of_death'
@@ -2467,12 +2467,30 @@ def summarize(
                         #    observed count of the given value:
                         #       keyword: 'count_result'
                         #       value: (int) number of times the given data value (described in the previous dictionary entry) was observed in this set of result data
+                        # 
+                        # plus possibly extra decorator entries, which will be arrays of values, e.g. (all together):
+                        # 
+                        #     "anatomic_site": "arm",
+                        #     "count_result": 4,
+                        #     "anatomic_site_containing_terms": [],
+                        #     "anatomic_site_related_terms": [],
+                        #     "anatomic_site_slim_terms": [],
+                        #     "anatomic_site_synonym_terms": []
 
                         result_dict[result_column] = dict()
 
-                        for dict_pair in result_dataframe[result_column][0]:
-                            
-                            result_dict[result_column][dict_pair[result_column]] = dict_pair['count_result']
+                        for dict_record in result_dataframe[result_column][0]:
+                            # The two fields (keys) that are always guaranteed.
+                            result_dict[result_column][dict_record[result_column]] = {
+                                'count_result': dict_record['count_result']
+                            }
+                            # Optional extras.
+                            if result_column in has_non_null_extras:
+                                for extra_list_type in extra_list_types:
+                                    if f"{result_column}_{extra_list_type}" in dict_record and len( dict_record[f"{result_column}_{extra_list_type}"] ) > 0:
+                                        result_dict[result_column][dict_record[result_column]][extra_list_type] = dict_record[f"{result_column}_{extra_list_type}"]
+                                    else:
+                                        result_dict[result_column][dict_record[result_column]][extra_list_type] = None
 
                 else:
                     
