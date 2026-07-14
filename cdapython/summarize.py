@@ -2118,6 +2118,9 @@ def summarize(
 
         result_list = list()
 
+        # Track context-relevant table display format defaults and options.
+        table_output_format = 'double_outline'
+
         # Return overall result summary counts first.
 
         # Identify the total result count for {table}.
@@ -2268,6 +2271,9 @@ def summarize(
                                 for extra_list_type in extra_list_types:
                                     if f"{result_column}_{extra_list_type}" in dict_pair and len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 0:
                                         result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_pair[f"{result_column}_{extra_list_type}"] ) ) )
+                                        if len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 1:
+                                            # Alter the border scheme to accommodate multiline cells.
+                                            table_output_format = 'double_grid'
                                     else:
                                         result_column_dict[extra_list_type].append( '<NA>' )
 
@@ -2298,8 +2304,6 @@ def summarize(
 
                     if print_df is not None and len( print_df ) > 0:
                         
-                        table_output_format = 'double_outline'
-
                         if len( print_df.columns ) == 1:
                             
                             colalign_list = [ 'left' ]
@@ -2325,8 +2329,6 @@ def summarize(
                                 if extra_list_type in print_df.columns.values:
                                     colalign_list.append( 'left' )
                                     maxcolwidths_list.append( max_col_width )
-                                    # Alter the border scheme to accommodate multiline cells.
-                                    table_output_format = 'double_grid'
 
                             # Truncate displayed text values manually and add ellipses. The `tabulate` library doesn't do this on its own (as Pandas does).
                             print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and not isinstance( x, bool ) and len( x ) > max_col_width ) else x )
