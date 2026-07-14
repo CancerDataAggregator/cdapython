@@ -113,6 +113,24 @@ def cda_functions():
 
 #############################################################################################################################
 #
+# cda_extra_metadata_columns(): Return a list of available metadata annotations that provide context for some harmonized CDA
+#   fields.
+#
+#############################################################################################################################
+
+def cda_extra_metadata_columns():
+    # extra_metadata_columns is enumerated by cda_extra_metadata_columns() in desired column-display order for return_data_as='' when all are included:
+    extra_metadata_columns = [ 'slim_terms', 'synonym_terms', 'related_terms', 'containing_terms' ]
+    return extra_metadata_columns
+
+#############################################################################################################################
+#
+# END cda_extra_metadata_columns()
+#
+#############################################################################################################################
+
+#############################################################################################################################
+#
 # tables(): Return a list of all searchable CDA data tables.
 #
 #############################################################################################################################
@@ -916,6 +934,7 @@ def column_values(
             include_external_refs=None,
             return_data_as=return_data_as,
             output_file=output_file,
+            add_extras=None,
             sort_by=sort_by,
             log=log
         )

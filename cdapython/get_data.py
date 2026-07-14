@@ -494,6 +494,8 @@ def get_data(
             include_external_refs=include_external_refs,
             return_data_as=return_data_as,
             output_file=output_file,
+            # Temporary pending handler draft
+            add_extras=list(),
             sort_by=None,
             log=log
         )

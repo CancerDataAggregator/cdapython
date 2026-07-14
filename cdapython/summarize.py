@@ -8,7 +8,7 @@ import cda_client
 
 from multiprocessing.pool import ApplyResult
 
-from cdapython.discover import columns, get_api_url, release_metadata, tables
+from cdapython.discover import cda_extra_metadata_columns, columns, get_api_url, release_metadata, tables
 from cdapython.logging_wrappers import get_logger
 from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list, validate_and_transform_match_from_file_values, validate_parameter_values
 
@@ -516,7 +516,8 @@ def summarize_files(
     add_columns=None,
     exclude_columns=None,
     return_data_as='',
-    output_file=''
+    output_file='',
+    add_extras=None
 ):
     """
     For a set of CDA file rows that all match a user-specified set of filters --
@@ -570,6 +571,12 @@ def summarize_files(
             If return_data_as='json' is specified, output_file should contain a
             resolvable path to a file into which JSON-formatted results will be
             written.
+
+        add_extras( string or list of strings; optional ):
+            One or more columns of extra metadata to include to contextualize
+            harmonized CDA column values. Current valid values are 'slim_terms',
+            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            last of which behaves as you'd expect. (Default: no extras.)
 
     Filter strings:
         Filter strings are expressions of the form "COLUMN_NAME OP VALUE"
@@ -640,7 +647,7 @@ def summarize_files(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    return summarize( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file, table='file' )
+    return summarize( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file, add_extras=add_extras, table='file' )
 
 #############################################################################################################################
 #
@@ -665,7 +672,8 @@ def summarize_subjects(
     add_columns=None,
     exclude_columns=None,
     return_data_as='',
-    output_file=''
+    output_file='',
+    add_extras=None
 ):
     """
     For a set of CDA subject rows that all match a user-specified set of filters --
@@ -718,6 +726,12 @@ def summarize_subjects(
         output_file( string; optional ):
             If return_data_as='json' is specified, output_file should contain a
             resolvable path to a file into which JSON-formatted results will be written.
+
+        add_extras( string or list of strings; optional ):
+            One or more columns of extra metadata to include to contextualize
+            harmonized CDA column values. Current valid values are 'slim_terms',
+            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            last of which behaves as you'd expect. (Default: no extras.)
 
     Filter strings:
         Filter strings are expressions of the form "COLUMN_NAME OP VALUE"
@@ -788,7 +802,7 @@ def summarize_subjects(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    return summarize( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file, table='subject' )
+    return summarize( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, return_data_as=return_data_as, output_file=output_file, add_extras=add_extras, table='subject' )
 
 #############################################################################################################################
 #
@@ -815,6 +829,7 @@ def summarize(
     exclude_columns=None,
     return_data_as='',
     output_file='',
+    add_extras=None,
     table=''
 ):
     """
@@ -869,6 +884,12 @@ def summarize(
             If return_data_as='json' is specified, output_file should contain a
             resolvable path to a file into which summarize() will write
             JSON-formatted results.
+
+        add_extras( string or list of strings; optional ):
+            One or more columns of extra metadata to include to contextualize
+            harmonized CDA column values. Current valid values are 'slim_terms',
+            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            last of which behaves as you'd expect. (Default: no extras.)
 
         table ( string; required: 'file' or 'subject' ):
             The CDA table to be queried and summarized.
@@ -947,8 +968,11 @@ def summarize(
         And yes, we know how those first two paragraphs look. We apologize to the entire English language.
     """
 
-    # These need to go somewhere else. Until then, they are prominently deposited here. extra_list_types is here to be enumerated in desired column-display order for return_data_as=''.
-    extra_list_types = [ 'slim_terms', 'synonym_terms', 'related_terms', 'containing_terms' ]
+    # extra_list_types is enumerated by cda_extra_metadata_columns() in desired column-display order for return_data_as='' when all are included:
+    # 
+    # [ 'slim_terms', 'synonym_terms', 'related_terms', 'containing_terms' ]
+    extra_list_types = cda_extra_metadata_columns()
+    # These need to go somewhere else. Until then, they are prominently deposited here.
     has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology', 'treatment_anatomic_site', 'primary_site' ]
 
     # Create logger object.
@@ -978,6 +1002,7 @@ def summarize(
         data_source = normalize_to_list( 'data_source', data_source, str )
         add_columns = normalize_to_list( 'add_columns', add_columns, str )
         exclude_columns = normalize_to_list( 'exclude_columns', exclude_columns, str )
+        add_extras = normalize_to_list( 'add_extras', add_extras, str )
     except Exception as e:
         log.error( e )
         return
@@ -1034,6 +1059,7 @@ def summarize(
             include_external_refs=None,
             return_data_as=return_data_as,
             output_file=output_file,
+            add_extras=add_extras,
             sort_by=None,
             log=log
         )

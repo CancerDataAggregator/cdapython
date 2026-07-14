@@ -417,6 +417,7 @@ def validate_and_transform_match_from_file_values( cda_column_to_match, target_d
 #     * `include_external_refs` isn't a boolean value or None, depending on `called_function`
 #     * `return_data_as` isn't one of the allowable types for `called_function`
 #     * The value of `output_file` isn't consistent with the directive in `return_data_as` for `called_function`
+#     * `add_extras` contains disallowed elements (for `called_function` in [ 'get_data', 'summarize' ])
 #     * `sort_by` isn't an allowable string value (or None, for callers get_data() and summarize())
 #
 #############################################################################################################################
@@ -436,6 +437,7 @@ def validate_parameter_values(
     include_external_refs,
     return_data_as,
     output_file,
+    add_extras,
     sort_by,
     log
 ):
@@ -464,6 +466,18 @@ def validate_parameter_values(
     elif called_function in [ 'column_values' ]:
         if column is None or not isinstance( column, str ) or column not in cached_column_metadata['column'].unique():
             raise RuntimeError( f"The required parameter 'column' must be a searchable CDA column; you supplied '{column}', which is not. Please run columns() for a list." )
+
+    # Ensure `add_extras` is conformant.
+    if called_function in [ 'get_data', 'summarize' ]:
+        if add_extras is None:
+            raise RuntimeError( f"'add_extras' shouldn't be None here: please alert the CDA devs to this event, something is misconfigured in our code." )
+        else:
+            allowed_values = set( cda_extra_metadata_columns() )
+            for extra_column in add_extras:
+                if extra_column not in allowed_values:
+                    raise RuntimeError( f"'add_extras' cannot process '' as an option; please use 'all' for all of them, or consult cda_extra_metadata_columns() to get a list of valid options." )
+    elif add_extras is not None:
+        raise RuntimeError( f"'add_extras' cannot be non-null here: please alert the CDA devs to this event, something is misconfigured in our code." )
 
     # Check `match_from_file` data for sanity.
     if called_function in [ 'get_data', 'summarize' ]:
@@ -687,6 +701,6 @@ def validate_parameter_values(
 #############################################################################################################################
 
 # This is down here to avoid a circular import problem.
-from cdapython.discover import tables
+from cdapython.discover import cda_extra_metadata_columns, tables
 
 
