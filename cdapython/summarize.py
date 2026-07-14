@@ -2332,7 +2332,7 @@ def summarize(
                             print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and not isinstance( x, bool ) and len( x ) > max_col_width ) else x )
                             for extra_list_type in extra_list_types:
                                 if extra_list_type in print_df.columns.values:
-                                    print_df[print_df.columns[print_df.columns.get_loc( extra_list_type )]] = print_df[print_df.columns[print_df.columns.get_loc( extra_list_type )]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x, flags=re.MULTILINE ) if ( x is not None and not isinstance( x, bool ) and len( x ) > max_col_width ) else x ).apply( lambda x: re.sub( r"^([^\n]+)\n([^\n]+)\n([^\n]+)\n(.*)", r"\1\n\2\n\3\n...", x, flags=re.MULTILINE ) )
+                                    print_df[print_df.columns[print_df.columns.get_loc( extra_list_type )]] = print_df[print_df.columns[print_df.columns.get_loc( extra_list_type )]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x, flags=re.MULTILINE ) if ( x is not None and not isinstance( x, bool ) and len( x ) > max_col_width ) else x ).apply( lambda x: re.sub( r"^([^\n]+)\n([^\n]+)\n([^\n]+)\n([.\n]*)", r"\1\n\2\n\3\n...", x, flags=re.MULTILINE ) )
 
                             # Put the count values first in the display.
                             new_column_ordering = []
