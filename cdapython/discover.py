@@ -102,6 +102,7 @@ def cda_functions():
             'disable_file_logging',
             'get_api_url',
             'set_api_url',
+            'cda_extra_metadata_columns',
             'cda_functions'
     ]
 
