@@ -2184,7 +2184,11 @@ def get_data(
                     if re.search( r'_' + re.escape( extra_list_type ) + r'$', column ) is not None:
                         is_extra = True
                 if is_extra:
-                    extra_columns.add( column )
+                    # All harmonized terms are eligible for extras, but ot all possible extras are populated. Avoid spam until data appears.
+                    if column in has_non_null_extras:
+                        extra_columns.add( column )
+                    else:
+                        columns_to_suppress.append( column )
                 else:
                     added_columns.append( column )
 
