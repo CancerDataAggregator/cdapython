@@ -798,52 +798,1182 @@ def get_data(
         log.error( f"{api_response_object.error_type}: {api_response_object.message}" )
         return
 
-    # Make a Pandas DataFrame out of the first batch of results.
-    #
-    # The API returns responses in JSON format: convert that JSON into a DataFrame
-    # using pandas' json_normalize() function. Example JSON responses ( note that
-    # not all of these columns are returned by default: some were requested; others
-    # induced by a non-null `data_source` parameter; note also that this is
-    # a cut/paste job from several responses, don't check it too hard for internal
-    # consistency -- it's just meant to let readers know what to expect in terms of
-    # field names and nesting structures):
-    #
+    # Sample JSON data at the /data/subject endpoint (with elisions to save space, not affecting structure or syntax):
+    # 
+    # Request:
     # {
-    #     "result": [
-    #         {
-    #             "subject_id": "TCGA.TCGA-AA-A022",
-    #             "subject_crdc_id": null,
-    #             "species": "human",
-    #             "year_of_birth": 1917,
-    #             "year_of_death": null,
-    #             "cause_of_death": null,
-    #             "race": null,
-    #             "ethnicity": null,
-    #             "subject_data_at_gdc": true,
-    #             "subject_data_at_idc": true,
-    #             "subject_data_at_gc": false,
-    #             "subject_data_at_pdc": true,
-    #             "subject_data_at_icdc": false,
-    #             "subject_data_source_count": 3,
-    #             "sex": [
-    #                 "female"
-    #             ]
-    #         },
-    #         
-    #         ...
-    #         
+    #     "SEARCH_LIST": [
+    #         "brain",
+    #         "penis"
     #     ],
-    #     "query_sql": "WITH subject_preselect AS ( ... ) AS json_result",
-    #     "total_row_count": 9,
-    #     "next_url": ""
+    #     "MATCH_ALL": [],
+    #     "MATCH_SOME": [],
+    #     "ADD_COLUMNS": [
+    #         "observed_anatomic_site",
+    #         "resection_anatomic_site",
+    #         "anatomic_site",
+    #         "diagnosis",
+    #         "morphology"
+    #     ],
+    #     "EXCLUDE_COLUMNS": [],
+    #     "COLLATE_RESULTS": false,
+    #     "EXTERNAL_REFERENCE": false
+    # }
+    # 
+    # Response:
+    # {
+    #   "result": [
+    #     {
+    #       "subject_id": "TCGA.TCGA-EE-A20C",
+    #       "subject_crdc_id": null,
+    #       "species": "human",
+    #       "year_of_birth": null,
+    #       "year_of_death": null,
+    #       "cause_of_death": null,
+    #       "race": "White",
+    #       "ethnicity": "Non-Hispanic",
+    #       "subject_data_at_gc": false,
+    #       "subject_data_at_gdc": true,
+    #       "subject_data_at_icdc": false,
+    #       "subject_data_at_idc": true,
+    #       "subject_data_at_pdc": false,
+    #       "subject_data_source_count": 2,
+    #       "observed_anatomic_site": [
+    #         "craniocervical region",
+    #         "brain",
+    #         "thoracic segment of trunk",
+    #         "upper limb segment",
+    #         "penis",
+    #         "pancreas",
+    #         "skin of trunk",
+    #         "skin of body",
+    #         "head or neck skin",
+    #         "skin of face",
+    #         "hypodermis",
+    #         "bone tissue",
+    #         "thoracic lymph node"
+    #       ],
+    #       "resection_anatomic_site": [
+    #         "skin of trunk"
+    #       ],
+    #       "diagnosis": [
+    #         "Malignant melanoma"
+    #       ],
+    #       "morphology": [
+    #         "Malignant melanoma"
+    #       ],
+    #       "anatomic_site": [
+    #         "skin of body"
+    #       ],
+    #       "species_containing_terms": [],
+    #       "species_related_terms": [],
+    #       "species_slim_terms": [],
+    #       "species_synonym_terms": [],
+    #       "cause_of_death_containing_terms": [],
+    #       "cause_of_death_related_terms": [],
+    #       "cause_of_death_slim_terms": [],
+    #       "cause_of_death_synonym_terms": [],
+    #       "race_containing_terms": [],
+    #       "race_related_terms": [],
+    #       "race_slim_terms": [],
+    #       "race_synonym_terms": [],
+    #       "ethnicity_containing_terms": [],
+    #       "ethnicity_related_terms": [],
+    #       "ethnicity_slim_terms": [],
+    #       "ethnicity_synonym_terms": [],
+    #       "observed_anatomic_site_name": [],
+    #       "observed_anatomic_site_containing_terms": [
+    #         "head or neck skin",
+    #         "anatomical system",
+    #         "subdivision of trunk",
+    #         "male organism",
+    #         // ...
+    #         "pectoral appendage",
+    #         "organ",
+    #         "limb",
+    #         "face",
+    #         "hemolymphoid system"
+    #       ],
+    #       "observed_anatomic_site_related_terms": [
+    #         "cephalic part of animal",
+    #         "subcutis",
+    #         "bone",
+    #         "integumental organ",
+    #         "entire integument",
+    #         "suprasegmental levels of nervous system",
+    #         "sub-tegumental tissue",
+    #         "portion of bone tissue",
+    #         "encephalon",
+    #         "skin",
+    #         // ...
+    #         "the brain"
+    #       ],
+    #       "observed_anatomic_site_slim_terms": [
+    #         "skeletal system",
+    #         "pancreas",
+    #         "limb",
+    #         // ...
+    #         "head",
+    #         "brain"
+    #       ],
+    #       "observed_anatomic_site_synonym_terms": [
+    #         "osteogenic tissue",
+    #         "calcium tissue",
+    #         "thorax",
+    #         "entire skin",
+    #         "hypoderm",
+    #         // ...
+    #         "osseous tissue",
+    #         "zone of skin of torso",
+    #         "trunk zone of skin"
+    #       ],
+    #       "resection_anatomic_site_name": [],
+    #       "resection_anatomic_site_containing_terms": [
+    #         "anatomical system",
+    #         "integument",
+    #         // ...
+    #         "structure with developmental contribution from neural crest",
+    #         "anatomical entity",
+    #         "organ"
+    #       ],
+    #       "resection_anatomic_site_related_terms": [],
+    #       "resection_anatomic_site_slim_terms": [
+    #         "skin of body"
+    #       ],
+    #       "resection_anatomic_site_synonym_terms": [
+    #         "trunk skin",
+    #         "torso zone of skin",
+    #         "zone of skin of trunk",
+    #         "zone of skin of torso",
+    #         "trunk zone of skin"
+    #       ],
+    #       "diagnosis_name": [],
+    #       "diagnosis_containing_terms": [],
+    #       "diagnosis_related_terms": [],
+    #       "diagnosis_slim_terms": [
+    #         "Nevi and melanomas"
+    #       ],
+    #       "diagnosis_synonym_terms": [],
+    #       "morphology_name": [],
+    #       "morphology_containing_terms": [],
+    #       "morphology_related_terms": [],
+    #       "morphology_slim_terms": [
+    #         "Nevi and melanomas"
+    #       ],
+    #       "morphology_synonym_terms": [],
+    #       "anatomic_site_name": [],
+    #       "anatomic_site_containing_terms": [
+    #         "multicellular anatomical structure",
+    #         "anatomical system",
+    #         // ...
+    #         "material anatomical entity",
+    #         "organ",
+    #         "anatomical structure"
+    #       ],
+    #       "anatomic_site_related_terms": [
+    #         "pelt",
+    #         "entire integument",
+    #         "skin",
+    #         "integumental organ"
+    #       ],
+    #       "anatomic_site_slim_terms": [
+    #         "skin of body"
+    #       ],
+    #       "anatomic_site_synonym_terms": [
+    #         "skin organ",
+    #         "entire skin"
+    #       ]
+    #     }
+    #   ],
+    #   "query_sql": "WITH subject_penis_0_keyword_ids_preselect AS (SELECT subject_keywords.id_alias AS id_alias FROM subject_keywords WHERE coalesce(upper(subject_keywords.keyword), :coalesce_1) = upper(:upper_1)), file_penis_0_keyword_ids_preselect AS (SELECT file_keywords.id_alias AS id_alias FROM file_keywords WHERE coalesce(upper(file_keywords.keyword), :coalesce_2) = upper(:upper_2)), subject_brain_1_keyword_ids_preselect AS (SELECT subject_keywords.id_alias AS id_alias FROM subject_keywords WHERE coalesce(upper(subject_keywords.keyword), :coalesce_3) = upper(:upper_3)), file_brain_1_keyword_ids_preselect AS (SELECT file_keywords.id_alias AS id_alias FROM file_keywords WHERE coalesce(upper(file_keywords.keyword), :coalesce_4) = upper(:upper_4)), unified_keyword_preselect AS (SELECT anon_2.subject_alias AS anon_2_subject_alias FROM (SELECT keyword_describes_subject.subject_alias AS subject_alias FROM keyword_describes_subject WHERE keyword_describes_subject.keyword_alias IN (SELECT subject_penis_0_keyword_ids_preselect.id_alias FROM subject_penis_0_keyword_ids_preselect) UNION SELECT file_describes_subject.subject_alias AS subject_alias FROM file_describes_subject WHERE file_describes_subject.file_alias IN (SELECT keyword_describes_file.file_alias AS subject_alias FROM keyword_describes_file WHERE keyword_describes_file.keyword_alias IN (SELECT file_penis_0_keyword_ids_preselect.id_alias FROM file_penis_0_keyword_ids_preselect))) AS anon_2 INTERSECT SELECT anon_3.subject_alias AS anon_3_subject_alias FROM (SELECT keyword_describes_subject.subject_alias AS subject_alias FROM keyword_describes_subject WHERE keyword_describes_subject.keyword_alias IN (SELECT subject_brain_1_keyword_ids_preselect.id_alias FROM subject_brain_1_keyword_ids_preselect) UNION SELECT file_describes_subject.subject_alias AS subject_alias FROM file_describes_subject WHERE file_describes_subject.file_alias IN (SELECT keyword_describes_file.file_alias AS subject_alias FROM keyword_describes_file WHERE keyword_describes_file.keyword_alias IN (SELECT file_brain_1_keyword_ids_preselect.id_alias FROM file_brain_1_keyword_ids_preselect))) AS anon_3), search_preselect AS (SELECT anon_1.subject_alias AS subject_alias FROM (SELECT unified_keyword_preselect.anon_2_subject_alias AS subject_alias FROM unified_keyword_preselect) AS anon_1), filtered_preselect AS (SELECT file_describes_subject.file_alias AS file_describes_subject_file_alias, file_describes_subject.subject_alias AS file_describes_subject_subject_alias FROM file_describes_subject WHERE file_describes_subject.subject_alias IN (SELECT search_preselect.subject_alias FROM search_preselect)), observation_subject_columns AS (SELECT observation.subject_alias AS subject_alias, array_remove(array_agg(DISTINCT observation.observed_anatomic_site), NULL) AS observed_anatomic_site, array_remove(array_agg(DISTINCT observation.resection_anatomic_site), NULL) AS resection_anatomic_site, array_remove(array_agg(DISTINCT observation.diagnosis), NULL) AS diagnosis, array_remove(array_agg(DISTINCT observation.morphology), NULL) AS morphology FROM observation WHERE observation.subject_alias IN (SELECT filtered_preselect.file_describes_subject_subject_alias FROM filtered_preselect) GROUP BY observation.subject_alias), file_subject_columns AS (SELECT file_describes_subject.subject_alias AS subject_alias, array_remove(array_agg(DISTINCT file_anatomic_site.anatomic_site), NULL) AS anatomic_site FROM file LEFT OUTER JOIN file_anatomic_site ON file.id_alias = file_anatomic_site.file_alias JOIN file_describes_subject ON file.id_alias = file_describes_subject.file_alias WHERE file.id_alias IN (SELECT filtered_preselect.file_describes_subject_file_alias FROM filtered_preselect) GROUP BY file_describes_subject.subject_alias) SELECT row_to_json(json_subquery) AS json_results, (SELECT count(distinct(filtered_preselect.file_describes_subject_subject_alias)) AS count_1 FROM filtered_preselect) AS total_row_count FROM (SELECT subject.id AS subject_id, subject.crdc_id AS subject_crdc_id, subject.species AS species, subject.year_of_birth AS year_of_birth, subject.year_of_death AS year_of_death, subject.cause_of_death AS cause_of_death, subject.race AS race, subject.ethnicity AS ethnicity, subject.data_at_gc AS subject_data_at_gc, subject.data_at_gdc AS subject_data_at_gdc, subject.data_at_icdc AS subject_data_at_icdc, subject.data_at_idc AS subject_data_at_idc, subject.data_at_pdc AS subject_data_at_pdc, subject.data_source_count AS subject_data_source_count, coalesce(observation_subject_columns.observed_anatomic_site, :coalesce_5) AS observed_anatomic_site, coalesce(observation_subject_columns.resection_anatomic_site, :coalesce_6) AS resection_anatomic_site, coalesce(observation_subject_columns.diagnosis, :coalesce_7) AS diagnosis, coalesce(observation_subject_columns.morphology, :coalesce_8) AS morphology, coalesce(file_subject_columns.anatomic_site, :coalesce_9) AS anatomic_site FROM subject LEFT OUTER JOIN observation_subject_columns ON observation_subject_columns.subject_alias = subject.id_alias LEFT OUTER JOIN file_subject_columns ON file_subject_columns.subject_alias = subject.id_alias WHERE subject.id_alias IN (SELECT filtered_preselect.file_describes_subject_subject_alias FROM filtered_preselect)) AS json_subquery",
+    #   "total_row_count": 1,
+    #   "next_url": ""
+    # }
+    # 
+    # 
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # 
+    # 
+    # And again with COLLATE_RESULTS set to true, because it's substantially different (again with elisions not affecting structure or syntax):
+    # 
+    # Request:
+    # {
+    #     "SEARCH_LIST": [
+    #         "brain",
+    #         "penis"
+    #     ],
+    #     "MATCH_ALL": [],
+    #     "MATCH_SOME": [],
+    #     "ADD_COLUMNS": [
+    #         "observed_anatomic_site",
+    #         "resection_anatomic_site",
+    #         "anatomic_site",
+    #         "diagnosis",
+    #         "morphology"
+    #     ],
+    #     "EXCLUDE_COLUMNS": [],
+    #     "COLLATE_RESULTS": true,
+    #     "EXTERNAL_REFERENCE": false
+    # }
+    # 
+    # Response:
+    # {
+    #   "result": [
+    #     {
+    #       "subject_id": "TCGA.TCGA-EE-A20C",
+    #       "subject_crdc_id": null,
+    #       "species": "human",
+    #       "year_of_birth": null,
+    #       "year_of_death": null,
+    #       "cause_of_death": null,
+    #       "race": "White",
+    #       "ethnicity": "Non-Hispanic",
+    #       "subject_data_at_gc": false,
+    #       "subject_data_at_gdc": true,
+    #       "subject_data_at_icdc": false,
+    #       "subject_data_at_idc": true,
+    #       "subject_data_at_pdc": false,
+    #       "subject_data_source_count": 2,
+    #       "observation_columns": [
+    #         {
+    #           "observed_anatomic_site": null,
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": null,
+    #           "morphology": null,
+    #           "observed_anatomic_site_containing_terms": [],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [],
+    #           "observed_anatomic_site_synonym_terms": [],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "thoracic lymph node",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             "anatomical entity",
+    #             // ...
+    #             "trunk region element"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "deep thoracic lymph node"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "lymphoid system"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "lymph node of thorax"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "hypodermis",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             "anatomical entity",
+    #             // ...
+    #             "structure with developmental contribution from neural crest"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "subcutaneous tissue",
+    #             // ...
+    #             "tela subcutanea"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "hypoderm",
+    #             "vertebrate hypodermis"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "head or neck skin",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             "anatomical entity",
+    #             // ...
+    #             "zone of skin"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "head"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": null,
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [],
+    #           "observed_anatomic_site_synonym_terms": [],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "skin of body",
+    #           "resection_anatomic_site": "skin of trunk",
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             "anatomical entity",
+    #             // ...
+    #             "somatosensory system",
+    #             "structure with developmental contribution from neural crest"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "entire integument",
+    #             "integumental organ",
+    #             "pelt",
+    #             "skin"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "entire skin",
+    #             "skin organ"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [
+    #             // ...
+    #             "organ system subdivision",
+    #             "sensory system",
+    #             "skin of body",
+    #             "somatosensory system",
+    #             // ...
+    #             "zone of skin"
+    #           ],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "resection_anatomic_site_synonym_terms": [
+    #             "torso zone of skin",
+    #             // ...
+    #             "zone of skin of trunk"
+    #           ],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "bone tissue",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "skeletal tissue",
+    #             "somatosensory system",
+    #             "tissue"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "bone",
+    #             "portion of bone tissue"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "skeletal system"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "calcium tissue",
+    #             "osseous tissue",
+    #             "osteogenic tissue"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "skin of face",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "sensory system",
+    #             "skin of body",
+    #             "skin of head",
+    #             "somatosensory system",
+    #             "structure with developmental contribution from neural crest",
+    #             "subdivision of head",
+    #             "subdivision of organism along main body axis",
+    #             "zone of organ",
+    #             "zone of skin"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "facial skin"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "face skin"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "penis",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "reproductive structure",
+    #             // ...
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "penes",
+    #             "phallus"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "male reproductive system"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "thoracic segment of trunk",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "trunk"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "anterior subdivision of trunk",
+    #             "upper body",
+    #             "upper trunk"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "trunk"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "thorax"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "brain",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "organ system subdivision",
+    #             "sensory system",
+    #             "somatosensory system"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "encephalon",
+    #             "suprasegmental levels of nervous system",
+    #             "suprasegmental structures",
+    #             "synganglion",
+    #             "the brain"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "brain"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "upper limb segment",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "pectoral appendage",
+    #             // ...
+    #             "subdivision of organism along appendicular axis"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "limb"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "free upper limb segment",
+    #             "free upper limb subdivision",
+    #             "segment of free upper limb",
+    #             "subdivision of free upper limb"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "skin of body",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": null,
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "somatosensory system",
+    #             "structure with developmental contribution from neural crest"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "entire integument",
+    #             "integumental organ",
+    #             "pelt",
+    #             "skin"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "entire skin",
+    #             "skin organ"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "skin of body",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "structure with developmental contribution from neural crest"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "entire integument",
+    #             "integumental organ",
+    #             "pelt",
+    #             "skin"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "entire skin",
+    #             "skin organ"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "craniocervical region",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "anterior region of body",
+    #             "disconnected anatomical group",
+    #             "entire sense organ system",
+    #             "main body axis",
+    #             "organism subdivision",
+    #             // ...
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "cephalic area",
+    #             "cephalic part of animal",
+    #             "cephalic region",
+    #             "head and neck",
+    #             "head or neck"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "craniocervical region"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "skin of body",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "entire integument",
+    #             "integumental organ",
+    #             "pelt",
+    #             "skin"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "entire skin",
+    #             "skin organ"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "pancreas",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #             "viscus"
+    #           ],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "pancreas"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "skin of body",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": null,
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #           ],
+    #           "observed_anatomic_site_related_terms": [
+    #             "entire integument",
+    #             "integumental organ",
+    #             "pelt",
+    #             "skin"
+    #           ],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "entire skin",
+    #             "skin organ"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": "skin of trunk",
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": "Malignant melanoma",
+    #           "morphology": "Malignant melanoma",
+    #           "observed_anatomic_site_containing_terms": [
+    #             // ...
+    #           ],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "observed_anatomic_site_synonym_terms": [
+    #             "torso zone of skin",
+    #             "trunk skin",
+    #             "trunk zone of skin",
+    #             "zone of skin of torso",
+    #             "zone of skin of trunk"
+    #           ],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [
+    #             "Nevi and melanomas"
+    #           ],
+    #           "morphology_synonym_terms": []
+    #         },
+    #         {
+    #           "observed_anatomic_site": null,
+    #           "resection_anatomic_site": null,
+    #           "diagnosis": null,
+    #           "morphology": null,
+    #           "observed_anatomic_site_containing_terms": [],
+    #           "observed_anatomic_site_related_terms": [],
+    #           "observed_anatomic_site_slim_terms": [],
+    #           "observed_anatomic_site_synonym_terms": [],
+    #           "resection_anatomic_site_containing_terms": [],
+    #           "resection_anatomic_site_related_terms": [],
+    #           "resection_anatomic_site_slim_terms": [],
+    #           "resection_anatomic_site_synonym_terms": [],
+    #           "diagnosis_containing_terms": [],
+    #           "diagnosis_related_terms": [],
+    #           "diagnosis_slim_terms": [],
+    #           "diagnosis_synonym_terms": [],
+    #           "morphology_containing_terms": [],
+    #           "morphology_related_terms": [],
+    #           "morphology_slim_terms": [],
+    #           "morphology_synonym_terms": []
+    #         }
+    #       ],
+    #       "file_columns": [
+    #         {
+    #           "anatomic_site": []
+    #         },
+    #         {
+    #           "anatomic_site": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_name": [],
+    #           "anatomic_site_containing_terms": [
+    #             "multicellular anatomical structure",
+    #             "anatomical system",
+    #             "multicellular organism",
+    #             "disconnected anatomical group",
+    #             "integument",
+    #             "non-connected functional system",
+    #             "sensory system",
+    #             "anatomical entity",
+    #             "organ system subdivision",
+    #             "integumental system",
+    #             "somatosensory system",
+    #             "structure with developmental contribution from neural crest",
+    #             "entire sense organ system",
+    #             "material anatomical entity",
+    #             "organ",
+    #             "anatomical structure"
+    #           ],
+    #           "anatomic_site_related_terms": [
+    #             "pelt",
+    #             "entire integument",
+    #             "skin",
+    #             "integumental organ"
+    #           ],
+    #           "anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "skin organ",
+    #             "entire skin"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_name": [],
+    #           "anatomic_site_containing_terms": [
+    #             // ...
+    #           ],
+    #           "anatomic_site_related_terms": [
+    #             "pelt",
+    #             "entire integument",
+    #             "skin",
+    #             "integumental organ"
+    #           ],
+    #           "anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "skin organ",
+    #             "entire skin"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_name": [],
+    #           "anatomic_site_containing_terms": [
+    #             // ...
+    #           ],
+    #           "anatomic_site_related_terms": [
+    #             "pelt",
+    #             "entire integument",
+    #             "skin",
+    #             "integumental organ"
+    #           ],
+    #           "anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "skin organ",
+    #             "entire skin"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_name": [],
+    #           "anatomic_site_containing_terms": [
+    #             // ...
+    #           ],
+    #           "anatomic_site_related_terms": [
+    #             "pelt",
+    #             "entire integument",
+    #             "skin",
+    #             "integumental organ"
+    #           ],
+    #           "anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "skin organ",
+    #             "entire skin"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_name": [],
+    #           "anatomic_site_containing_terms": [
+    #             // ...
+    #           ],
+    #           "anatomic_site_related_terms": [
+    #             "pelt",
+    #             "entire integument",
+    #             "skin",
+    #             "integumental organ"
+    #           ],
+    #           "anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "skin organ",
+    #             "entire skin"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_name": [],
+    #           "anatomic_site_containing_terms": [
+    #             // ...
+    #           ],
+    #           "anatomic_site_related_terms": [
+    #             "pelt",
+    #             "entire integument",
+    #             "skin",
+    #             "integumental organ"
+    #           ],
+    #           "anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "skin organ",
+    #             "entire skin"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": []
+    #         },
+    #         {
+    #           "anatomic_site": []
+    #         },
+    #         // [88 more blank copies]
+    #         {
+    #           "anatomic_site": []
+    #         },
+    #         {
+    #           "anatomic_site": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_name": [],
+    #           "anatomic_site_containing_terms": [
+    #             // ...
+    #           ],
+    #           "anatomic_site_related_terms": [
+    #             "pelt",
+    #             "entire integument",
+    #             "skin",
+    #             "integumental organ"
+    #           ],
+    #           "anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "skin organ",
+    #             "entire skin"
+    #           ]
+    #         }
+    #       ],
+    #       "species_containing_terms": [],
+    #       "species_related_terms": [],
+    #       "species_slim_terms": [],
+    #       "species_synonym_terms": [],
+    #       "cause_of_death_containing_terms": [],
+    #       "cause_of_death_related_terms": [],
+    #       "cause_of_death_slim_terms": [],
+    #       "cause_of_death_synonym_terms": [],
+    #       "race_containing_terms": [],
+    #       "race_related_terms": [],
+    #       "race_slim_terms": [],
+    #       "race_synonym_terms": [],
+    #       "ethnicity_containing_terms": [],
+    #       "ethnicity_related_terms": [],
+    #       "ethnicity_slim_terms": [],
+    #       "ethnicity_synonym_terms": []
+    #     }
+    #   ],
+    #   "query_sql": "WITH subject_penis_0_keyword_ids_preselect AS (SELECT subject_keywords.id_alias AS id_alias FROM subject_keywords WHERE coalesce(upper(subject_keywords.keyword), :coalesce_1) = upper(:upper_1)), file_penis_0_keyword_ids_preselect AS (SELECT file_keywords.id_alias AS id_alias FROM file_keywords WHERE coalesce(upper(file_keywords.keyword), :coalesce_2) = upper(:upper_2)), subject_brain_1_keyword_ids_preselect AS (SELECT subject_keywords.id_alias AS id_alias FROM subject_keywords WHERE coalesce(upper(subject_keywords.keyword), :coalesce_3) = upper(:upper_3)), file_brain_1_keyword_ids_preselect AS (SELECT file_keywords.id_alias AS id_alias FROM file_keywords WHERE coalesce(upper(file_keywords.keyword), :coalesce_4) = upper(:upper_4)), unified_keyword_preselect AS (SELECT anon_2.subject_alias AS anon_2_subject_alias FROM (SELECT keyword_describes_subject.subject_alias AS subject_alias FROM keyword_describes_subject WHERE keyword_describes_subject.keyword_alias IN (SELECT subject_penis_0_keyword_ids_preselect.id_alias FROM subject_penis_0_keyword_ids_preselect) UNION SELECT file_describes_subject.subject_alias AS subject_alias FROM file_describes_subject WHERE file_describes_subject.file_alias IN (SELECT keyword_describes_file.file_alias AS subject_alias FROM keyword_describes_file WHERE keyword_describes_file.keyword_alias IN (SELECT file_penis_0_keyword_ids_preselect.id_alias FROM file_penis_0_keyword_ids_preselect))) AS anon_2 INTERSECT SELECT anon_3.subject_alias AS anon_3_subject_alias FROM (SELECT keyword_describes_subject.subject_alias AS subject_alias FROM keyword_describes_subject WHERE keyword_describes_subject.keyword_alias IN (SELECT subject_brain_1_keyword_ids_preselect.id_alias FROM subject_brain_1_keyword_ids_preselect) UNION SELECT file_describes_subject.subject_alias AS subject_alias FROM file_describes_subject WHERE file_describes_subject.file_alias IN (SELECT keyword_describes_file.file_alias AS subject_alias FROM keyword_describes_file WHERE keyword_describes_file.keyword_alias IN (SELECT file_brain_1_keyword_ids_preselect.id_alias FROM file_brain_1_keyword_ids_preselect))) AS anon_3), search_preselect AS (SELECT anon_1.subject_alias AS subject_alias FROM (SELECT unified_keyword_preselect.anon_2_subject_alias AS subject_alias FROM unified_keyword_preselect) AS anon_1), filtered_preselect AS (SELECT file_describes_subject.file_alias AS file_describes_subject_file_alias, file_describes_subject.subject_alias AS file_describes_subject_subject_alias FROM file_describes_subject WHERE file_describes_subject.subject_alias IN (SELECT search_preselect.subject_alias FROM search_preselect)), observation_collated_preselect AS (SELECT json_subquery.subject_alias AS subject_alias, array_agg(json_subquery.json_results) AS observation_columns FROM (SELECT subquery.subject_alias AS subject_alias, json_build_object(:json_build_object_1, subquery.observed_anatomic_site, :json_build_object_2, subquery.resection_anatomic_site, :json_build_object_3, subquery.diagnosis, :json_build_object_4, subquery.morphology) AS json_results FROM (SELECT observation.subject_alias AS subject_alias, observation.observed_anatomic_site AS observed_anatomic_site, observation.resection_anatomic_site AS resection_anatomic_site, observation.diagnosis AS diagnosis, observation.morphology AS morphology FROM observation WHERE observation.subject_alias IN (SELECT filtered_preselect.file_describes_subject_subject_alias FROM filtered_preselect)) AS subquery) AS json_subquery GROUP BY json_subquery.subject_alias), file_file_anatomic_site_columns AS (SELECT file_anatomic_site.file_alias AS file_alias, array_remove(array_agg(DISTINCT file_anatomic_site.anatomic_site), NULL) AS anatomic_site FROM file_anatomic_site WHERE file_anatomic_site.file_alias IN (SELECT filtered_preselect.file_describes_subject_file_alias FROM filtered_preselect) GROUP BY file_anatomic_site.file_alias), file_collated_preselect AS (SELECT json_subquery.subject_alias AS subject_alias, array_agg(json_subquery.json_results) AS file_columns FROM (SELECT subquery.subject_alias AS subject_alias, json_build_object(:json_build_object_5, subquery.anatomic_site) AS json_results FROM (SELECT file_describes_subject.subject_alias AS subject_alias, coalesce(file_file_anatomic_site_columns.anatomic_site, :coalesce_5) AS anatomic_site FROM file LEFT OUTER JOIN file_file_anatomic_site_columns ON file_file_anatomic_site_columns.file_alias = file.id_alias JOIN file_describes_subject ON file.id_alias = file_describes_subject.file_alias WHERE file.id_alias IN (SELECT filtered_preselect.file_describes_subject_file_alias FROM filtered_preselect)) AS subquery) AS json_subquery GROUP BY json_subquery.subject_alias) SELECT row_to_json(json_subquery) AS json_results, (SELECT count(distinct(filtered_preselect.file_describes_subject_subject_alias)) AS count_1 FROM filtered_preselect) AS total_row_count FROM (SELECT subject.id AS subject_id, subject.crdc_id AS subject_crdc_id, subject.species AS species, subject.year_of_birth AS year_of_birth, subject.year_of_death AS year_of_death, subject.cause_of_death AS cause_of_death, subject.race AS race, subject.ethnicity AS ethnicity, subject.data_at_gc AS subject_data_at_gc, subject.data_at_gdc AS subject_data_at_gdc, subject.data_at_icdc AS subject_data_at_icdc, subject.data_at_idc AS subject_data_at_idc, subject.data_at_pdc AS subject_data_at_pdc, subject.data_source_count AS subject_data_source_count, observation_collated_preselect.observation_columns AS observation_columns, file_collated_preselect.file_columns AS file_columns FROM subject LEFT OUTER JOIN observation_collated_preselect ON observation_collated_preselect.subject_alias = subject.id_alias LEFT OUTER JOIN file_collated_preselect ON file_collated_preselect.subject_alias = subject.id_alias WHERE subject.id_alias IN (SELECT filtered_preselect.file_describes_subject_subject_alias FROM filtered_preselect)) AS json_subquery",
+    #   "total_row_count": 1,
+    #   "next_url": ""
     # }
 
-    # Report some metadata about the results we got back.
 
+    # Report some metadata about the results we got back.
     log.debug( f"/data/{table} endpoint query SQL:\n{api_response_object.to_dict()['query_sql']}" )
 
-    # This is stupidly verbose.
-
+    # This is stupidly verbose. Nice time to warn you, right? After I just echoed two response objects?
     # log.debug( f"Page one results:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
     
     # Convert response JSON into a DataFrame using pandas' json_normalize() function.
