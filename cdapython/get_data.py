@@ -2203,7 +2203,7 @@ def get_data(
             name_columns_to_remove.add(  f"{column}_name" )
             columns_to_suppress.append( f"{column}_name" )
 
-    added_columns = [ column if column not in name_columns_to_remove for column in added_columns ]
+    added_columns = [ column for column in added_columns if column not in name_columns_to_remove ]
 
     for column in df_columns_to_add:
         result_dataframe[column] = df_columns_to_add[column]
