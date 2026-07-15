@@ -2180,12 +2180,15 @@ def get_data(
             elif column not in source_table_columns_in_order:
                 # Is this a column included because of an add_extras request? If so, put it in a bag for proper sequencing later.
                 is_extra = False
+                main_column = ''
                 for extra_list_type in extra_list_types:
-                    if re.search( r'_' + re.escape( extra_list_type ) + r'$', column ) is not None:
+                    match_result = re.search( r'^(.*)_' + re.escape( extra_list_type ) + r'$', column )
+                    if match_result is not None:
                         is_extra = True
+                        main_column = match_result.groups( 1 )
                 if is_extra:
                     # All harmonized terms are eligible for extras, but ot all possible extras are populated. Avoid spam until data appears.
-                    if column in has_non_null_extras:
+                    if main_column in has_non_null_extras:
                         extra_columns.add( column )
                     else:
                         columns_to_suppress.append( column )
