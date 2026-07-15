@@ -2185,7 +2185,7 @@ def get_data(
                     match_result = re.search( r'^(.*)_' + re.escape( extra_list_type ) + r'$', column )
                     if match_result is not None:
                         is_extra = True
-                        main_column = match_result.groups( 1 )
+                        main_column = match_result.group( 1 )
                 if is_extra:
                     # All harmonized terms are eligible for extras, but ot all possible extras are populated. Avoid spam until data appears.
                     if main_column in has_non_null_extras:
