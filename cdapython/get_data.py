@@ -2055,6 +2055,7 @@ def get_data(
 
     columns_to_suppress = list()
     added_columns = list()
+    extra_columns = set()
 
     df_columns_to_add = dict()
 
@@ -2177,13 +2178,22 @@ def get_data(
                 df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
 
             elif column not in source_table_columns_in_order:
-                added_columns.append( column )
+                # Is this a column included because of an add_extras request? If so, put it in a bag for proper sequencing later.
+                is_extra = False
+                for extra_list_type in extra_list_types:
+                    if re.search( r'_' + re.escape( extra_list_type ) + r'$', column ) is not None:
+                        is_extra = True
+                if is_extra:
+                    extra_columns.add( column )
+                else:
+                    added_columns.append( column )
 
     for column in df_columns_to_add:
         result_dataframe[column] = df_columns_to_add[column]
 
     if len( columns_to_suppress ) > 0:
         log.debug( f"Filtering API columns: {columns_to_suppress}" )
+        # (Safe) assumption: nothing here will be harmonized data values, and so nothing here will require corresponding drops in associated add_extras-requested columns.
         result_dataframe = result_dataframe.drop( columns=columns_to_suppress )
 
     # Resequence the output columns according to the sequence given by the columns() function.
@@ -2193,6 +2203,10 @@ def get_data(
     for column in source_table_columns_in_order:
         if column in result_dataframe:
             final_column_order.append( column )
+            # Are there any add_extras columns associated with this column? If so, add them here in display order governed by the output sequence from cda_extra_metadata_columns().
+            for extra_list_type in extra_list_types:
+                if f"{column}_{extra_list_type}" in extra_columns:
+                    final_column_order.append( f"{column}_{extra_list_type}" )
 
     # Then our `data_source` result summary, if it wasn't suppressed.
     if not suppress_data_source_results:
@@ -2201,6 +2215,10 @@ def get_data(
     # Then the fields from other tables that the user added.
     for added_column in added_columns:
         final_column_order.append( added_column )
+        # Are there any add_extras columns associated with this column? If so, add them here in display order governed by the output sequence from cda_extra_metadata_columns().
+        for extra_list_type in extra_list_types:
+            if f"{added_column}_{extra_list_type}" in extra_columns:
+                final_column_order.append( f"{added_column}_{extra_list_type}" )
 
     for added_column in df_columns_to_add:
         final_column_order.append( added_column )
@@ -2215,7 +2233,7 @@ def get_data(
 
         for column in result_column_names:
             
-            if column != 'data_source' and column not in df_columns_to_add and column not in added_columns:
+            if column != 'data_source' and column not in df_columns_to_add and column not in added_columns and column not in extra_columns:
                 
                 # Home-table columns.
 
@@ -2241,8 +2259,13 @@ def get_data(
                     
                     # Replace values that are None (== null) with '<NA>' (to match what we['re forced to] use
                     # for null numeric values). Values that are empty lists [] will be passed along unmodified.
-
                     result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
+
+                    # Are there any add_extras columns associated with this column? If so, handle those here.
+                    for extra_list_type in extra_list_types:
+                        extra_column_name = f"{column}_{extra_list_type}"
+                        if extra_column_name in extra_columns:
+                            result_dataframe[extra_column_name] = result_dataframe[extra_column_name].fillna( '<NA>' )
 
                 else:
                     
@@ -2297,6 +2320,12 @@ def get_data(
                         processed_column_data.append( processed_cell_value )
 
                 result_dataframe[column] = processed_column_data
+
+                # Are there any add_extras columns associated with this column? If so, handle those here.
+                for extra_list_type in extra_list_types:
+                    extra_column_name = f"{column}_{extra_list_type}"
+                    if extra_column_name in extra_columns:
+                        result_dataframe[extra_column_name] = result_dataframe[extra_column_name].fillna( '<NA>' )
 
     #############################################################################################################################
     # Return our response to the user.
