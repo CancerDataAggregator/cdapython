@@ -2192,6 +2192,19 @@ def get_data(
                 else:
                     added_columns.append( column )
 
+    # TO DO: AFAIK these data elements shouldn't be here at all; therefore this filter should be removed when they disappear from API responses or I am educated as to why they exist
+    name_columns_to_remove = set()
+    for column in source_table_columns_in_order:
+        if f"{column}_name" in added_columns:
+            name_columns_to_remove.add(  f"{column}_name" )
+            columns_to_suppress.append( f"{column}_name" )
+    for column in added_columns:
+        if f"{column}_name" in added_columns:
+            name_columns_to_remove.add(  f"{column}_name" )
+            columns_to_suppress.append( f"{column}_name" )
+
+    added_columns = [ column if column not in name_columns_to_remove for column in added_columns ]
+
     for column in df_columns_to_add:
         result_dataframe[column] = df_columns_to_add[column]
 
