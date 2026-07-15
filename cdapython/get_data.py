@@ -5,7 +5,7 @@ import re
 
 import cda_client
 
-from cdapython.discover import columns, get_api_url, release_metadata
+from cdapython.discover import cda_extra_metadata_columns, columns, get_api_url, release_metadata
 from cdapython.logging_wrappers import get_logger
 from cdapython.validation import normalize_to_list, validate_and_transform_match_filter_list, validate_and_transform_match_from_file_values, validate_parameter_values
 
@@ -42,7 +42,8 @@ def get_file_data(
     exclude_columns=None,
     collate_results=False,
     return_data_as='dataframe',
-    output_file=''
+    output_file='',
+    add_extras=None
 ):
     """
     Get CDA file rows ('result rows') that match user-specified criteria.
@@ -100,6 +101,12 @@ def get_file_data(
             resolvable path to a file into which tab-delimited results will be
             written.
 
+        add_extras( string or list of strings; optional ):
+            One or more columns of extra metadata to include to contextualize
+            harmonized CDA column values. Current valid values are 'slim_terms',
+            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            last of which behaves as you'd expect. (Default: no extras.)
+
     Filter strings:
         Filter strings are expressions of the form 'COLUMN_NAME OP VALUE'
         (note in particular that the whitespace surrounding OP is required),
@@ -147,7 +154,7 @@ def get_file_data(
 
     """
 
-    return get_data( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=False, return_data_as=return_data_as, output_file=output_file, table='file' )
+    return get_data( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=False, return_data_as=return_data_as, output_file=output_file, add_extras=add_extras, table='file' )
 
 #############################################################################################################################
 #
@@ -166,7 +173,8 @@ def get_subject_data(
     collate_results=False,
     include_external_refs=False,
     return_data_as='dataframe',
-    output_file=''
+    output_file='',
+    add_extras=None
 ):
     """
     Get CDA subject rows ('result rows') that match user-specified criteria.
@@ -229,6 +237,12 @@ def get_subject_data(
             resolvable path to a file into which tab-delimited results will be
             written.
 
+        add_extras( string or list of strings; optional ):
+            One or more columns of extra metadata to include to contextualize
+            harmonized CDA column values. Current valid values are 'slim_terms',
+            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            last of which behaves as you'd expect. (Default: no extras.)
+
     Filter strings:
         Filter strings are expressions of the form 'COLUMN_NAME OP VALUE'
         (note in particular that the whitespace surrounding OP is required),
@@ -276,7 +290,7 @@ def get_subject_data(
 
     """
 
-    return get_data( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=include_external_refs, return_data_as=return_data_as, output_file=output_file, table='subject' )
+    return get_data( *search_terms, match_all=match_all, match_any=match_any, match_from_file=match_from_file, data_source=data_source, add_columns=add_columns, exclude_columns=exclude_columns, collate_results=collate_results, include_external_refs=include_external_refs, return_data_as=return_data_as, output_file=output_file, add_extras=add_extras, table='subject' )
 
 #############################################################################################################################
 #
@@ -296,6 +310,7 @@ def get_data(
     include_external_refs=False,
     return_data_as='dataframe',
     output_file='',
+    add_extras=None,
     table=None
 ):
     """
@@ -361,6 +376,12 @@ def get_data(
             resolvable path to a file into which get_data() will write
             tab-delimited results.
 
+        add_extras( string or list of strings; optional ):
+            One or more columns of extra metadata to include to contextualize
+            harmonized CDA column values. Current valid values are 'slim_terms',
+            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            last of which behaves as you'd expect. (Default: no extras.)
+
         table ( string; required: 'file' or 'subject' ):
             The CDA table whose rows are to be filtered and retrieved.
 
@@ -412,6 +433,14 @@ def get_data(
 
     """
 
+    # extra_list_types is enumerated by cda_extra_metadata_columns() in desired column-display order for return_data_as='':
+    # 
+    # [ 'slim_terms', 'synonym_terms', 'related_terms', 'containing_terms' ]
+    extra_list_types = cda_extra_metadata_columns()
+    # These need to go somewhere else. Until then, they are prominently deposited here. Similary in summarize.py.
+    has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology', 'treatment_anatomic_site', 'primary_site' ]
+
+    # Create logger object.
     log = get_logger()
 
     #############################################################################################################################
@@ -438,6 +467,7 @@ def get_data(
         data_source = normalize_to_list( 'data_source', data_source, str )
         add_columns = normalize_to_list( 'add_columns', add_columns, str )
         exclude_columns = normalize_to_list( 'exclude_columns', exclude_columns, str )
+        add_extras = normalize_to_list( 'add_extras', add_extras, str )
     except Exception as e:
         log.error( e )
         return
@@ -494,8 +524,7 @@ def get_data(
             include_external_refs=include_external_refs,
             return_data_as=return_data_as,
             output_file=output_file,
-            # Temporary pending handler draft
-            add_extras=list(),
+            add_extras=add_extras,
             sort_by=None,
             log=log
         )

@@ -120,7 +120,7 @@ def cda_functions():
 #############################################################################################################################
 
 def cda_extra_metadata_columns():
-    # extra_metadata_columns is enumerated by cda_extra_metadata_columns() in desired column-display order for return_data_as='' when all are included:
+    # extra_metadata_columns is enumerated by cda_extra_metadata_columns() in desired column-display order for return_data_as='':
     extra_metadata_columns = [ 'slim_terms', 'synonym_terms', 'related_terms', 'containing_terms' ]
     return extra_metadata_columns
 
