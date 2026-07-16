@@ -2135,36 +2135,43 @@ def get_data(
                                     and re.search( r'^' + re.escape( foreign_table_name ) + r'_id_alias$', foreign_table_column ) is None \
                                     and re.search( r'crdc_id$', foreign_table_column ) is None:
                                     
-                                    if foreign_table_column not in foreign_table_data_by_column:
-                                        foreign_table_data_by_column[foreign_table_column] = list()
+                                    # We'll handle extra-metadata columns explicitly. Let's not roll them in at this level.
+                                    matched_extra_column = False
+                                    for extra_list_type in extra_list_types:
+                                        if re.search( r'_' + re.escape( extra_list_type ) + r'$', foreign_table_column ) is not None:
+                                            matched_extra_column = True
 
-                                    # Initialize extras columns in case of need. These are sometimes omitted from API responses when null.
-                                    # TO DO: Fix that thing at the end of the last comment line.
-                                    if foreign_table_column in has_non_null_extras:
-                                        for extra_list_type in extra_list_types:
-                                            if extra_list_type in add_extras or 'all' in add_extras:
-                                                extra_column_name = f"{foreign_table_column}_{extra_list_type}"
-                                                if extra_column_name not in foreign_table_data_by_column:
-                                                    foreign_table_data_by_column[extra_column_name] = list()
+                                    if not matched_extra_column:
+                                        if foreign_table_column not in foreign_table_data_by_column:
+                                            foreign_table_data_by_column[foreign_table_column] = list()
 
-                                    # Encode nulls as '<NA>'.
-                                    # (float) NaN != NaN
-                                    # Testing values for None will miss NaN values, so we use the above truth to test for those too.
-                                    # Empty list values [] will be passed along unmodified.
-                                    if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
-                                        foreign_table_data_by_column[foreign_table_column].append( '<NA>' )
-                                    else:
-                                        foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+                                        # Initialize extras columns in case of need. These are sometimes omitted from API responses when null.
+                                        # TO DO: Fix that thing at the end of the last comment line.
+                                        if foreign_table_column in has_non_null_extras:
+                                            for extra_list_type in extra_list_types:
+                                                if extra_list_type in add_extras or 'all' in add_extras:
+                                                    extra_column_name = f"{foreign_table_column}_{extra_list_type}"
+                                                    if extra_column_name not in foreign_table_data_by_column:
+                                                        foreign_table_data_by_column[extra_column_name] = list()
 
-                                    # Update extras.
-                                    if foreign_table_column in has_non_null_extras:
-                                        for extra_list_type in extra_list_types:
-                                            if extra_list_type in add_extras or 'all' in add_extras:
-                                                extra_column_name = f"{foreign_table_column}_{extra_list_type}"
-                                                if extra_column_name not in foreign_table_record or foreign_table_record[extra_column_name] is None or len( foreign_table_record[extra_column_name] ) == 0:
-                                                    foreign_table_data_by_column[extra_column_name].append( list() )
-                                                else:
-                                                    foreign_table_data_by_column[extra_column_name].append( foreign_table_record[extra_column_name] )
+                                        # Encode nulls as '<NA>'.
+                                        # (float) NaN != NaN
+                                        # Testing values for None will miss NaN values, so we use the above truth to test for those too.
+                                        # Empty list values [] will be passed along unmodified.
+                                        if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
+                                            foreign_table_data_by_column[foreign_table_column].append( '<NA>' )
+                                        else:
+                                            foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+
+                                        # Update extras.
+                                        if foreign_table_column in has_non_null_extras:
+                                            for extra_list_type in extra_list_types:
+                                                if extra_list_type in add_extras or 'all' in add_extras:
+                                                    extra_column_name = f"{foreign_table_column}_{extra_list_type}"
+                                                    if extra_column_name not in foreign_table_record or foreign_table_record[extra_column_name] is None or len( foreign_table_record[extra_column_name] ) == 0:
+                                                        foreign_table_data_by_column[extra_column_name].append( list() )
+                                                    else:
+                                                        foreign_table_data_by_column[extra_column_name].append( foreign_table_record[extra_column_name] )
 
                             if foreign_table_name in ['project', 'subject' ]:
                                 upstream_data_source = sorted( upstream_data_source )
