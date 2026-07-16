@@ -2161,7 +2161,7 @@ def get_data(
                                         for extra_list_type in extra_list_types:
                                             if extra_list_type in add_extras or 'all' in add_extras:
                                                 extra_column_name = f"{foreign_table_column}_{extra_list_type}"
-                                                if extra_column_name not in foreign_table_record.columns.values or foreign_table_record[extra_column_name] is None or len( foreign_table_record[extra_column_name] ) == 0:
+                                                if extra_column_name not in foreign_table_record or foreign_table_record[extra_column_name] is None or len( foreign_table_record[extra_column_name] ) == 0:
                                                     foreign_table_data_by_column[extra_column_name].append( list() )
                                                 else:
                                                     foreign_table_data_by_column[extra_column_name].append( foreign_table_record[extra_column_name] )
