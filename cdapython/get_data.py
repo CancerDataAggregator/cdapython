@@ -2177,8 +2177,10 @@ def get_data(
                                     for extra_list_type in extra_list_types:
                                         if extra_list_type in add_extras or 'all' in add_extras:
                                             extra_column_name = f"{foreign_table_column}_{extra_list_type}"
-                                            if extra_column_name in foreign_table_data_by_column:
-                                                foreign_table_column_ordering.append( extra_column_name )
+                                            if extra_column_name not in foreign_table_data_by_column:
+                                                # MODIFY ONLY WITH CAUTION, this is Python-list-pointer safe:
+                                                foreign_table_data_by_column[extra_column_name] = [ [] for _ in range( len( foreign_table_data_by_column[foreign_table_column] ) ) ]
+                                            foreign_table_column_ordering.append( extra_column_name )
 
                         foreign_df_list.append( pd.DataFrame.from_dict( { re.sub( r'^external_reference_', r'', foreign_table_column ) : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_column_ordering }, orient='columns' ) )
 
