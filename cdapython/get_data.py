@@ -2079,14 +2079,19 @@ def get_data(
 
                 foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
-                # Our result DataFrame's cells in a column named for `foreign_table_name` will
+                # Our result DataFrame's f"{foreign_table_name}_data" column will
                 # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
                 # all data from that table associated with each top-level row's main entity record.
+                # Possibly plus extra metadata for harmonized terms in `foreign_table_name`, if
+                # any is available and the user asked for it.
 
+                # Each element in this list will populate one (possibly empty) DataFrame cell in the overall result.
                 foreign_df_list = list()
 
                 for row_index, result_record in result_dataframe.iterrows():
                     
+                    # Construct one DataFrame from one (top-level / home-entity-record) row's worth of data from `foreign_table_name`.
+
                     foreign_table_data_by_column = dict()
 
                     # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing external_reference or upstream_identifiers, which encode this data differently or not at all.
@@ -2167,6 +2172,13 @@ def get_data(
                         for foreign_table_column in foreign_table_column_list:
                             if foreign_table_column in foreign_table_data_by_column:
                                 foreign_table_column_ordering.append( foreign_table_column )
+                                # If the user requested extra metadata for harmonized terms, here's where it gets included.
+                                if foreign_table_column in has_non_null_extras:
+                                    for extra_list_type in extra_list_types:
+                                        if extra_list_type in add_extras or 'all' in add_extras:
+                                            extra_column_name = f"{foreign_table_column}_{extra_list_type}"
+                                            if extra_column_name in foreign_table_data_by_column:
+                                                foreign_table_column_ordering.append( extra_column_name )
 
                         foreign_df_list.append( pd.DataFrame.from_dict( { re.sub( r'^external_reference_', r'', foreign_table_column ) : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_column_ordering }, orient='columns' ) )
 
