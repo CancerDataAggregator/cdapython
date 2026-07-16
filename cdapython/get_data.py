@@ -2138,18 +2138,33 @@ def get_data(
                                     if foreign_table_column not in foreign_table_data_by_column:
                                         foreign_table_data_by_column[foreign_table_column] = list()
 
+                                    # Initialize extras columns in case of need. These are sometimes omitted from API responses when null.
+                                    # TO DO: Fix that thing at the end of the last comment line.
+                                    if foreign_table_column in has_non_null_extras:
+                                        for extra_list_type in extra_list_types:
+                                            if extra_list_type in add_extras or 'all' in add_extras:
+                                                extra_column_name = f"{foreign_table_column}_{extra_list_type}"
+                                                if extra_column_name not in foreign_table_data_by_column:
+                                                    foreign_table_data_by_column[extra_column_name] = list()
+
                                     # Encode nulls as '<NA>'.
                                     # (float) NaN != NaN
                                     # Testing values for None will miss NaN values, so we use the above truth to test for those too.
                                     # Empty list values [] will be passed along unmodified.
-
                                     if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
-                                        
                                         foreign_table_data_by_column[foreign_table_column].append( '<NA>' )
-
                                     else:
-                                        
                                         foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
+
+                                    # Update extras.
+                                    if foreign_table_column in has_non_null_extras:
+                                        for extra_list_type in extra_list_types:
+                                            if extra_list_type in add_extras or 'all' in add_extras:
+                                                extra_column_name = f"{foreign_table_column}_{extra_list_type}"
+                                                if extra_column_name not in foreign_table_record.columns.values or foreign_table_record[extra_column_name] is None or len( foreign_table_record[extra_column_name] ) == 0:
+                                                    foreign_table_data_by_column[extra_column_name].append( list() )
+                                                else:
+                                                    foreign_table_data_by_column[extra_column_name].append( foreign_table_record[extra_column_name] )
 
                             if foreign_table_name in ['project', 'subject' ]:
                                 upstream_data_source = sorted( upstream_data_source )
@@ -2177,9 +2192,6 @@ def get_data(
                                     for extra_list_type in extra_list_types:
                                         if extra_list_type in add_extras or 'all' in add_extras:
                                             extra_column_name = f"{foreign_table_column}_{extra_list_type}"
-                                            if extra_column_name not in foreign_table_data_by_column:
-                                                # MODIFY ONLY WITH CAUTION, this is Python-list-pointer safe:
-                                                foreign_table_data_by_column[extra_column_name] = [ [] for _ in range( len( foreign_table_data_by_column[foreign_table_column] ) ) ]
                                             foreign_table_column_ordering.append( extra_column_name )
 
                         print( [ f"{foreign_table_column}: {len( foreign_table_data_by_column[foreign_table_column] )}" for foreign_table_column in foreign_table_column_ordering ] )
