@@ -2201,7 +2201,6 @@ def get_data(
                                             extra_column_name = f"{foreign_table_column}_{extra_list_type}"
                                             foreign_table_column_ordering.append( extra_column_name )
 
-                        print( [ f"{foreign_table_column}: {len( foreign_table_data_by_column[foreign_table_column] )}" for foreign_table_column in foreign_table_column_ordering ] )
                         foreign_df_list.append( pd.DataFrame.from_dict( { re.sub( r'^external_reference_', r'', foreign_table_column ) : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_column_ordering }, orient='columns' ) )
 
                     else:
