@@ -2282,11 +2282,11 @@ def summarize(
                         #     "anatomic_site_slim_terms": [],
                         #     "anatomic_site_synonym_terms": []
 
-                        for dict_pair in result_dataframe[result_column][0]:
+                        for dict_record in result_dataframe[result_column][0]:
                             
                             print_value = '<NA>'
 
-                            actual_value = dict_pair[result_column]
+                            actual_value = dict_record[result_column]
 
                             if actual_value is not None and actual_value != '':
                                 
@@ -2294,16 +2294,26 @@ def summarize(
 
                             result_column_dict[result_column].append( print_value )
 
-                            result_column_dict['count_result'].append( dict_pair['count_result'] )
+                            result_column_dict['count_result'].append( dict_record['count_result'] )
 
                             if result_column in has_non_null_extras:
+                                # At present (2026-07-23), synonyms are only displayed as names (strings). In the background, we link
+                                # ICD-O-3 terms to DO terms as synonyms, which is appropriate, but this can lead to name doubling when
+                                # "synonyms" are displayed to the user as names unaccompanied (again, at present) by disambiguating
+                                # identifiers or other clarifying context. Remove redundant entries.
+                                # 
+                                # Note this filter is performed in two places in this script.
+                                if 'synonym_terms' in result_column_dict and f"{result_column}_synonym_terms" in dict_record and len( dict_record[f"{result_column}_synonym_terms"] ) > 0:
+                                    dict_record[f"{result_column}_synonym_terms"] = [ synonym_term for synonym_term in dict_record[f"{result_column}_synonym_terms"] if synonym_term.lower() != print_value.lower() ]
+
                                 for extra_list_type in extra_list_types:
                                     # Follow instructions received from the user as to whether or not to include each available extra column:
                                     # substructures of result_column_dict were initialized above for those that were asked for, so make sure
                                     # they exist before populating them.
-                                    if extra_list_type in result_column_dict and f"{result_column}_{extra_list_type}" in dict_pair and len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 0:
-                                        result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_pair[f"{result_column}_{extra_list_type}"] ) ) )
-                                        if len( dict_pair[f"{result_column}_{extra_list_type}"] ) > 1:
+                                    
+                                    if extra_list_type in result_column_dict and f"{result_column}_{extra_list_type}" in dict_record and len( dict_record[f"{result_column}_{extra_list_type}"] ) > 0:
+                                        result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_record[f"{result_column}_{extra_list_type}"] ) ) )
+                                        if len( dict_record[f"{result_column}_{extra_list_type}"] ) > 1:
                                             # Alter the border scheme to accommodate multiline cells.
                                             custom_table_output_format[result_column] = 'double_grid'
                                     elif extra_list_type in result_column_dict:
@@ -2528,6 +2538,15 @@ def summarize(
                             }
                             # Optional extras.
                             if result_column in has_non_null_extras:
+                                # At present (2026-07-23), synonyms are only displayed as names (strings). In the background, we link
+                                # ICD-O-3 terms to DO terms as synonyms, which is appropriate, but this can lead to name doubling when
+                                # "synonyms" are displayed to the user as names unaccompanied (again, at present) by disambiguating
+                                # identifiers or other clarifying context. Remove redundant entries.
+                                # 
+                                # Note this filter is performed in two places in this script.
+                                if 'synonym_terms' in result_column_dict and f"{result_column}_synonym_terms" in dict_record and len( dict_record[f"{result_column}_synonym_terms"] ) > 0:
+                                    dict_record[f"{result_column}_synonym_terms"] = [ synonym_term for synonym_term in dict_record[f"{result_column}_synonym_terms"] if synonym_term.lower() != print_value.lower() ]
+
                                 for extra_list_type in extra_list_types:
                                     if f"{result_column}_{extra_list_type}" in dict_record and len( dict_record[f"{result_column}_{extra_list_type}"] ) > 0:
                                         result_dict[result_column][dict_record[result_column]][extra_list_type] = dict_record[f"{result_column}_{extra_list_type}"]
