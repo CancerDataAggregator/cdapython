@@ -475,7 +475,7 @@ def validate_parameter_values(
             allowed_values = set( cda_extra_metadata_columns() )
             for extra_column in add_extras:
                 if extra_column not in allowed_values and extra_column != 'all':
-                    raise RuntimeError( f"'add_extras' cannot process '' as an option; please use 'all' for all of them, or consult cda_extra_metadata_columns() to get a list of valid options." )
+                    raise RuntimeError( f"'add_extras' cannot process '{extra_column}' as an option; please use 'all' for all of them, or consult cda_extra_metadata_columns() to get a list of valid options." )
     elif add_extras is not None:
         raise RuntimeError( f"'add_extras' cannot be non-null here: please alert the CDA devs to this event, something is misconfigured in our code." )
 
