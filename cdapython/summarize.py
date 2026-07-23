@@ -2545,7 +2545,7 @@ def summarize(
                                 # 
                                 # Note this filter is performed in two places in this script.
                                 if f"{result_column}_synonym_terms" in dict_record and len( dict_record[f"{result_column}_synonym_terms"] ) > 0:
-                                    dict_record[f"{result_column}_synonym_terms"] = [ synonym_term for synonym_term in dict_record[f"{result_column}_synonym_terms"] if synonym_term.lower() != print_value.lower() ]
+                                    dict_record[f"{result_column}_synonym_terms"] = [ synonym_term for synonym_term in dict_record[f"{result_column}_synonym_terms"] if synonym_term.lower() != dict_record[result_column].lower() ]
 
                                 for extra_list_type in extra_list_types:
                                     if f"{result_column}_{extra_list_type}" in dict_record and len( dict_record[f"{result_column}_{extra_list_type}"] ) > 0:
