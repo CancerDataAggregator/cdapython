@@ -2066,11 +2066,10 @@ def summarize(
     log.debug( "Organizing result data..." )
 
     # Make a dict out of the results so we can restructure a bit before DataFrame conversion.
-
     api_response_dict = api_response_object.to_dict()['result'][0]
 
-    # Wrap the 'data_source' response element in a list to avoid splitting the entries into individual columns
-    # when converting into a DataFrame.
+    # Wrap the 'data_source' response element's (dictionary) value in a list, to avoid splitting
+    # dictionary entries into individual columns when converting response data into a DataFrame.
     # 
     #       "data_source": {
     #         "gdc_exclusive": 4,
@@ -2082,18 +2081,14 @@ def summarize(
     #         "gdc_icdc_exclusive": 0,
     #         "gdc_gc_exclusive": 0,
     #         ...
-
     api_response_dict['data_source'] = [api_response_dict['data_source']]
 
     # Convert response JSON into a DataFrame using pandas' json_normalize() function.
-
     result_dataframe = pd.json_normalize( [api_response_dict] )
 
     # For some reason, the highest-level summary counts come through as floats. Fix that
     # (and rename them while we're at it).
-
     toplevel_columns_to_fix = {
-        
         'total_count': 'number_of_matching_files' if table == 'file' else 'number_of_matching_subjects' if table == 'subject' else 'number_of_matching_rows',
         'file_count': 'number_of_files_related_to_matching_subjects',
         'subject_count': 'number_of_subjects_related_to_matching_files'
@@ -2102,13 +2097,10 @@ def summarize(
     for result_column in toplevel_columns_to_fix:
         
         if result_column in result_dataframe:
-            
             result_dataframe[result_column] = result_dataframe[result_column].round().astype( int )
-
             result_dataframe = result_dataframe.rename( columns={ result_column: toplevel_columns_to_fix[result_column] } )
 
     # Remove '_summary' from ordinary result column names before returning.
-
     skip_rename = {
         'data_source',
         'file_data_source_count_summary',
@@ -2125,11 +2117,8 @@ def summarize(
     for result_column in result_column_names:
         
         if result_column not in skip_rename:
-            
             new_column_name = re.sub( r'_summary$', r'', result_column )
-
             if new_column_name != result_column:
-                
                 result_dataframe = result_dataframe.rename( columns={ result_column: new_column_name } )
 
     #############################################################################################################################
@@ -2141,14 +2130,15 @@ def summarize(
         # Right now, the default is to print one table to standard output
         # for each DataFrame that would be returned had the user requested
         # `return_data_as='dataframe_list'`.
-
         result_list = list()
 
         # Track context-relevant table display format defaults and options.
         default_table_output_format = 'double_outline'
         custom_table_output_format = dict()
 
+        #########################################################################################################################
         # Return overall result summary counts first.
+        #########################################################################################################################
 
         # Identify the total result count for {table}.
         total_base_rows = 0
@@ -2156,113 +2146,80 @@ def summarize(
         for toplevel_column in [ 'number_of_matching_files', 'number_of_matching_subjects', 'number_of_matching_rows', 'number_of_files_related_to_matching_subjects', 'number_of_subjects_related_to_matching_files' ]:
             
             if toplevel_column in result_dataframe:
-                
                 # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
-
                 result_list.append( pd.DataFrame( result_dataframe[toplevel_column], columns=[toplevel_column] ) )
-
                 if toplevel_column == f"number_of_matching_{table}s":
                     total_base_rows = int( result_dataframe[toplevel_column][0] )
 
         # Next, summarize data sources unless `exclude_columns='data_source'` was specified by the user.
-
         if not suppress_data_source_results:
-            
             output_data_source_dict = {
                 'data_source': list(),
                 f"{table}s": list()
             }
 
             if result_dataframe['data_source'] is not None:
-                
                 input_data_source_dict = result_dataframe['data_source'][0][0]
-
                 # This cell should be a Python dict pairing some combination of valid data sources with a count of matching results.
-
                 for data_source_combo in input_data_source_dict:
-                    
                     current_count = input_data_source_dict[data_source_combo]
-
                     if current_count is not None and current_count != 0:
-                        
                         data_source_combo = re.sub( r'_exclusive$', r'', data_source_combo )
-
                         if re.search( r'_', data_source_combo ) is None:
-                            
                             data_source_combo = f"{data_source_combo.upper()} only"
-
                         else:
-                            
                             data_source_combo = " + ".join( data_source_combo.upper().split( '_' ) )
-
                         output_data_source_dict[f"{table}s"].append( current_count )
                         output_data_source_dict['data_source'].append( data_source_combo )
 
             result_list.append( pd.DataFrame.from_dict( output_data_source_dict ).sort_values( by=f"{table}s", ascending=False ).reset_index( drop=True ) )
 
         # Put the numeric summaries at the end of the displayed block of results.
-
         result_list_tail = list()
 
         for result_column in result_dataframe.columns:
             
-            if result_column not in skip_rename and result_dataframe[result_column].dtype == 'object' and isinstance( result_dataframe[result_column][0], list ) and isinstance( result_dataframe[result_column][0][0], dict ) and 'median' in result_dataframe[result_column][0][0]:
-                
+            if result_column not in skip_rename \
+                and result_dataframe[result_column].dtype == 'object' \
+                and isinstance( result_dataframe[result_column][0], list ) \
+                and isinstance( result_dataframe[result_column][0][0], dict ) \
+                and 'median' in result_dataframe[result_column][0][0]:
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
                 # 
                 # They come back with null values if there are no results. In such a case, print <NA>s.
-
                 if result_dataframe[result_column][0][0]['median'] is not None:
-                    
                     result_column_dict = dict()
-
                     result_column_dict['cda_column_name'] = [result_column]
-
                     # Hard-coding this is fragile, but safe for now and there's a lot to do.
-
                     for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
-                        
                         result_column_dict[key] = [result_dataframe[result_column][0][0][key]]
-
                     result_list_tail.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
-
                 else:
-                    
                     result_column_dict = dict()
-
                     result_column_dict['cda_column_name'] = [result_column]
-
                     # Hard-coding this is fragile, but safe for now and there's a lot to do.
-
                     for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
-                        
                         result_column_dict[key] = ['<NA>']
-
                     result_list_tail.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
 
             elif result_column not in skip_rename:
-                
-                # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
-
+                # Copy the column data into a new DataFrame, then append the new DataFrame to the result list.
                 if result_dataframe[result_column].dtype == 'int64':
-                    
                     result_dataframe[result_column] = int( result_dataframe[result_column][0] )
 
                 elif result_dataframe[result_column].dtype == 'object':
-                    
                     result_column_dict = {
                         result_column: [],
                         'count_result': []
                     }
 
+                    # Consult the user-supplied parameter to determine which if any extra metadata columns to include.
                     if result_column in has_non_null_extras:
                         for extra_list_type in extra_list_types:
-                            # Consult the user-supplied parameter to determine which of these to include.
                             if extra_list_type in add_extras or 'all' in add_extras:
                                 result_column_dict[extra_list_type] = []
 
                     if result_dataframe[result_column][0] is not None:
-                        
                         # This cell should contain an array of Python dicts, with each dict containing at least two entries:
                         #
                         #    data column label and value:
@@ -2283,17 +2240,12 @@ def summarize(
                         #     "anatomic_site_synonym_terms": []
 
                         for dict_record in result_dataframe[result_column][0]:
-                            
                             print_value = '<NA>'
-
                             actual_value = dict_record[result_column]
-
                             if actual_value is not None and actual_value != '':
-                                
                                 print_value = actual_value
 
                             result_column_dict[result_column].append( print_value )
-
                             result_column_dict['count_result'].append( dict_record['count_result'] )
 
                             if result_column in has_non_null_extras:
@@ -2310,7 +2262,6 @@ def summarize(
                                     # Follow instructions received from the user as to whether or not to include each available extra column:
                                     # substructures of result_column_dict were initialized above for those that were asked for, so make sure
                                     # they exist before populating them.
-                                    
                                     if extra_list_type in result_column_dict and f"{result_column}_{extra_list_type}" in dict_record and len( dict_record[f"{result_column}_{extra_list_type}"] ) > 0:
                                         result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_record[f"{result_column}_{extra_list_type}"] ) ) )
                                         if len( dict_record[f"{result_column}_{extra_list_type}"] ) > 1:
@@ -2322,40 +2273,36 @@ def summarize(
                     result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ 'count_result', result_column ], ascending=[ False, True ] ).reset_index( drop=True ) )
 
                 else:
-                    
+                    # result_dataframe[result_column].dtype not in { 'int64', 'object' }
                     log.critical( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
                     return
 
         result_list = result_list + result_list_tail
 
         if return_data_as == '':
-            
             log.debug( 'Returning results in default form (printing list of tables to standard output)' )
-
             with pd.option_context( 'display.max_rows', None, 'display.max_columns', None, 'display.max_colwidth', 65 ):
                 
                 for result_list_df in result_list:
-                    
-                    print_df = result_list_df
-
                     max_col_width = 40
-
                     maxcolwidths_list = [ None ]
-
                     colalign_list = [ 'left' ]
 
+                    print_df = result_list_df
+
                     if print_df is not None and len( print_df ) > 0:
-                        
                         result_column = ''
 
                         if len( print_df.columns ) == 1:
-                            
                             colalign_list = [ 'left' ]
 
                         elif 'count_result' in print_df.columns.values or f"{table}s" in print_df.columns.values:
-                            
-                            # Find the base result_column name; find out if extra columns are present; identify the name of the count column; and order output columns accordingly for display.
-
+                            # A two-column table, e.g. "count_result|species" or "subjects|data_source"
+                            maxcolwidths_list = [ None, max_col_width ]
+                            colalign_list = [ 'right', 'right' ]
+                            # Find the base result_column name; find out if extra columns are present;
+                            # identify the name of the count column; and order output columns accordingly for display.
+                            # 
                             # TO DO: This next thing should be made more robust. Also see the big lambda constructor a few
                             # lines below which similarly references the first column in print_df. A brief review suggests
                             # we're relying on Python dict key insert order to support our assumption that this is in fact
@@ -2364,10 +2311,6 @@ def summarize(
                             # also impossible to debug. Also see near the tabulate block where we use this to determine
                             # context-dependent output formatting.
                             result_column = print_df.columns.values[0]
-
-                            maxcolwidths_list = [ None, max_col_width ]
-
-                            colalign_list = [ 'right', 'right' ]
 
                             # Check for extra columns and update accordingly.
                             for extra_list_type in extra_list_types:
@@ -2386,8 +2329,10 @@ def summarize(
 
                             if f"{table}s" in print_df.columns.values:
                                 new_column_ordering = [ f"{table}s" ]
+                                # Leading to e.g. "subjects|data_source"
                             else:
                                 new_column_ordering = [ 'count_result' ]
+                                # Leading to e.g. "count_result|race"
 
                             new_column_ordering.append( result_column )
 
@@ -2398,29 +2343,21 @@ def summarize(
                             print_df = print_df[new_column_ordering]
 
                         elif 'median' in print_df.columns.values:
-                            
+                            # A statistical summary table, e.g. "year_of_birth:mean|min|lower_quartile|median|upper_quartile|max"
+                            # Align statistic names to the right in the leftmost column.
                             colalign_list = [ 'right' ]
-
                             result_column = print_df['cda_column_name'][0]
-
                             result_dict = {
-                                
                                 '': list(),
                                 result_column: list()
                             }
-
                             # Hard-coding this is fragile, but safe for now and there's a lot to do.
-
                             for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
-                                
                                 result_dict[''].append( f"{re.sub( r'_', r' ', key )}" )
-
                                 result_dict[result_column].append( f"{print_df[key][0]:>15}" )
-
                             print_df = pd.DataFrame.from_dict( result_dict ).reset_index( drop=True )
 
                         # Suppress output of confusing row-index column when displaying DataFrame contents and get some control over cell alignment.
-
                         table_output_format = default_table_output_format
 
                         if result_column in custom_table_output_format:
@@ -2437,79 +2374,54 @@ def summarize(
                                 disable_numparse=True,
                             )
                         )
-
             return
 
         elif return_data_as == 'dataframe_list':
-            
             log.debug( 'Returning results as a list of pandas.DataFrame objects' )
-
             return result_list
 
     elif return_data_as == 'dict' or return_data_as == 'json':
-        
         # Build a Python dictionary to shape returned results.
-
         result_dict = dict()
-
         for result_column in result_dataframe.columns:
             
-            if ( result_column not in skip_rename or re.search( r'_data_source_count_summary$', result_column ) is not None ) and result_dataframe[result_column].dtype == 'object' and isinstance( result_dataframe[result_column][0], list ) and isinstance( result_dataframe[result_column][0][0], dict ) and 'median' in result_dataframe[result_column][0][0]:
-                
+            if ( result_column not in skip_rename or re.search( r'_data_source_count_summary$', result_column ) is not None ) \
+                and result_dataframe[result_column].dtype == 'object' \
+                and isinstance( result_dataframe[result_column][0], list ) \
+                and isinstance( result_dataframe[result_column][0][0], dict ) \
+                and 'median' in result_dataframe[result_column][0][0]:
                 # These are one-element arrays, with the element being a key/value dictionary containing summary stats.
                 # 
-                # They come back with null values if there are no results. These nulls are forwarded to the result dicts without modification, matching what's done for counts for null values in enumerated fields.
-
+                # They come back with null values if there are no results. These nulls are forwarded to the result dicts
+                # without modification, matching what's done for counts for null values in enumerated fields.
                 result_dict[result_column] = dict()
-
                 # Hard-coding this is fragile, but safe for now and there's a lot to do.
-
                 for key in [ 'mean', 'min', 'lower_quartile', 'median', 'upper_quartile', 'max' ]:
-                    
                     result_dict[result_column][key] = result_dataframe[result_column][0][0][key]
 
             elif result_column == 'data_source':
-                
                 if result_dataframe['data_source'] is not None:
-                    
                     input_data_source_dict = result_dataframe['data_source'][0][0]
-
                     # This cell should be a Python dict pairing some combination of valid data sources with a count of matching results.
-
                     for data_source_combo in input_data_source_dict:
-                        
                         current_count = input_data_source_dict[data_source_combo]
-
                         if current_count is not None and current_count != 0:
-                            
                             data_source_combo = re.sub( r'_exclusive$', r'', data_source_combo )
-
                             if re.search( r'_', data_source_combo ) is None:
-                                
                                 data_source_combo = f"{data_source_combo.upper()} only"
-
                             else:
-                                
                                 data_source_combo = " and ".join( data_source_combo.upper().split( '_' ) )
-
                             if 'data_source' not in result_dict:
-                                
                                 result_dict['data_source'] = dict()
-
                             result_dict['data_source'][data_source_combo] = current_count
 
             else:
-                
                 if result_dataframe[result_column].dtype == 'int64':
-                    
                     result_dict[result_column] = int( result_dataframe[result_column][0] )
 
                 elif result_dataframe[result_column].dtype == 'object':
-                    
                     result_dict[result_column] = None
-
                     if result_dataframe[result_column][0] is not None:
-                        
                         # This cell should contain an array of Python dicts, with each dict containing at least two entries:
                         #
                         #    data column label and value:
@@ -2528,9 +2440,7 @@ def summarize(
                         #     "anatomic_site_related_terms": [],
                         #     "anatomic_site_slim_terms": [],
                         #     "anatomic_site_synonym_terms": []
-
                         result_dict[result_column] = dict()
-
                         for dict_record in result_dataframe[result_column][0]:
                             # The two fields (keys) that are always guaranteed.
                             result_dict[result_column][dict_record[result_column]] = {
@@ -2554,34 +2464,23 @@ def summarize(
                                         result_dict[result_column][dict_record[result_column]][extra_list_type] = None
 
                 else:
-                    
+                    # result_dataframe[result_column].dtype not in { 'int64', 'object' }
                     log.critical( f"Unexpected return type '{result_dataframe[result_column].dtype}' observed in result column '{result_column}'; please inform the CDA devs of this event." )
                     return
 
         if return_data_as == 'dict':
-            
             log.debug( 'Returning results as a Python dictionary' )
-
             return result_dict
 
         elif return_data_as == 'json':
-            
             # Write the results to a user-specified JSON file.
-
             log.debug( f"Printing results to JSON file '{output_file}'" )
-
             try:
-                
                 with open( output_file, 'w' ) as OUT:
-                    
                     json.dump( result_dict, OUT, indent=4, ensure_ascii=True )
-
                 return
-
             except Exception as error:
-                
                 log.error( f"Couldn't write to requested output file '{output_file}': got error of type '{type(error)}', with error message '{error}'." )
-
                 return
 
     log.critical( 'Something has gone unexpectedly and disastrously wrong with return-data postprocessing. Please alert the CDA devs to this event and include details of how to reproduce this error.' )
