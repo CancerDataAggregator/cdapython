@@ -2144,7 +2144,6 @@ def summarize(
         total_base_rows = 0
 
         for toplevel_column in [ 'number_of_matching_files', 'number_of_matching_subjects', 'number_of_matching_rows', 'number_of_files_related_to_matching_subjects', 'number_of_subjects_related_to_matching_files' ]:
-            
             if toplevel_column in result_dataframe:
                 # Copy the column into a new DataFrame, then append the new DataFrame to the result list.
                 result_list.append( pd.DataFrame( result_dataframe[toplevel_column], columns=[toplevel_column] ) )
@@ -2203,8 +2202,12 @@ def summarize(
                     result_list_tail.append( pd.DataFrame.from_dict( result_column_dict ).reset_index( drop=True ) )
 
             elif result_column not in skip_rename:
+                # All columns not covered by preprocessing above the current for-loop or the
+                # case immediately above: counts of observed values, possibly with extra metadata alongside.
+                # 
                 # Copy the column data into a new DataFrame, then append the new DataFrame to the result list.
                 if result_dataframe[result_column].dtype == 'int64':
+                    print( f"DING! {result_column}" )
                     result_dataframe[result_column] = int( result_dataframe[result_column][0] )
 
                 elif result_dataframe[result_column].dtype == 'object':

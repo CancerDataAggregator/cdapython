@@ -1969,15 +1969,13 @@ def get_data(
     #   "next_url": ""
     # }
 
-
     # Report some metadata about the results we got back.
     log.debug( f"/data/{table} endpoint query SQL:\n{api_response_object.to_dict()['query_sql']}" )
 
     # This is stupidly verbose. Nice time to warn you, right? After I just echoed two response objects?
     # log.debug( f"Page one results:\n{json.dumps( api_response_object.to_dict()['result'], indent=4 )}\n" )
-    
-    # Convert response JSON into a DataFrame using pandas' json_normalize() function.
 
+    # Convert response JSON into a DataFrame using pandas' json_normalize() function.
     result_dataframe = pd.json_normalize( api_response_object.to_dict()['result'] )
 
     # The data we've fetched so far might be just the first page (if the total number
@@ -1985,13 +1983,9 @@ def get_data(
     #
     # Get the rest of the result pages, if there are any, and add each page's data
     # onto the end of our results DataFrame.
-
     incremented_offset = starting_offset + rows_per_page
-
     while api_response_object.next_url is not None and len( api_response_object.next_url ) > 0:
-        
         log.debug( f"Pulling next paged result from API with an offset of {incremented_offset} and a max page size of {rows_per_page}")
-
         try:
             api_response_object = query_selector[table].sync(
                 client=query_api_instance,
@@ -2011,19 +2005,14 @@ def get_data(
             log.error( f"{api_response_object.error_type}: {api_response_object.message}" )
 
         # Convert response JSON into a DataFrame using pandas' json_normalize() function.
-
         next_result_batch = pd.json_normalize( api_response_object.to_dict()['result'] )
-
         log.debug( f"/data/{table} endpoint query SQL:\n{api_response_object.to_dict()['query_sql']}" )
 
         # Add data from this page to our full result set.
-
         if not result_dataframe.empty and not next_result_batch.empty:
-            
             # Silence a future deprecation warning about pd.concat and empty DataFrame columns.
             # 
             # Possibly relevant note: never fill in missing numeric values with 0!
-
             next_result_batch = next_result_batch.astype( result_dataframe.dtypes )
             result_dataframe = pd.concat( [result_dataframe, next_result_batch] )
 
@@ -2037,12 +2026,9 @@ def get_data(
 
     # Collect data source information and populate our user-facing `data_source` result column summary,
     # unless it's been suppressed via exclude_columns=['data_source'].
-
     if not suppress_data_source_results:
-        
         # Make a new column called 'data_source', populated with empty lists.
         result_dataframe['data_source'] = [ [] for _ in range( len( result_dataframe ) ) ]
-
         for row_index, result_record in result_dataframe.iterrows():
             for upstream_data_source in sorted( valid_data_sources ):
                 if result_record[ f"{table}_data_at_{upstream_data_source.lower()}" ] == True:
