@@ -2267,13 +2267,11 @@ def summarize(
                                     # substructures of result_column_dict were initialized above for those that were asked for, so make sure
                                     # they exist before populating them.
                                     if extra_list_type in result_column_dict and f"{result_column}_{extra_list_type}" in dict_record and len( dict_record[f"{result_column}_{extra_list_type}"] ) > 0:
-                                        #result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_record[f"{result_column}_{extra_list_type}"] ) ) )
                                         result_column_dict[extra_list_type].append( dict_record[f"{result_column}_{extra_list_type}"] )
                                         if len( dict_record[f"{result_column}_{extra_list_type}"] ) > 1:
                                             # Alter the border scheme to accommodate multiline cells.
                                             custom_table_output_format[result_column] = 'double_grid'
                                     elif extra_list_type in result_column_dict:
-                                        #result_column_dict[extra_list_type].append( '<NA>' )
                                         result_column_dict[extra_list_type].append( list() )
 
                     result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ 'count_result', result_column ], ascending=[ False, True ] ).reset_index( drop=True ) )
@@ -2467,7 +2465,7 @@ def summarize(
                                     if f"{result_column}_{extra_list_type}" in dict_record and len( dict_record[f"{result_column}_{extra_list_type}"] ) > 0:
                                         result_dict[result_column][dict_record[result_column]][extra_list_type] = dict_record[f"{result_column}_{extra_list_type}"]
                                     else:
-                                        result_dict[result_column][dict_record[result_column]][extra_list_type] = None
+                                        result_dict[result_column][dict_record[result_column]][extra_list_type] = list()
 
                 else:
                     # result_dataframe[result_column].dtype not in { 'int64', 'object' }
