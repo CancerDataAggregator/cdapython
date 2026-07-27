@@ -2204,13 +2204,14 @@ def summarize(
             elif result_column not in skip_rename:
                 # All columns not covered by preprocessing above the current for-loop or the
                 # case immediately above: counts of observed values, possibly with extra metadata alongside.
-                # 
-                # Copy the column data into a new DataFrame, then append the new DataFrame to the result list.
+
                 if result_dataframe[result_column].dtype == 'int64':
-                    print( f"DING! {result_column}" )
+                    # I'm not a hundred percent sure this case is ever invoked. TO DO: find out. (2026-07-24)
+                    # print( f"HEY! {result_column}" )
                     result_dataframe[result_column] = int( result_dataframe[result_column][0] )
 
                 elif result_dataframe[result_column].dtype == 'object':
+                    # Copy the column data into a new DataFrame, then append the new DataFrame to the result list.
                     result_column_dict = {
                         result_column: [],
                         'count_result': []
@@ -2266,12 +2267,14 @@ def summarize(
                                     # substructures of result_column_dict were initialized above for those that were asked for, so make sure
                                     # they exist before populating them.
                                     if extra_list_type in result_column_dict and f"{result_column}_{extra_list_type}" in dict_record and len( dict_record[f"{result_column}_{extra_list_type}"] ) > 0:
-                                        result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_record[f"{result_column}_{extra_list_type}"] ) ) )
+                                        #result_column_dict[extra_list_type].append( '\n'.join( sorted( dict_record[f"{result_column}_{extra_list_type}"] ) ) )
+                                        result_column_dict[extra_list_type].append( dict_record[f"{result_column}_{extra_list_type}"] )
                                         if len( dict_record[f"{result_column}_{extra_list_type}"] ) > 1:
                                             # Alter the border scheme to accommodate multiline cells.
                                             custom_table_output_format[result_column] = 'double_grid'
                                     elif extra_list_type in result_column_dict:
-                                        result_column_dict[extra_list_type].append( '<NA>' )
+                                        #result_column_dict[extra_list_type].append( '<NA>' )
+                                        result_column_dict[extra_list_type].append( list() )
 
                     result_list.append( pd.DataFrame.from_dict( result_column_dict ).sort_values( by=[ 'count_result', result_column ], ascending=[ False, True ] ).reset_index( drop=True ) )
 
@@ -2325,7 +2328,7 @@ def summarize(
                             print_df[print_df.columns[0]] = print_df[print_df.columns[0]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x ) if ( x is not None and not isinstance( x, bool ) and len( x ) > max_col_width ) else x )
                             for extra_list_type in extra_list_types:
                                 if extra_list_type in print_df.columns.values:
-                                    print_df[print_df.columns[print_df.columns.get_loc( extra_list_type )]] = print_df[print_df.columns[print_df.columns.get_loc( extra_list_type )]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", x, flags=re.MULTILINE ) if ( x is not None and not isinstance( x, bool ) and len( x ) > max_col_width ) else x ).apply( lambda y: re.sub( r"(^(?:.*\n){3})(.*\n)*.*", r"\1...", y, flags=re.MULTILINE ) )
+                                    print_df[print_df.columns[print_df.columns.get_loc( extra_list_type )]] = print_df[print_df.columns[print_df.columns.get_loc( extra_list_type )]].apply( lambda x: re.sub( f"^(.{{{max_col_width-3}}}).*", r"\1...", '\n'.join( sorted( x ) ), flags=re.MULTILINE ) if ( x is not None and isinstance( x, list ) and len( x ) > 0 ) else '<NA>' ).apply( lambda y: re.sub( r"(^(?:.*\n){3})(.*\n)*.*", r"\1...", y, flags=re.MULTILINE ) )
 
                             # Put the count values first in the display.
                             new_column_ordering = []
