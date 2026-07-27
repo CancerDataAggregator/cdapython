@@ -2336,68 +2336,51 @@ def get_data(
     #############################################################################################################################
 
     if return_data_as == '' or return_data_as == 'dataframe':
-        
         # Right now, the default is the same as if the user had specified return_data_as='dataframe'.
         return result_dataframe
 
     elif return_data_as == 'tsv':
-        
         log.debug( f"Printing results to TSV file '{output_file}'" )
-
         # Write results to a user-specified TSV.
-
         try:
-            
             # We can't use DataFrame.to_csv() because it doesn't handle nested DataFrames the way we want.
-
             with open( output_file, 'w' ) as OUT:
-                
                 print( *result_dataframe.columns.to_list(), sep='\t', file=OUT )
 
                 for row_index, result_record in result_dataframe.iterrows():
-                    
                     row_data = list()
 
                     for column in result_dataframe.columns.to_list():
-                        
                         if isinstance( result_record[column], pd.DataFrame ):
-                            
                             list_of_dicts_with_na_nulls = result_record[column].to_dict( orient='records' )
-
                             list_of_dicts_with_empty_string_nulls = list()
-
                             # This assumes 2D DataFrames, which is safe at time of writing (2025-05-07).
-
+                            # Convert "<NA>" to "" throughout.
                             for dict_with_na_nulls in list_of_dicts_with_na_nulls:
-                                
                                 dict_with_empty_string_nulls = dict()
-
                                 for key in dict_with_na_nulls:
-                                    
                                     if dict_with_na_nulls[key] == '<NA>':
-                                        
                                         dict_with_empty_string_nulls[key] = ''
-
                                     else:
-                                        
                                         dict_with_empty_string_nulls[key] = dict_with_na_nulls[key]
-
                                 list_of_dicts_with_empty_string_nulls.append( dict_with_empty_string_nulls )
 
                             if len( list_of_dicts_with_empty_string_nulls ) > 0:
-                                
+                                # DataFrame was nonempty. Pass converted rows along as dicts within a list to the destination TSV cell.
                                 row_data.append( list_of_dicts_with_empty_string_nulls )
-
                             else:
-                                
-                                row_data.append( '' )
+                                # DataFrame was empty. Pass an empty list to the destination TSV cell.
+                                row_data.append( [] )
 
                         elif result_record[column] is None or ( isinstance( result_record[column], str ) and result_record[column] == '<NA>' ):
-                            
+                            # This should only apply to scalar values. Home-table list values (file.anatomic_site) are received from the API
+                            # as empty lists and forwarded unmodified, and `extra_list_type` columns associated with those have been populated
+                            # with [] (by construction, above) when empty; foreign-table list values (uncollated search results) are similarly
+                            # encoded and forwarded when empty.
                             row_data.append( '' )
 
                         else:
-                            
+                            # This will include all empty list values constructed (or forwarded unmodified) during API response processing.
                             row_data.append( result_record[column] )
 
                     print( *row_data, sep='\t', file=OUT )
