@@ -2484,7 +2484,8 @@ def summarize(
                 result_column_list = result_dict.keys()
                 for result_column in result_column_list:
                     if None in result_dict[result_column]:
-                        result_dict[result_column][''] = result_dict[result_column].pop( None )
+                        print( f'DARN! {result_column}' )
+                        #result_dict[result_column][''] = result_dict[result_column].pop( None )
                 with open( output_file, 'w' ) as OUT:
                     json.dump( result_dict, OUT, indent=4, ensure_ascii=True )
                 return
