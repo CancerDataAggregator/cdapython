@@ -2038,89 +2038,68 @@ def get_data(
     # is the same whether or not additional column data (e.g. from other tables) has
     # been requested. Also make sure non-user-facing columns (e.g. `subject_data_at_gdc`)
     # are not passed through to the user unprocessed.
-
     columns_to_suppress = list()
     added_columns = list()
     extra_columns = set()
-
     df_columns_to_add = dict()
 
     for column in result_dataframe:
-        
         if column not in { 'data_source' }:
             
             # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see below in this block for more explicit filters.
-
             if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or re.search( r'_id_alias$', column ) is not None or re.search( r'crdc_id$', column ) is not None:
                 columns_to_suppress.append( column )
 
-            # Remove raw versions of aggregated result sets from foreign tables
-            # and replace them with DataFrames.
-
             elif re.search( r'_columns$', column ) is not None:
-                
                 # Note: collate_results will always be True in this case: there is no other way to get 'X_columns' lists back from the API.
-
+                # 
+                # Intercept collated foreign-table slices and store them as processed single-cell DataFrames for the result object.
                 columns_to_suppress.append( column )
-
                 foreign_table_name = re.search( r'^(.*)_columns$', column ).group(1)
 
                 # Our result DataFrame's f"{foreign_table_name}_data" column will
                 # contain DataFrames with linked values, row-wise, from `foreign_table_name`, describing
                 # all data from that table associated with each top-level row's main entity record.
+                # 
                 # Possibly plus extra metadata for harmonized terms in `foreign_table_name`, if
                 # any is available and the user asked for it.
-
+                # 
                 # Each element in this list will populate one (possibly empty) DataFrame cell in the overall result.
                 foreign_df_list = list()
 
                 for row_index, result_record in result_dataframe.iterrows():
-                    
                     # Construct one DataFrame from one (top-level / home-entity-record) row's worth of data from `foreign_table_name`.
-
                     foreign_table_data_by_column = dict()
-
                     # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing external_reference or upstream_identifiers, which encode this data differently or not at all.
-
                     foreign_table_data_by_column['data_source'] = list()
 
                     if result_record[column] is not None:
-                        
                         for foreign_table_record in result_record[column]:
-                            
+                            # Collect upstream_data_source information piecewise as we go through each collated result record.
                             upstream_data_source = ''
-
                             if foreign_table_name in [ 'project', 'subject' ]:
                                 # project and subject records can have multiple upstream data sources.
                                 upstream_data_source = set()
 
                             for foreign_table_column in foreign_table_record:
-                                
                                 match_result = re.search( r'^' + re.escape( foreign_table_name ) + r'_data_at_(.+)$', foreign_table_column )
-
                                 if match_result is not None:
-                                    
+                                    # Identify and capture data_source information.
                                     if foreign_table_record[foreign_table_column] == True:
-                                        
                                         detected_data_source = match_result.group(1).upper()
-
                                         if foreign_table_name in [ 'project', 'subject' ]:
                                             upstream_data_source.add( detected_data_source )
-
                                         elif upstream_data_source == '':
                                             upstream_data_source = detected_data_source
-
                                         elif upstream_data_source != detected_data_source:
                                             # There should only ever be one of these for non-subject records.
                                             log.error( f"Upstream data source clash: {detected_data_source} != {upstream_data_source}; {foreign_table_name} (partial) record: \"{foreign_table_record}\"; please notify the CDA devs of this event." )
                                             return
 
                                 # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see above and below in this general block for more explicit filters.
-
                                 elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None \
                                     and re.search( r'^' + re.escape( foreign_table_name ) + r'_id_alias$', foreign_table_column ) is None \
                                     and re.search( r'crdc_id$', foreign_table_column ) is None:
-                                    
                                     # We'll handle extra-metadata columns explicitly. Let's not roll them in at this level.
                                     matched_extra_column = False
                                     for extra_list_type in extra_list_types:
@@ -2130,7 +2109,6 @@ def get_data(
                                     if not matched_extra_column:
                                         if foreign_table_column not in foreign_table_data_by_column:
                                             foreign_table_data_by_column[foreign_table_column] = list()
-
                                         # Initialize extras columns in case of need. These are sometimes omitted from API responses when null.
                                         # TO DO: Fix that thing at the end of the last comment line.
                                         if foreign_table_column in has_non_null_extras:
@@ -2140,13 +2118,13 @@ def get_data(
                                                     if extra_column_name not in foreign_table_data_by_column:
                                                         foreign_table_data_by_column[extra_column_name] = list()
 
-                                        # Encode nulls as '<NA>'.
+                                        # Encode null scalars as '<NA>', pass empty lists through as [].
                                         # (float) NaN != NaN
                                         # Testing values for None will miss NaN values, so we use the above truth to test for those too.
-                                        # Empty list values [] will be passed along unmodified.
                                         if foreign_table_record[foreign_table_column] is None or foreign_table_record[foreign_table_column] != foreign_table_record[foreign_table_column]:
                                             foreign_table_data_by_column[foreign_table_column].append( '<NA>' )
                                         else:
+                                            # Note: file.anatomic_site, e.g., a list, will be encoded as [] by the API and here passed through unmodified.
                                             foreign_table_data_by_column[foreign_table_column].append( foreign_table_record[foreign_table_column] )
 
                                         # Update extras.
@@ -2159,21 +2137,18 @@ def get_data(
                                                     else:
                                                         foreign_table_data_by_column[extra_column_name].append( foreign_table_record[extra_column_name] )
 
+                            # Log final collected upstream_data_source information for this foreign_table_record.
                             if foreign_table_name in ['project', 'subject' ]:
                                 upstream_data_source = sorted( upstream_data_source )
-
                             foreign_table_data_by_column['data_source'].append( upstream_data_source )
 
                     if len( foreign_table_data_by_column.keys() ) > 1:
-                        
+                        # Something non-null came through. Build this result cell's DataFrame and save it.
                         foreign_table_column_ordering = [ 'data_source' ]
-
                         # Summarize (row-wise) 'data_source' values as we do for top-level result rows, unless we're processing external_reference or upstream_identifiers, which encode this data differently or not at all.
                         if foreign_table_name in { 'external_reference', 'upstream_identifiers' }:
                             foreign_table_column_ordering = []
-
                         foreign_table_column_list = [ 'external_reference_type', 'external_reference_name', 'external_reference_short_name', 'last_updated', 'uri', 'external_reference_description', 'source_short_name', 'source_url' ]
-
                         if foreign_table_name != 'external_reference':
                             foreign_table_column_list = cached_column_metadata.query( f"table == '{foreign_table_name}'" ).column.to_list()
                             
@@ -2190,10 +2165,10 @@ def get_data(
                         foreign_df_list.append( pd.DataFrame.from_dict( { re.sub( r'^external_reference_', r'', foreign_table_column ) : foreign_table_data_by_column[foreign_table_column] for foreign_table_column in foreign_table_column_ordering }, orient='columns' ) )
 
                     else:
-                        
+                        # Store an empty DataFrame as this cell's value: there was no upstream data.
                         foreign_df_list.append( pd.DataFrame.from_dict( {} ) )
 
-                # Make a new column called '`foreign_table_name`_data', populated with DataFrames.
+                # Make a new column called '`foreign_table_name`_data', populated with the per-cell DataFrames we just built.
                 df_columns_to_add[f"{foreign_table_name}_data"] = foreign_df_list
 
             elif column not in source_table_columns_in_order:
@@ -2207,7 +2182,7 @@ def get_data(
                         main_column = match_result.group( 1 )
                 if is_extra != 'no':
                     extra_list_type = is_extra
-                    # All harmonized terms are eligible for extras, but ot all possible extras are populated. Avoid spam until data appears.
+                    # All harmonized terms are eligible for extras, but not all possible extras are populated. Avoid spam until data appears.
                     if main_column in has_non_null_extras:
                         # Did anyone ask for this?
                         if extra_list_type in add_extras or 'all' in add_extras:
@@ -2229,12 +2204,14 @@ def get_data(
         if f"{column}_name" in added_columns:
             name_columns_to_remove.add(  f"{column}_name" )
             columns_to_suppress.append( f"{column}_name" )
-
+    # Filter extraneous columns just identified from the added_columns used to build the result.
     added_columns = [ column for column in added_columns if column not in name_columns_to_remove ]
 
+    # Add DataFrame-valued columns (collated results from foreign tables) to the result DataFrame.
     for column in df_columns_to_add:
         result_dataframe[column] = df_columns_to_add[column]
 
+    # Remove suppressed columns.
     if len( columns_to_suppress ) > 0:
         log.debug( f"Filtering API columns: {columns_to_suppress}" )
         # (Safe) assumption: nothing here will be harmonized data values, and so nothing here will require corresponding drops in associated add_extras-requested columns.
@@ -2242,7 +2219,6 @@ def get_data(
 
     # Resequence the output columns according to the sequence given by the columns() function.
     final_column_order = list()
-
     # First, order all the native fields from this endpoint that weren't explicitly excluded by the user, in the default (relative) order.
     for column in source_table_columns_in_order:
         if column in result_dataframe:
@@ -2251,11 +2227,9 @@ def get_data(
             for extra_list_type in extra_list_types:
                 if f"{column}_{extra_list_type}" in extra_columns:
                     final_column_order.append( f"{column}_{extra_list_type}" )
-
     # Then our `data_source` result summary, if it wasn't suppressed.
     if not suppress_data_source_results:
         final_column_order.append( 'data_source' )
-
     # Then the fields from other tables that the user added.
     for added_column in added_columns:
         final_column_order.append( added_column )
@@ -2263,53 +2237,46 @@ def get_data(
         for extra_list_type in extra_list_types:
             if f"{added_column}_{extra_list_type}" in extra_columns:
                 final_column_order.append( f"{added_column}_{extra_list_type}" )
-
+    # Then the DataFrame-valued columns (collated results from foreign tables).
     for added_column in df_columns_to_add:
         final_column_order.append( added_column )
 
+    # Handle null value encoding.
+    # 
+    # Assumes rows within DataFrame-valued cells have already been handled during construction and ignores them.
+    # 
+    # `extra_list_type` columns are handled inline with the main columns to which they are attached, with processing
+    # replicated across both contexts below (one for extras associated with main-table columns, and the other for
+    # extras associated with `added_columns`).
     if len( result_dataframe.columns ) > 0:
-        
         result_dataframe = result_dataframe[ final_column_order ]
-
         log.debug( 'Handling missing values...' )
-
         result_column_names = result_dataframe.columns.to_list()
 
         for column in result_column_names:
-            
             if column != 'data_source' and column not in df_columns_to_add and column not in added_columns and column not in extra_columns:
-                
                 # Home-table columns.
-
                 # CDA has no float values. Cast all numeric data to integers.
-
                 if column_data_types[column] in { 'integer', 'bigint' }:
-                    
                     # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
                     # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
                     # Pandas workaround: use extension type 'Int64' (note initial capital) -- itself an alias for numpy.int64 --
                     # which supports the storage of missing values. These will print as '<NA>'.
-
                     if result_dataframe[column].dtype == 'float64':
-                        
                         result_dataframe[column] = pd.to_numeric( result_dataframe[column] ).round().astype( 'Int64' )
-
                     # (float) NaN != NaN
                     # Testing cell values for None will miss NaN values, which will then generate an error if uncaught before trying to round them.
-
                     result_dataframe[column] = result_dataframe[column].apply( lambda cell_val: [ numpy.int64( round( element_val ) ) if ( element_val is not None and element_val == element_val ) else '<NA>' for element_val in cell_val ] if isinstance( cell_val, list ) else numpy.int64( round( cell_val ) ) if ( cell_val is not None and cell_val == cell_val ) else '<NA>' )
 
                 elif column_data_types[column] in { 'text', 'boolean' }:
-                    
                     # Replace values that are None (== null) with '<NA>' (to match what we['re forced to] use
                     # for null numeric values). Values that are empty lists [] will be passed along unmodified.
                     result_dataframe[column] = result_dataframe[column].fillna( '<NA>' )
-
                     # Are there any add_extras columns associated with this column? If so, handle those here.
                     for extra_list_type in extra_list_types:
                         extra_column_name = f"{column}_{extra_list_type}"
                         if extra_column_name in extra_columns:
-                            result_dataframe[extra_column_name] = result_dataframe[extra_column_name].fillna( '<NA>' )
+                            result_dataframe[extra_column_name] = result_dataframe[extra_column_name].fillna( list() )
 
                 else:
                     
@@ -2370,6 +2337,10 @@ def get_data(
                     extra_column_name = f"{column}_{extra_list_type}"
                     if extra_column_name in extra_columns:
                         result_dataframe[extra_column_name] = result_dataframe[extra_column_name].fillna( '<NA>' )
+
+        # END ( iterator over result_column_names )
+
+    # END ( result_dataframe emptiness check )
 
     #############################################################################################################################
     # Return our response to the user.
