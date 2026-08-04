@@ -435,7 +435,7 @@ def get_data(
 
     # extra_list_types is enumerated by cda_extra_metadata_columns() in desired column-display order for return_data_as='':
     # 
-    # [ 'slim_terms', 'synonym_terms', 'related_terms', 'containing_terms' ]
+    # [ 'synonym_terms', 'slim_terms', 'containing_terms', 'related_terms' ]
     extra_list_types = cda_extra_metadata_columns()
     # These need to go somewhere else. Until then, they are prominently deposited here. Similary in summarize.py.
     has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology', 'treatment_anatomic_site', 'primary_site' ]
@@ -2047,7 +2047,11 @@ def get_data(
         if column not in { 'data_source' }:
             
             # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see below in this block for more explicit filters.
-            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None or re.search( r'^[^_]+_data_source_count$', column ) is not None or re.search( r'_id_alias$', column ) is not None or re.search( r'crdc_id$', column ) is not None:
+            if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None \
+                or re.search( r'^[^_]+_data_source_count$', column ) is not None \
+                or re.search( r'_id_alias$', column ) is not None \
+                or re.search( r'crdc_id$', column ) is not None \
+                or re.search( r'related_terms$', column ) is not None:
                 columns_to_suppress.append( column )
 
             elif re.search( r'_columns$', column ) is not None:
@@ -2099,7 +2103,8 @@ def get_data(
                                 # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see above and below in this general block for more explicit filters.
                                 elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None \
                                     and re.search( r'^' + re.escape( foreign_table_name ) + r'_id_alias$', foreign_table_column ) is None \
-                                    and re.search( r'crdc_id$', foreign_table_column ) is None:
+                                    and re.search( r'crdc_id$', foreign_table_column ) is None \
+                                    and re.search( r'related_terms$', foreign_table_column ) is None:
                                     # We'll handle extra-metadata columns explicitly. Let's not roll them in at this level.
                                     matched_extra_column = False
                                     for extra_list_type in extra_list_types:
@@ -2342,7 +2347,7 @@ def get_data(
                         # "synonyms" are displayed to the user as names unaccompanied (again, at present) by disambiguating
                         # identifiers or other clarifying context. Remove redundant entries.
                         if extra_list_type == 'synonym_terms':
-                            # "axis=1" here allows access to the entire containing row, not just individual cells in result_dataframe[extra_column_name].
+                            # "axis=1" processes result_dataframe row-by-row, allowing the test we need to be applied row-wise instead of trying to consume columns in their entirety in one go.
                             result_dataframe[extra_column_name] = result_dataframe.apply(
                                     lambda row: [ term for term in row[extra_column_name] if term.lower() not in [ main_column_value.lower() for main_column_value in row[column] ] ], axis=1 )
             # END ( switch on column type )

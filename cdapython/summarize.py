@@ -970,7 +970,7 @@ def summarize(
 
     # extra_list_types is enumerated by cda_extra_metadata_columns() in desired column-display order for return_data_as='':
     # 
-    # [ 'slim_terms', 'synonym_terms', 'related_terms', 'containing_terms' ]
+    # [ 'synonym_terms', 'slim_terms', 'containing_terms', 'related_terms' ]
     extra_list_types = cda_extra_metadata_columns()
     # These need to go somewhere else. Until then, they are prominently deposited here. Similary in get_data.py.
     has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology', 'treatment_anatomic_site', 'primary_site' ]
