@@ -2142,9 +2142,12 @@ def get_data(
                                                             # "synonyms" are displayed to the user as names unaccompanied (again, at present) by disambiguating
                                                             # identifiers or other clarifying context. Remove redundant entries.
                                                             print("DING!")
-                                                            display_list = [ synonym_term for synonym_term in display_list if synonym_term.lower() != foreign_table_record[foreign_table_column].lower() ]
+                                                            # NO. THIS IS SOMETIMES A LIST. ALSO DO IT DOWN BELOW FOR NON-COLLATED RESULTS
+                                                            if not isinstance( foreign_table_record[foreign_table_column], list ):
+                                                                display_list = [ synonym_term for synonym_term in display_list if synonym_term.lower() != foreign_table_record[foreign_table_column].lower() ]
+                                                            else:
+                                                                display_list = [ synonym_term for synonym_term in display_list if synonym_term.lower() not in [ term.lower() for term in foreign_table_record[foreign_table_column] ] ]
                                                         foreign_table_data_by_column[extra_column_name].append( display_list )
-                                                        #foreign_table_data_by_column[extra_column_name].append( foreign_table_record[extra_column_name] )
 
                             # Log final collected upstream_data_source information for this foreign_table_record.
                             if foreign_table_name in ['project', 'subject' ]:
