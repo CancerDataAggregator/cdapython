@@ -2141,7 +2141,6 @@ def get_data(
                                                             # ICD-O-3 terms to DO terms as synonyms, which is appropriate, but this can lead to name doubling when
                                                             # "synonyms" are displayed to the user as names unaccompanied (again, at present) by disambiguating
                                                             # identifiers or other clarifying context. Remove redundant entries.
-                                                            print("DING!")
                                                             # NO. THIS IS SOMETIMES A LIST. ALSO DO IT DOWN BELOW FOR NON-COLLATED RESULTS
                                                             if not isinstance( foreign_table_record[foreign_table_column], list ):
                                                                 display_list = [ synonym_term for synonym_term in display_list if synonym_term.lower() != foreign_table_record[foreign_table_column].lower() ]
