@@ -2141,7 +2141,6 @@ def get_data(
                                                             # ICD-O-3 terms to DO terms as synonyms, which is appropriate, but this can lead to name doubling when
                                                             # "synonyms" are displayed to the user as names unaccompanied (again, at present) by disambiguating
                                                             # identifiers or other clarifying context. Remove redundant entries.
-                                                            # NO. THIS IS SOMETIMES A LIST. ALSO DO IT DOWN BELOW FOR NON-COLLATED RESULTS
                                                             if not isinstance( foreign_table_record[foreign_table_column], list ):
                                                                 display_list = [ synonym_term for synonym_term in display_list if synonym_term.lower() != foreign_table_record[foreign_table_column].lower() ]
                                                             else:
@@ -2338,6 +2337,14 @@ def get_data(
                     extra_column_name = f"{column}_{extra_list_type}"
                     if extra_column_name in extra_columns:
                         result_dataframe[extra_column_name] = result_dataframe[extra_column_name].apply( lambda x: x if isinstance( x, list ) else [] )
+                        # At present (2026-07-23), synonyms are only displayed as names (strings). In the background, we link
+                        # ICD-O-3 terms to DO terms as synonyms, which is appropriate, but this can lead to name doubling when
+                        # "synonyms" are displayed to the user as names unaccompanied (again, at present) by disambiguating
+                        # identifiers or other clarifying context. Remove redundant entries.
+                        if extra_list_type == 'synonym_terms':
+                            # "axis=1" here allows access to the entire containing row, not just individual cells in result_dataframe[extra_column_name].
+                            result_dataframe[extra_column_name] = result_dataframe[extra_column_name].apply( \
+                                    lambda row: [ term for term in row[extra_column_name] if term.lower() not in [ main_column_value.lower() for main_column_value in row[column] ] ], axis=1 )
             # END ( switch on column type )
         # END ( iterator over result_column_names )
     # END ( result_dataframe emptiness check )
