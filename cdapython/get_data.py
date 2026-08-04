@@ -2136,12 +2136,11 @@ def get_data(
                                                         foreign_table_data_by_column[extra_column_name].append( list() )
                                                     else:
                                                         display_list = foreign_table_record[extra_column_name].copy()
-                                                        if extra_column_name == 'synonym_terms':
+                                                        if extra_list_type == 'synonym_terms':
                                                             # At present (2026-07-23), synonyms are only displayed as names (strings). In the background, we link
                                                             # ICD-O-3 terms to DO terms as synonyms, which is appropriate, but this can lead to name doubling when
                                                             # "synonyms" are displayed to the user as names unaccompanied (again, at present) by disambiguating
                                                             # identifiers or other clarifying context. Remove redundant entries.
-                                                            print( "DING!" )
                                                             display_list = [ synonym_term for synonym_term in display_list if synonym_term.lower() not in [ term.lower() for term in foreign_table_record[foreign_table_column] ] ]
                                                         foreign_table_data_by_column[extra_column_name].append( display_list )
                                                         #foreign_table_data_by_column[extra_column_name].append( foreign_table_record[extra_column_name] )
