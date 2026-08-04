@@ -2135,7 +2135,15 @@ def get_data(
                                                     if extra_column_name not in foreign_table_record or foreign_table_record[extra_column_name] is None or len( foreign_table_record[extra_column_name] ) == 0:
                                                         foreign_table_data_by_column[extra_column_name].append( list() )
                                                     else:
-                                                        foreign_table_data_by_column[extra_column_name].append( foreign_table_record[extra_column_name] )
+                                                        display_list = foreign_table_record[extra_column_name].copy()
+                                                        if extra_column_name == 'synonym_terms':
+                                                            # At present (2026-07-23), synonyms are only displayed as names (strings). In the background, we link
+                                                            # ICD-O-3 terms to DO terms as synonyms, which is appropriate, but this can lead to name doubling when
+                                                            # "synonyms" are displayed to the user as names unaccompanied (again, at present) by disambiguating
+                                                            # identifiers or other clarifying context. Remove redundant entries.
+                                                            display_list = [ synonym_term for synonym_term in display_list if synonym_term.lower() != foreign_table_record[foreign_table_column].lower() ]
+                                                        foreign_table_data_by_column[extra_column_name].append( display_list )
+                                                        #foreign_table_data_by_column[extra_column_name].append( foreign_table_record[extra_column_name] )
 
                             # Log final collected upstream_data_source information for this foreign_table_record.
                             if foreign_table_name in ['project', 'subject' ]:
