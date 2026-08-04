@@ -2343,9 +2343,8 @@ def get_data(
                         # identifiers or other clarifying context. Remove redundant entries.
                         if extra_list_type == 'synonym_terms':
                             # "axis=1" here allows access to the entire containing row, not just individual cells in result_dataframe[extra_column_name].
-                            result_dataframe[extra_column_name] = result_dataframe[extra_column_name].apply(
-                                    lambda row: [ term for term in row[extra_column_name] if term.lower() not in [ main_column_value.lower() for main_column_value in row[column] ] ],
-                                    axis=1 )
+                            result_dataframe[extra_column_name] = result_dataframe.apply(
+                                    lambda row: [ term for term in row[extra_column_name] if term.lower() not in [ main_column_value.lower() for main_column_value in row[column] ] ], axis=1 )
             # END ( switch on column type )
         # END ( iterator over result_column_names )
     # END ( result_dataframe emptiness check )
