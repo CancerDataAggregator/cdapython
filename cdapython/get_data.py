@@ -103,8 +103,8 @@ def get_file_data(
 
         add_extras( string or list of strings; optional ):
             One or more columns of extra metadata to include to contextualize
-            harmonized CDA column values. Current valid values are 'slim_terms',
-            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            harmonized CDA column values. Current valid values are 'synonym_terms',
+            'slim_terms', 'containing_terms' and 'all', the
             last of which behaves as you'd expect. (Default: no extras.)
 
     Filter strings:
@@ -239,8 +239,8 @@ def get_subject_data(
 
         add_extras( string or list of strings; optional ):
             One or more columns of extra metadata to include to contextualize
-            harmonized CDA column values. Current valid values are 'slim_terms',
-            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            harmonized CDA column values. Current valid values are 'synonym_terms',
+            'slim_terms', 'containing_terms' and 'all', the
             last of which behaves as you'd expect. (Default: no extras.)
 
     Filter strings:
@@ -378,8 +378,8 @@ def get_data(
 
         add_extras( string or list of strings; optional ):
             One or more columns of extra metadata to include to contextualize
-            harmonized CDA column values. Current valid values are 'slim_terms',
-            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            harmonized CDA column values. Current valid values are 'synonym_terms',
+            'slim_terms', 'containing_terms' and 'all', the
             last of which behaves as you'd expect. (Default: no extras.)
 
         table ( string; required: 'file' or 'subject' ):
@@ -435,7 +435,7 @@ def get_data(
 
     # extra_list_types is enumerated by cda_extra_metadata_columns() in desired column-display order for return_data_as='':
     # 
-    # [ 'synonym_terms', 'slim_terms', 'containing_terms', 'related_terms' ]
+    # [ 'synonym_terms', 'slim_terms', 'containing_terms' ]
     extra_list_types = cda_extra_metadata_columns()
     # These need to go somewhere else. Until then, they are prominently deposited here. Similary in summarize.py.
     has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology', 'treatment_anatomic_site', 'primary_site' ]
@@ -866,19 +866,15 @@ def get_data(
     #         "skin of body"
     #       ],
     #       "species_containing_terms": [],
-    #       "species_related_terms": [],
     #       "species_slim_terms": [],
     #       "species_synonym_terms": [],
     #       "cause_of_death_containing_terms": [],
-    #       "cause_of_death_related_terms": [],
     #       "cause_of_death_slim_terms": [],
     #       "cause_of_death_synonym_terms": [],
     #       "race_containing_terms": [],
-    #       "race_related_terms": [],
     #       "race_slim_terms": [],
     #       "race_synonym_terms": [],
     #       "ethnicity_containing_terms": [],
-    #       "ethnicity_related_terms": [],
     #       "ethnicity_slim_terms": [],
     #       "ethnicity_synonym_terms": [],
     #       "observed_anatomic_site_name": [],
@@ -893,20 +889,6 @@ def get_data(
     #         "limb",
     #         "face",
     #         "hemolymphoid system"
-    #       ],
-    #       "observed_anatomic_site_related_terms": [
-    #         "cephalic part of animal",
-    #         "subcutis",
-    #         "bone",
-    #         "integumental organ",
-    #         "entire integument",
-    #         "suprasegmental levels of nervous system",
-    #         "sub-tegumental tissue",
-    #         "portion of bone tissue",
-    #         "encephalon",
-    #         "skin",
-    #         // ...
-    #         "the brain"
     #       ],
     #       "observed_anatomic_site_slim_terms": [
     #         "skeletal system",
@@ -936,7 +918,6 @@ def get_data(
     #         "anatomical entity",
     #         "organ"
     #       ],
-    #       "resection_anatomic_site_related_terms": [],
     #       "resection_anatomic_site_slim_terms": [
     #         "skin of body"
     #       ],
@@ -949,14 +930,12 @@ def get_data(
     #       ],
     #       "diagnosis_name": [],
     #       "diagnosis_containing_terms": [],
-    #       "diagnosis_related_terms": [],
     #       "diagnosis_slim_terms": [
     #         "Nevi and melanomas"
     #       ],
     #       "diagnosis_synonym_terms": [],
     #       "morphology_name": [],
     #       "morphology_containing_terms": [],
-    #       "morphology_related_terms": [],
     #       "morphology_slim_terms": [
     #         "Nevi and melanomas"
     #       ],
@@ -969,12 +948,6 @@ def get_data(
     #         "material anatomical entity",
     #         "organ",
     #         "anatomical structure"
-    #       ],
-    #       "anatomic_site_related_terms": [
-    #         "pelt",
-    #         "entire integument",
-    #         "skin",
-    #         "integumental organ"
     #       ],
     #       "anatomic_site_slim_terms": [
     #         "skin of body"
@@ -1043,19 +1016,15 @@ def get_data(
     #           "diagnosis": null,
     #           "morphology": null,
     #           "observed_anatomic_site_containing_terms": [],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [],
     #           "observed_anatomic_site_synonym_terms": [],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [],
     #           "morphology_synonym_terms": []
     #         },
@@ -1069,9 +1038,6 @@ def get_data(
     #             // ...
     #             "trunk region element"
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "deep thoracic lymph node"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "lymphoid system"
     #           ],
@@ -1079,17 +1045,14 @@ def get_data(
     #             "lymph node of thorax"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1105,11 +1068,6 @@ def get_data(
     #             // ...
     #             "structure with developmental contribution from neural crest"
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "subcutaneous tissue",
-    #             // ...
-    #             "tela subcutanea"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1118,17 +1076,14 @@ def get_data(
     #             "vertebrate hypodermis"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1144,23 +1099,19 @@ def get_data(
     #             // ...
     #             "zone of skin"
     #           ],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [
     #             "head"
     #           ],
     #           "observed_anatomic_site_synonym_terms": [],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1172,21 +1123,17 @@ def get_data(
     #           "diagnosis": "Malignant melanoma",
     #           "morphology": "Malignant melanoma",
     #           "observed_anatomic_site_containing_terms": [],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [],
     #           "observed_anatomic_site_synonym_terms": [],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1202,12 +1149,6 @@ def get_data(
     #             // ...
     #             "somatosensory system",
     #             "structure with developmental contribution from neural crest"
-    #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "entire integument",
-    #             "integumental organ",
-    #             "pelt",
-    #             "skin"
     #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "skin of body"
@@ -1225,7 +1166,6 @@ def get_data(
     #             // ...
     #             "zone of skin"
     #           ],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1235,13 +1175,11 @@ def get_data(
     #             "zone of skin of trunk"
     #           ],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1258,10 +1196,6 @@ def get_data(
     #             "somatosensory system",
     #             "tissue"
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "bone",
-    #             "portion of bone tissue"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "skeletal system"
     #           ],
@@ -1271,17 +1205,14 @@ def get_data(
     #             "osteogenic tissue"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1304,9 +1235,6 @@ def get_data(
     #             "zone of organ",
     #             "zone of skin"
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "facial skin"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1314,17 +1242,14 @@ def get_data(
     #             "face skin"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1340,26 +1265,19 @@ def get_data(
     #             "reproductive structure",
     #             // ...
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "penes",
-    #             "phallus"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "male reproductive system"
     #           ],
     #           "observed_anatomic_site_synonym_terms": [],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1374,11 +1292,6 @@ def get_data(
     #             // ...
     #             "trunk"
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "anterior subdivision of trunk",
-    #             "upper body",
-    #             "upper trunk"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "trunk"
     #           ],
@@ -1386,17 +1299,14 @@ def get_data(
     #             "thorax"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1413,29 +1323,19 @@ def get_data(
     #             "sensory system",
     #             "somatosensory system"
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "encephalon",
-    #             "suprasegmental levels of nervous system",
-    #             "suprasegmental structures",
-    #             "synganglion",
-    #             "the brain"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "brain"
     #           ],
     #           "observed_anatomic_site_synonym_terms": [],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1452,7 +1352,6 @@ def get_data(
     #             // ...
     #             "subdivision of organism along appendicular axis"
     #           ],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [
     #             "limb"
     #           ],
@@ -1463,17 +1362,14 @@ def get_data(
     #             "subdivision of free upper limb"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1489,12 +1385,6 @@ def get_data(
     #             "somatosensory system",
     #             "structure with developmental contribution from neural crest"
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "entire integument",
-    #             "integumental organ",
-    #             "pelt",
-    #             "skin"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1503,17 +1393,14 @@ def get_data(
     #             "skin organ"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [],
     #           "morphology_synonym_terms": []
     #         },
@@ -1526,12 +1413,6 @@ def get_data(
     #             // ...
     #             "structure with developmental contribution from neural crest"
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "entire integument",
-    #             "integumental organ",
-    #             "pelt",
-    #             "skin"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1540,17 +1421,14 @@ def get_data(
     #             "skin organ"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1570,29 +1448,19 @@ def get_data(
     #             "organism subdivision",
     #             // ...
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "cephalic area",
-    #             "cephalic part of animal",
-    #             "cephalic region",
-    #             "head and neck",
-    #             "head or neck"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "craniocervical region"
     #           ],
     #           "observed_anatomic_site_synonym_terms": [],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1606,12 +1474,6 @@ def get_data(
     #           "observed_anatomic_site_containing_terms": [
     #             // ...
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "entire integument",
-    #             "integumental organ",
-    #             "pelt",
-    #             "skin"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1620,17 +1482,14 @@ def get_data(
     #             "skin organ"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1645,23 +1504,19 @@ def get_data(
     #             // ...
     #             "viscus"
     #           ],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [
     #             "pancreas"
     #           ],
     #           "observed_anatomic_site_synonym_terms": [],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1675,12 +1530,6 @@ def get_data(
     #           "observed_anatomic_site_containing_terms": [
     #             // ...
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "entire integument",
-    #             "integumental organ",
-    #             "pelt",
-    #             "skin"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1689,17 +1538,14 @@ def get_data(
     #             "skin organ"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [],
     #           "morphology_synonym_terms": []
     #         },
@@ -1711,7 +1557,6 @@ def get_data(
     #           "observed_anatomic_site_containing_terms": [
     #             // ...
     #           ],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1723,17 +1568,14 @@ def get_data(
     #             "zone of skin of trunk"
     #           ],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Nevi and melanomas"
     #           ],
@@ -1745,19 +1587,15 @@ def get_data(
     #           "diagnosis": null,
     #           "morphology": null,
     #           "observed_anatomic_site_containing_terms": [],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [],
     #           "observed_anatomic_site_synonym_terms": [],
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": [],
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [],
     #           "diagnosis_synonym_terms": [],
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [],
     #           "morphology_synonym_terms": []
     #         }
@@ -1789,11 +1627,21 @@ def get_data(
     #             "organ",
     #             "anatomical structure"
     #           ],
-    #           "anatomic_site_related_terms": [
-    #             "pelt",
-    #             "entire integument",
-    #             "skin",
-    #             "integumental organ"
+    #           "anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "skin organ",
+    #             "entire skin"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_name": [],
+    #           "anatomic_site_containing_terms": [
+    #             // ...
     #           ],
     #           "anatomic_site_slim_terms": [
     #             "skin of body"
@@ -1811,11 +1659,21 @@ def get_data(
     #           "anatomic_site_containing_terms": [
     #             // ...
     #           ],
-    #           "anatomic_site_related_terms": [
-    #             "pelt",
-    #             "entire integument",
-    #             "skin",
-    #             "integumental organ"
+    #           "anatomic_site_slim_terms": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_synonym_terms": [
+    #             "skin organ",
+    #             "entire skin"
+    #           ]
+    #         },
+    #         {
+    #           "anatomic_site": [
+    #             "skin of body"
+    #           ],
+    #           "anatomic_site_name": [],
+    #           "anatomic_site_containing_terms": [
+    #             // ...
     #           ],
     #           "anatomic_site_slim_terms": [
     #             "skin of body"
@@ -1833,12 +1691,6 @@ def get_data(
     #           "anatomic_site_containing_terms": [
     #             // ...
     #           ],
-    #           "anatomic_site_related_terms": [
-    #             "pelt",
-    #             "entire integument",
-    #             "skin",
-    #             "integumental organ"
-    #           ],
     #           "anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1854,56 +1706,6 @@ def get_data(
     #           "anatomic_site_name": [],
     #           "anatomic_site_containing_terms": [
     #             // ...
-    #           ],
-    #           "anatomic_site_related_terms": [
-    #             "pelt",
-    #             "entire integument",
-    #             "skin",
-    #             "integumental organ"
-    #           ],
-    #           "anatomic_site_slim_terms": [
-    #             "skin of body"
-    #           ],
-    #           "anatomic_site_synonym_terms": [
-    #             "skin organ",
-    #             "entire skin"
-    #           ]
-    #         },
-    #         {
-    #           "anatomic_site": [
-    #             "skin of body"
-    #           ],
-    #           "anatomic_site_name": [],
-    #           "anatomic_site_containing_terms": [
-    #             // ...
-    #           ],
-    #           "anatomic_site_related_terms": [
-    #             "pelt",
-    #             "entire integument",
-    #             "skin",
-    #             "integumental organ"
-    #           ],
-    #           "anatomic_site_slim_terms": [
-    #             "skin of body"
-    #           ],
-    #           "anatomic_site_synonym_terms": [
-    #             "skin organ",
-    #             "entire skin"
-    #           ]
-    #         },
-    #         {
-    #           "anatomic_site": [
-    #             "skin of body"
-    #           ],
-    #           "anatomic_site_name": [],
-    #           "anatomic_site_containing_terms": [
-    #             // ...
-    #           ],
-    #           "anatomic_site_related_terms": [
-    #             "pelt",
-    #             "entire integument",
-    #             "skin",
-    #             "integumental organ"
     #           ],
     #           "anatomic_site_slim_terms": [
     #             "skin of body"
@@ -1931,12 +1733,6 @@ def get_data(
     #           "anatomic_site_containing_terms": [
     #             // ...
     #           ],
-    #           "anatomic_site_related_terms": [
-    #             "pelt",
-    #             "entire integument",
-    #             "skin",
-    #             "integumental organ"
-    #           ],
     #           "anatomic_site_slim_terms": [
     #             "skin of body"
     #           ],
@@ -1947,19 +1743,15 @@ def get_data(
     #         }
     #       ],
     #       "species_containing_terms": [],
-    #       "species_related_terms": [],
     #       "species_slim_terms": [],
     #       "species_synonym_terms": [],
     #       "cause_of_death_containing_terms": [],
-    #       "cause_of_death_related_terms": [],
     #       "cause_of_death_slim_terms": [],
     #       "cause_of_death_synonym_terms": [],
     #       "race_containing_terms": [],
-    #       "race_related_terms": [],
     #       "race_slim_terms": [],
     #       "race_synonym_terms": [],
     #       "ethnicity_containing_terms": [],
-    #       "ethnicity_related_terms": [],
     #       "ethnicity_slim_terms": [],
     #       "ethnicity_synonym_terms": []
     #     }
@@ -2050,8 +1842,7 @@ def get_data(
             if re.search( r'^[^_]+_data_at_[^_]+$', column ) is not None \
                 or re.search( r'^[^_]+_data_source_count$', column ) is not None \
                 or re.search( r'_id_alias$', column ) is not None \
-                or re.search( r'crdc_id$', column ) is not None \
-                or re.search( r'related_terms$', column ) is not None:
+                or re.search( r'crdc_id$', column ) is not None:
                 columns_to_suppress.append( column )
 
             elif re.search( r'_columns$', column ) is not None:
@@ -2103,8 +1894,7 @@ def get_data(
                                 # TO DO: This is a terrible way to exclude columns. See similar comment on banned_columns in summarize.py. Also see above and below in this general block for more explicit filters.
                                 elif re.search( r'^' + re.escape( foreign_table_name ) + r'_data_source_count$', foreign_table_column ) is None \
                                     and re.search( r'^' + re.escape( foreign_table_name ) + r'_id_alias$', foreign_table_column ) is None \
-                                    and re.search( r'crdc_id$', foreign_table_column ) is None \
-                                    and re.search( r'related_terms$', foreign_table_column ) is None:
+                                    and re.search( r'crdc_id$', foreign_table_column ) is None:
                                     # We'll handle extra-metadata columns explicitly. Let's not roll them in at this level.
                                     matched_extra_column = False
                                     for extra_list_type in extra_list_types:

@@ -574,8 +574,8 @@ def summarize_files(
 
         add_extras( string or list of strings; optional ):
             One or more columns of extra metadata to include to contextualize
-            harmonized CDA column values. Current valid values are 'slim_terms',
-            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            harmonized CDA column values. Current valid values are 'synonym_terms',
+            'slim_terms', 'containing_terms' and 'all', the
             last of which behaves as you'd expect. (Default: no extras.)
 
     Filter strings:
@@ -729,8 +729,8 @@ def summarize_subjects(
 
         add_extras( string or list of strings; optional ):
             One or more columns of extra metadata to include to contextualize
-            harmonized CDA column values. Current valid values are 'slim_terms',
-            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            harmonized CDA column values. Current valid values are 'synonym_terms',
+            'slim_terms', 'containing_terms' and 'all', the
             last of which behaves as you'd expect. (Default: no extras.)
 
     Filter strings:
@@ -887,8 +887,8 @@ def summarize(
 
         add_extras( string or list of strings; optional ):
             One or more columns of extra metadata to include to contextualize
-            harmonized CDA column values. Current valid values are 'slim_terms',
-            'synonym_terms', 'related_terms', 'containing_terms' and 'all', the
+            harmonized CDA column values. Current valid values are 'synonym_terms',
+            'slim_terms', 'containing_terms' and 'all', the
             last of which behaves as you'd expect. (Default: no extras.)
 
         table ( string; required: 'file' or 'subject' ):
@@ -970,7 +970,7 @@ def summarize(
 
     # extra_list_types is enumerated by cda_extra_metadata_columns() in desired column-display order for return_data_as='':
     # 
-    # [ 'synonym_terms', 'slim_terms', 'containing_terms', 'related_terms' ]
+    # [ 'synonym_terms', 'slim_terms', 'containing_terms' ]
     extra_list_types = cda_extra_metadata_columns()
     # These need to go somewhere else. Until then, they are prominently deposited here. Similary in get_data.py.
     has_non_null_extras = [ 'observed_anatomic_site', 'resection_anatomic_site', 'anatomic_site', 'diagnosis', 'morphology', 'treatment_anatomic_site', 'primary_site' ]
@@ -1322,7 +1322,6 @@ def summarize(
     #           "ethnicity": null,
     #           "count_result": 3,
     #           "ethnicity_containing_terms": [],
-    #           "ethnicity_related_terms": [],
     #           "ethnicity_slim_terms": [],
     #           "ethnicity_synonym_terms": []
     #         },
@@ -1330,7 +1329,6 @@ def summarize(
     #           "ethnicity": "Non-Hispanic",
     #           "count_result": 2,
     #           "ethnicity_containing_terms": [],
-    #           "ethnicity_related_terms": [],
     #           "ethnicity_slim_terms": [],
     #           "ethnicity_synonym_terms": []
     #         }
@@ -1340,7 +1338,6 @@ def summarize(
     #           "cause_of_death": null,
     #           "count_result": 4,
     #           "cause_of_death_containing_terms": [],
-    #           "cause_of_death_related_terms": [],
     #           "cause_of_death_slim_terms": [],
     #           "cause_of_death_synonym_terms": []
     #         },
@@ -1348,7 +1345,6 @@ def summarize(
     #           "cause_of_death": "Non-Cancer Related Death",
     #           "count_result": 1,
     #           "cause_of_death_containing_terms": [],
-    #           "cause_of_death_related_terms": [],
     #           "cause_of_death_slim_terms": [],
     #           "cause_of_death_synonym_terms": []
     #         }
@@ -1358,7 +1354,6 @@ def summarize(
     #           "race": null,
     #           "count_result": 3,
     #           "race_containing_terms": [],
-    #           "race_related_terms": [],
     #           "race_slim_terms": [],
     #           "race_synonym_terms": []
     #         },
@@ -1366,7 +1361,6 @@ def summarize(
     #           "race": "Black or African American",
     #           "count_result": 2,
     #           "race_containing_terms": [],
-    #           "race_related_terms": [],
     #           "race_slim_terms": [],
     #           "race_synonym_terms": []
     #         }
@@ -1376,7 +1370,6 @@ def summarize(
     #           "species": null,
     #           "count_result": 1,
     #           "species_containing_terms": [],
-    #           "species_related_terms": [],
     #           "species_slim_terms": [],
     #           "species_synonym_terms": []
     #         },
@@ -1384,7 +1377,6 @@ def summarize(
     #           "species": "human",
     #           "count_result": 4,
     #           "species_containing_terms": [],
-    #           "species_related_terms": [],
     #           "species_slim_terms": [],
     #           "species_synonym_terms": []
     #         }
@@ -1447,7 +1439,6 @@ def summarize(
     #           "resection_anatomic_site": null,
     #           "count_result": 1,
     #           "resection_anatomic_site_containing_terms": [],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [],
     #           "resection_anatomic_site_synonym_terms": []
     #         },
@@ -1493,7 +1484,6 @@ def summarize(
     #             "tube",
     #             "viscus"
     #           ],
-    #           "resection_anatomic_site_related_terms": [],
     #           "resection_anatomic_site_slim_terms": [
     #             "respiratory airway"
     #           ],
@@ -1507,7 +1497,6 @@ def summarize(
     #           "diagnosis": null,
     #           "count_result": 1,
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [],
     #           "diagnosis_synonym_terms": []
     #         },
@@ -1515,7 +1504,6 @@ def summarize(
     #           "diagnosis": "Neoplasm, uncertain whether benign or malignant",
     #           "count_result": 1,
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Neoplasms"
     #           ],
@@ -1525,7 +1513,6 @@ def summarize(
     #           "diagnosis": "Basaloid squamous cell carcinoma",
     #           "count_result": 1,
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Squamous cell neoplasms"
     #           ],
@@ -1537,7 +1524,6 @@ def summarize(
     #           "diagnosis": "Squamous cell carcinoma",
     #           "count_result": 4,
     #           "diagnosis_containing_terms": [],
-    #           "diagnosis_related_terms": [],
     #           "diagnosis_slim_terms": [
     #             "Squamous cell neoplasms"
     #           ],
@@ -1570,11 +1556,6 @@ def summarize(
     #             "subdivision of trunk",
     #             "trunk"
     #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "adult abdomen",
-    #             "belly",
-    #             "celiac region"
-    #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "trunk"
     #           ],
@@ -1605,10 +1586,6 @@ def summarize(
     #             "subdivision of trunk",
     #             "thoracic segment of trunk",
     #             "trunk"
-    #           ],
-    #           "observed_anatomic_site_related_terms": [
-    #             "thoracic body wall",
-    #             "thorax"
     #           ],
     #           "observed_anatomic_site_slim_terms": [
     #             "trunk"
@@ -1642,7 +1619,6 @@ def summarize(
     #             "somatosensory system",
     #             "tube"
     #           ],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [
     #             "lower digestive tract"
     #           ],
@@ -1698,7 +1674,6 @@ def summarize(
     #             "tube",
     #             "viscus"
     #           ],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [
     #             "respiratory airway"
     #           ],
@@ -1751,7 +1726,6 @@ def summarize(
     #             "tube",
     #             "viscus"
     #           ],
-    #           "observed_anatomic_site_related_terms": [],
     #           "observed_anatomic_site_slim_terms": [
     #             "respiratory airway"
     #           ],
@@ -1765,7 +1739,6 @@ def summarize(
     #           "morphology": null,
     #           "count_result": 1,
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [],
     #           "morphology_synonym_terms": []
     #         },
@@ -1773,7 +1746,6 @@ def summarize(
     #           "morphology": "Basaloid squamous cell carcinoma",
     #           "count_result": 1,
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Squamous cell neoplasms"
     #           ],
@@ -1785,7 +1757,6 @@ def summarize(
     #           "morphology": "Squamous cell carcinoma",
     #           "count_result": 3,
     #           "morphology_containing_terms": [],
-    #           "morphology_related_terms": [],
     #           "morphology_slim_terms": [
     #             "Squamous cell neoplasms"
     #           ],
@@ -1799,7 +1770,6 @@ def summarize(
     #           "anatomic_site": null,
     #           "count_result": 100,
     #           "anatomic_site_containing_terms": [],
-    #           "anatomic_site_related_terms": [],
     #           "anatomic_site_slim_terms": [],
     #           "anatomic_site_synonym_terms": []
     #         },
@@ -1825,11 +1795,6 @@ def summarize(
     #             "subdivision of organism along main body axis",
     #             "subdivision of trunk",
     #             "trunk"
-    #           ],
-    #           "anatomic_site_related_terms": [
-    #             "adult abdomen",
-    #             "belly",
-    #             "celiac region"
     #           ],
     #           "anatomic_site_slim_terms": [
     #             "trunk"
@@ -1861,10 +1826,6 @@ def summarize(
     #             "subdivision of trunk",
     #             "thoracic segment of trunk",
     #             "trunk"
-    #           ],
-    #           "anatomic_site_related_terms": [
-    #             "thoracic body wall",
-    #             "thorax"
     #           ],
     #           "anatomic_site_slim_terms": [
     #             "trunk"
@@ -1919,7 +1880,6 @@ def summarize(
     #             "tube",
     #             "viscus"
     #           ],
-    #           "anatomic_site_related_terms": [],
     #           "anatomic_site_slim_terms": [
     #             "respiratory airway"
     #           ],
@@ -1968,7 +1928,6 @@ def summarize(
     #             "tube",
     #             "viscus"
     #           ],
-    #           "anatomic_site_related_terms": [],
     #           "anatomic_site_slim_terms": [
     #             "respiratory airway"
     #           ],
@@ -1996,7 +1955,6 @@ def summarize(
     #             "somatosensory system",
     #             "tube"
     #           ],
-    #           "anatomic_site_related_terms": [],
     #           "anatomic_site_slim_terms": [
     #             "lower digestive tract"
     #           ],
@@ -2040,7 +1998,6 @@ def summarize(
     #             "trunk region element",
     #             "viscus"
     #           ],
-    #           "anatomic_site_related_terms": [],
     #           "anatomic_site_slim_terms": [
     #             "lymphoid system"
     #           ],
@@ -2239,7 +2196,6 @@ def summarize(
                         #     "anatomic_site": "arm",
                         #     "count_result": 4,
                         #     "anatomic_site_containing_terms": [],
-                        #     "anatomic_site_related_terms": [],
                         #     "anatomic_site_slim_terms": [],
                         #     "anatomic_site_synonym_terms": []
 
@@ -2441,7 +2397,6 @@ def summarize(
                         #     "anatomic_site": "arm",
                         #     "count_result": 4,
                         #     "anatomic_site_containing_terms": [],
-                        #     "anatomic_site_related_terms": [],
                         #     "anatomic_site_slim_terms": [],
                         #     "anatomic_site_synonym_terms": []
                         result_dict[result_column] = dict()
