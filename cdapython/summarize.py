@@ -551,7 +551,7 @@ def summarize_files(
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
-            data source(s). Current valid values are 'GC', 'GDC', 'IDC',
+            data source(s). Current valid values are 'CTDC', 'GC', 'GDC', 'IDC',
             'PDC' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
@@ -707,7 +707,7 @@ def summarize_subjects(
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
-            data source(s). Current valid values are 'GC', 'GDC', 'IDC',
+            data source(s). Current valid values are 'CTDC', 'GC', 'GDC', 'IDC',
             'PDC' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):
@@ -863,7 +863,7 @@ def summarize(
 
         data_source ( string or list of strings; optional ):
             Restrict results to those deriving from the given upstream
-            data source(s). Current valid values are 'GC', 'GDC', 'IDC',
+            data source(s). Current valid values are 'CTDC', 'GC', 'GDC', 'IDC',
             'PDC' and 'ICDC'. (Default: no filter.)
 
         add_columns ( string or list of strings; optional ):

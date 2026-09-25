@@ -848,7 +848,7 @@ def column_values(
 
         data_source ( string; optional ):
             Restrict returned values to the given upstream data source. Current
-            valid values are 'GC', 'GDC', 'PDC', 'IDC' and 'ICDC'.
+            valid values are 'CTDC', 'GC', 'GDC', 'PDC', 'IDC' and 'ICDC'.
             Defaults to None (no filter).
 
         force( boolean; optional ):
