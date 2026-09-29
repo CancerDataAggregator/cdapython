@@ -1,4 +1,4 @@
-2026-08-25: 2.2.0: add support for harmonized controlled-vocabulary metadata retrieval (slims, synonyms, containing terms); see help text for the `add_extras` flag in the `get\_data()` and `summarize()` functions
+2026-08-25: 2.2.0: add support for harmonized controlled-vocabulary metadata retrieval (slims, synonyms, containing terms); see help text for the `add_extras` flag in the `get_data()` and `summarize()` functions
 
 2026-04-07: 2.1.0: add `search_terms` support; obsolesce `disease_slims` POC in deference to upcoming full version
 
