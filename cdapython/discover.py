@@ -997,7 +997,7 @@ def column_values(
 
     # Warn the user if an override hasn't been requested.
     if not force and column in expensive_columns:
-        log.warning( f"'{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., 'force=True' )." )
+        log.warning( f"'{column}' has a very large number of values; retrieval is blocked by default. To perform this query, use column_values( ..., force=True )." )
         return
 
     #############################################################################################################################
