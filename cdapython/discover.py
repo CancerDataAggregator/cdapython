@@ -502,7 +502,10 @@ def columns(
     try:
         columns_response_data_object = cda_client.api.columns.columns_endpoint_columns_get.sync( client=query_api_instance )
     except UnexpectedStatus as error:
-        log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {json.loads( error.content )['message']}" )
+        try:
+            log.error( f"UnexpectedStatus error from API, status code {error.status_code}: {json.loads( error.content )['message']}" )
+        except:
+            log.error(error)
         return
     except Exception as error:
         log.error( f"{type(error)}: {error}" )
