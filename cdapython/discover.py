@@ -1155,7 +1155,7 @@ def column_values(
 
     # CDA has no float values. If the API gives us some, cast them to integers.
     
-    if result_dataframe[column].dtype == 'float64':
+    if result_dataframe[column].dtype in ['float64', 'int64'] :
         
         # Columns of type `float64` can contain NaN (missing) values, which cannot (for some reason)
         # be stored in Pandas Series objects (i.e., DataFrame columns) of type `int` or `int64`.
