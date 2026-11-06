@@ -1,3 +1,5 @@
+2026-11-06: 2.2.2: harden error handling to more gracefully process e.g. 403s
+
 2026-10-01: 2.2.1: fix help text typo for `column_values()`
 
 2026-08-25: 2.2.0: add support for harmonized controlled-vocabulary metadata retrieval (slims, synonyms, containing terms); see help text for the `add_extras` flag in the `get_data()` and `summarize()` functions
